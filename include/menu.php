@@ -120,6 +120,10 @@ if (!isset($_SESSION["mikhmon"])) {
     $schmenu = "menu-open";
   } elseif ($report == "selling" || $report == "resume-report") {
     $sselling = "active";
+    $reportmenu = "menu-open";
+    if ($reportservice == "pppoe") { $sreportpppoe = "active"; }
+    elseif ($reportservice == "hotspot") { $sreporthotspot = "active"; }
+    else { $sreportall = "active"; }
     $mpage = $_report;
   } elseif ($userprofile == "add") {
     $suserprof = "active";
@@ -353,7 +357,12 @@ include('./info.php');
   <!--traffic monitor-->
   <a href="./?interface=traffic-monitor&session=<?= $session; ?>" class="menu <?= $strafficmonitor; ?>"><i class=" fa fa-area-chart"></i> <?= $_traffic_monitor ?></a>
   <!--report-->
-  <a href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&session=<?= $session; ?>" class="menu <?= $sselling; ?>"><i class="nav-icon fa fa-money"></i> <?= $_report ?></a>
+  <div class="dropdown-btn <?= $sselling; ?>"><i class="nav-icon fa fa-money"></i> <?= $_report ?> <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-container <?= $reportmenu; ?>">
+    <a href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&session=<?= $session; ?>" class="<?= $sreportall; ?>"><i class="fa fa-list"></i> Semua</a>
+    <a href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&service=hotspot&session=<?= $session; ?>" class="<?= $sreporthotspot; ?>"><i class="fa fa-wifi"></i> Hotspot</a>
+    <a href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&service=pppoe&session=<?= $session; ?>" class="<?= $sreportpppoe; ?>"><i class="fa fa-exchange"></i> PPPoE</a>
+  </div>
   <!--settings-->
   <div class="dropdown-btn <?= $ssett; ?>"><i class=" fa fa-gear"></i> <?= $_settings ?> 
     <i class="fa fa-caret-down"></i> &nbsp;

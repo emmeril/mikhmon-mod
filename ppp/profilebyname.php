@@ -10,7 +10,7 @@ if (!is_array($pools)) {
 }
 if (isset($_POST['save'])) {
   $profileComment=pppProfileMetaEncode($_POST['price'],$_POST['selling-price'],$_POST['comment'],$_POST['expmode'],$_POST['validity']);
-  $API->comm("/ppp/profile/set",array(".id"=>$profile['.id'],"name"=>trim($_POST['name']),"local-address"=>$_POST['local-address'],"remote-address"=>$_POST['remote-address'],"rate-limit"=>$_POST['rate-limit'],"dns-server"=>$_POST['dns-server'],"comment"=>$profileComment,"on-up"=>pppProfileOnUpScript($_POST['expmode'],$_POST['validity'])));
+  $API->comm("/ppp/profile/set",array(".id"=>$profile['.id'],"name"=>trim($_POST['name']),"local-address"=>$_POST['local-address'],"remote-address"=>$_POST['remote-address'],"rate-limit"=>$_POST['rate-limit'],"dns-server"=>$_POST['dns-server'],"comment"=>$profileComment,"on-up"=>pppProfileOnUpScript($_POST['expmode'],$_POST['validity'],trim($_POST['name']),$_POST['price'],$_POST['selling-price'])));
   echo "<script>window.location='./?ppp=profiles&session=" . $session . "'</script>"; exit;
 }
 function pv($key,$row){return htmlspecialchars(isset($row[$key])?$row[$key]:'',ENT_QUOTES);}

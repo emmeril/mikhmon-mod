@@ -52,6 +52,7 @@ if (!isset($_SESSION["mikhmon"])) {
 	$_SESSION['idbl'] = $idbl;
 	$remdata = ($_POST['remdata']);
 	$prefix = $_GET['prefix'];
+	$service = $_GET['service'];
 	$fcomment = $_GET['comment'];
 	$range = $_GET['range'];
 	if(!empty($range)){$trange = "[".$range."]";}
@@ -144,6 +145,15 @@ if (!isset($_SESSION["mikhmon"])) {
 		$filedownload = $idbl;
 		$shf = "hidden";
 		$shd = "inline-block";
+	}
+
+	if (in_array($service, array('hotspot', 'pppoe')) && is_array($getData)) {
+		$getData = array_values(array_filter($getData, function ($row) use ($service) {
+			$parts = explode('-|-', isset($row['name']) ? $row['name'] : '');
+			$type = (isset($parts[9]) && strtolower($parts[9]) == 'pppoe') || (isset($parts[5]) && strtolower($parts[5]) == 'pppoe') ? 'pppoe' : 'hotspot';
+			return $type == $service;
+		}));
+		$TotalReg = count($getData);
 	}
 	
 }

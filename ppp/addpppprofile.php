@@ -12,7 +12,7 @@ if (isset($_POST['save'])) {
     "name" => trim($_POST['name']), "local-address" => $_POST['local-address'],
     "remote-address" => $_POST['remote-address'], "rate-limit" => $_POST['rate-limit'],
     "dns-server" => $_POST['dns-server'], "comment" => $profileComment,
-    "on-up" => pppProfileOnUpScript($_POST['expmode'], $_POST['validity'])
+    "on-up" => pppProfileOnUpScript($_POST['expmode'], $_POST['validity'], trim($_POST['name']), $_POST['price'], $_POST['selling-price'])
   ));
   echo "<script>window.location='./?ppp=profiles&session=" . $session . "'</script>"; exit;
 }

@@ -35,6 +35,8 @@ if (!isset($_SESSION["mikhmon"])) {
 	$_SESSION['idbl'] = $idbl;
 	$remdata = ($_POST['remdata']);
 	$prefix = $_GET['prefix'];
+	$service = $_GET['service'];
+	$serviceQuery = in_array($service, array('hotspot', 'pppoe')) ? '&service=' . $service : '';
 	
 
 	$gettimezone = $API->comm("/system/clock/print");
@@ -82,6 +84,7 @@ if (!isset($_SESSION["mikhmon"])) {
 		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
 			$getData = $API->comm("/system/script/print", array(
 				"?source" => "$idhr",
+				"?comment" => "mikhmon",
 			));
 			$TotalReg = count($getData);
 		}
@@ -92,6 +95,7 @@ if (!isset($_SESSION["mikhmon"])) {
 		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
 			$getData = $API->comm("/system/script/print", array(
 				"?owner" => "$idbl",
+				"?comment" => "mikhmon",
 			));
 			$TotalReg = count($getData);
 		}
@@ -118,6 +122,16 @@ if (!isset($_SESSION["mikhmon"])) {
 		$filedownload = $idbl;
 		$shf = "hidden";
 		$shd = "inline-block";
+	}
+
+	if (in_array($service, array('hotspot', 'pppoe')) && is_array($getData)) {
+		$getData = array_values(array_filter($getData, function ($row) use ($service) {
+			$parts = explode('-|-', isset($row['name']) ? $row['name'] : '');
+			$type = (isset($parts[9]) && strtolower($parts[9]) == 'pppoe') || (isset($parts[5]) && strtolower($parts[5]) == 'pppoe') ? 'pppoe' : 'hotspot';
+			return $type == $service;
+		}));
+		$TotalReg = count($getData);
+		$filedownload .= '-' . $service;
 	}
 	
 }
@@ -235,9 +249,9 @@ $(document).ready(function(){
 		  <input id="filterTable" type="text" class="form-control" style="float:left; margin-top: 6px; max-width: 150px;" placeholder="<?= $_search ?>">&nbsp;
 		  <button name="help" class="btn bg-primary" onclick="location.href='#help';" title="Help"><i class="fa fa-question"></i> <?= $_help ?></button>
 		  <button class="btn bg-primary" onclick="exportTableToCSV('report-mikhmon-<?= $filedownload . $fprefix; ?>.csv')" title="Download selling report"><i class="fa fa-download"></i> CSV</button>
-			<button class="btn bg-primary" onclick="location.href='./?report=selling&session=<?= $session; ?>';" title="Reload all data"><i class="fa fa-search"></i> <?= $_all ?></button>
+			<button class="btn bg-primary" onclick="location.href='./?report=selling&service=<?= htmlspecialchars($service, ENT_QUOTES) ?>&session=<?= $session; ?>';" title="Reload all data"><i class="fa fa-search"></i> <?= $_all ?></button>
 			<?php if(!empty($idbl)){echo '<button name="resume" id="openResume" class="btn bg-primary"title="Resume Report"><i class="fa fa-area-chart"></i> '.$_resume.'</button>';}else{
-				echo '<a class="btn bg-primary" href="./?report=selling&idbl='.$idbl2.'&session='.$session.'" title="Show '.ucfirst(substr($idbl2,0,3).' '.substr($idbl2,3,5)).'"><i class="fa fa-search"></i> '.ucfirst(substr($idbl2,0,3).' '.substr($idbl2,3,5)).'</a>';}?>
+				echo '<a class="btn bg-primary" href="./?report=selling&idbl='.$idbl2.$serviceQuery.'&session='.$session.'" title="Show '.ucfirst(substr($idbl2,0,3).' '.substr($idbl2,3,5)).'"><i class="fa fa-search"></i> '.ucfirst(substr($idbl2,0,3).' '.substr($idbl2,3,5)).'</a>';}?>
 		  <button name="print" class="btn bg-primary" onclick="window.open('./report/print.php?<?= explode("?report=selling&",$url)[1] ?>','_blank');" title="Print"><i class="fa fa-print"></i> <?= $_print ?></button>
 		  <button style="display: <?= $shd; ?>;" name="remdata" class="btn bg-danger" onclick="location.href='#remdata';" title="Delete Data <?= $filedownload; ?>"><i class="fa fa-trash"></i> <?= $_delete_data.' '. $filedownload; ?></button>
 		  <button  id="remSelected" style="display: none;" class="btn bg-red" onclick="MikhmonRemoveReportSelected()"><i class="fa fa-trash"></i> <span id="selected"></span> <?= $_selected ?></button>
@@ -322,9 +336,9 @@ $(document).ready(function(){
 					var X = document.getElementById('filterTable').value;
 
 					if(D !== ""){
-						window.location='./?report=selling&idhr='+M+'/'+D+'/'+Y+'&prefix='+X+'&session=<?= $session; ?>';
+						window.location='./?report=selling&idhr='+M+'/'+D+'/'+Y+'&prefix='+X+'<?= $serviceQuery ?>'+'&session=<?= $session; ?>';
 					}else if(D === ""){
-						window.location='./?report=selling&idbl='+M+Y+'&prefix='+X+'&session=<?= $session; ?>';
+						window.location='./?report=selling&idbl='+M+Y+'&prefix='+X+'<?= $serviceQuery ?>'+'&session=<?= $session; ?>';
 					}
 					
 				}
@@ -334,7 +348,7 @@ $(document).ready(function(){
 			<table id="dataTable" class="table table-bordered table-hover text-nowrap">
 				<thead class="thead-light">
 				<tr>
-				  <th colspan=5 ><?= $_selling_report ?> <?= $filedownload . $fprefix; ?><b style="font-size:0;">,,,,</b></th>
+				  <th colspan=6 ><?= $_selling_report ?> <?= $filedownload . $fprefix; ?><b style="font-size:0;">,,,,,</b></th>
 				  <th style="text-align:right;"><?= $_total ?></th>
 				  <th style="text-align:right;" id="total"></th>
 				</tr>
@@ -344,6 +358,7 @@ $(document).ready(function(){
 					<th ><?= $_time ?></th>
 					<th ><?= $_user_name ?></th>
 					<th ><?= $_profile ?></th>
+					<th >Type</th>
 					<th ><?= $_comment ?></th>
 					<th style="text-align:right;"> <?= $_price ?></th>
 				</tr>
@@ -370,6 +385,9 @@ $(document).ready(function(){
 						echo "<td>";
 						$profile = $getname[7];
 						echo $profile;
+						echo "</td>";
+						echo "<td>";
+						echo ((isset($getname[9]) && strtolower($getname[9]) == 'pppoe') || (isset($getname[5]) && strtolower($getname[5]) == 'pppoe')) ? 'PPPoE' : 'Hotspot';
 						echo "</td>";
 						echo "<td>";
 						$comment = $getname[8];
@@ -401,6 +419,9 @@ $(document).ready(function(){
 					echo "<td>";
 					$profile = $getname[7];
 					echo $profile;
+					echo "</td>";
+					echo "<td>";
+					echo ((isset($getname[9]) && strtolower($getname[9]) == 'pppoe') || (isset($getname[5]) && strtolower($getname[5]) == 'pppoe')) ? 'PPPoE' : 'Hotspot';
 					echo "</td>";
 					echo "<td>";
 					$comment = $getname[8];

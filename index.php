@@ -113,6 +113,7 @@ if (!isset($_SESSION["mikhmon"])) {
   $comm = $_GET['comment'];
   $serveractive = $_GET['server'];
   $report = $_GET['report'];
+  $reportservice = $_GET['service'];
   $removereport = $_GET['remove-report'];
   $minterface = $_GET['interface'];
 

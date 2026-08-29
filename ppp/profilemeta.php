@@ -37,17 +37,29 @@ function pppProfileMetaEncode($price, $sellingPrice, $comment, $expmode = 'none'
   return '[MIKHMON-PPPOE price=' . $price . ' selling=' . $sellingPrice . ' expmode=' . $expmode . ' validity=' . $validity . ']' . ($comment !== '' ? ' ' . $comment : '');
 }
 
-function pppProfileOnUpScript($expmode, $validity) {
-  if ($expmode === 'none' || $validity === '') {
-    return '';
+function pppRouterOsString($value) {
+  $value = str_replace(array("\r", "\n"), ' ', (string) $value);
+  return str_replace(array('\\', '"', '$'), array('\\\\', '\\"', '\\$'), $value);
+}
+
+function pppProfileOnUpScript($expmode, $validity, $profileName = '', $price = '', $sellingPrice = '') {
+  $profileName = pppRouterOsString($profileName);
+  $reportPrice = is_numeric($sellingPrice) && (float) $sellingPrice > 0 ? $sellingPrice : $price;
+  $reportPrice = is_numeric($reportPrice) && (float) $reportPrice > 0 ? (string) $reportPrice : '';
+  $script = ':local u $user; :local addr $"remote-address"; :local marker ("mikhmon-pppoe-sale-" . $u); ';
+
+  if ($reportPrice !== '') {
+    $script .= ':if ([:len [/system script find where name=$marker]] = 0) do={ :local date [/system clock get date]; :local time [/system clock get time]; :local month [:pick $date 0 3]; :local year [:pick $date 7 11]; :local record ("$date-|-$time-|-$u-|-'. $reportPrice .'-|-$addr-|-PPPoE-|-'. $validity .'-|-'. $profileName .'-|-PPPoE-|-pppoe"); /system script add name=$record owner=("$month$year") source=$date comment="mikhmon"; /system script add name=$marker comment="mikhmon-pppoe-marker"; }; ';
   }
 
-  $action = $expmode === 'remove'
-    ? '/ppp secret remove [find where name=$u]'
-    : '/ppp secret set [find where name=$u] disabled=yes';
+  if ($expmode === 'none' || $validity === '') {
+    return $script;
+  }
+
+  $action = $expmode === 'remove' ? '/ppp secret remove [find where name=$u]' : '/ppp secret set [find where name=$u] disabled=yes';
   $quote = chr(92) . '"';
 
-  return ':local u $user; :local n ("mikhmon-pppoe-" . $u); :if ([:len [/system scheduler find where name=$n]] = 0) do={ /system scheduler add name=$n interval=' . $validity . ' on-event=":local u ' . $quote . '$u' . $quote . '; :local n (' . $quote . 'mikhmon-pppoe-' . $quote . ' . $u); /ppp active remove [find where name=$u]; ' . $action . '; /system scheduler remove [find where name=$n];"; };';
+  return $script . ':local n ("mikhmon-pppoe-" . $u); :if ([:len [/system scheduler find where name=$n]] = 0) do={ /system scheduler add name=$n interval=' . $validity . ' on-event=":local u ' . $quote . '$u' . $quote . '; :local n (' . $quote . 'mikhmon-pppoe-' . $quote . ' . $u); :local marker (' . $quote . 'mikhmon-pppoe-sale-' . $quote . ' . $u); /ppp active remove [find where name=$u]; ' . $action . '; /system script remove [find where name=$marker]; /system scheduler remove [find where name=$n];"; };';
 }
 
 function pppProfilePriceFormat($value, $currency, $indoCurrencies) {

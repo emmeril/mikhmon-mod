@@ -399,8 +399,8 @@ if (!isset($_SESSION["mikhmon"])) {
                           <?php 
                           if ($_SESSION[$session.'sdate'] == $_SESSION[$session.'idhr']){
                             echo $_income." <br/>" . "
-                          ".$_today." " . $_SESSION[$session.'totalHr'] . "vcr : " . $currency . " " . $_SESSION[$session.'dincome']. "<br/>
-                          ".$_this_month." " . $_SESSION[$session.'totalBl'] . "vcr : " . $currency . " " . $_SESSION[$session.'mincome']; 
+                          ".$_today." " . $_SESSION[$session.'totalHr'] . " trx : " . $currency . " " . $_SESSION[$session.'dincome']. "<br/>
+                          ".$_this_month." " . $_SESSION[$session.'totalBl'] . " trx : " . $currency . " " . $_SESSION[$session.'mincome'];
                           }else{
                             echo "<div id='loader' ><i><span> <i class='fa fa-circle-o-notch fa-spin'></i> ". $_processing." </i></div>";
                           }

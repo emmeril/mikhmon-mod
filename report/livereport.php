@@ -71,6 +71,7 @@ include('../lang/'.$langid.'.php');
     $_SESSION[$session.'totalHr'] = $TotalRHr;*/
     $getSRBl = $API->comm("/system/script/print", array(
       "?owner" => "$idbl",
+      "?comment" => "mikhmon",
     ));
     $TotalRBl = count($getSRBl);
     $_SESSION[$session.'totalBl'] = $TotalRBl;
@@ -121,8 +122,8 @@ include('../lang/'.$langid.'.php');
                             $_SESSION[$session.'mincome'] = $mincome;
                           }
                             echo $_income."<br/>" . "
-                          ".$_today." " . $TotalRHr . "vcr : " . $currency . " " . $dincome . "<br/>
-                          ".$_this_month." " . $TotalRBl . "vcr : " . $currency . " " . $mincome;
+                          ".$_today." " . $TotalRHr . " trx : " . $currency . " " . $dincome . "<br/>
+                          ".$_this_month." " . $TotalRBl . " trx : " . $currency . " " . $mincome;
                           ?>
                         </div>
                     </span>
@@ -130,4 +131,3 @@ include('../lang/'.$langid.'.php');
               </div>
             </div>
             </div>
-            
