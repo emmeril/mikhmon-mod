@@ -369,7 +369,7 @@ function number_format(number, decimals, dec_point, thousands_sep) {
 						echo $comment;
 						echo "</td>";
 						echo "<td style='text-align:right;'>";
-						$price = $getname[3];
+						$price = mikhmonReportSellingPrice($getData[$i], $profileSellingPrices);
 						echo $price;
 						echo "</td>";
 						echo "</tr>";
@@ -402,7 +402,7 @@ function number_format(number, decimals, dec_point, thousands_sep) {
 						echo $comment;
 						echo "</td>";
 						echo "<td style='text-align:right;'>";
-						$price = $getname[3];
+						$price = mikhmonReportSellingPrice($getData[$i], $profileSellingPrices);
 						echo $price;
 						echo "</td>";
 						echo "</tr>";
@@ -441,7 +441,7 @@ function number_format(number, decimals, dec_point, thousands_sep) {
 						echo $comment;
 						echo "</td>";
 						echo "<td style='text-align:right;'>";
-						$price = $getname[3];
+						$price = mikhmonReportSellingPrice($getData[$i], $profileSellingPrices);
 						echo $price;
 						echo "</td>";
 						echo "</tr>";
@@ -473,13 +473,13 @@ function number_format(number, decimals, dec_point, thousands_sep) {
 					echo $comment;
 					echo "</td>";
 					echo "<td style='text-align:right;'>";
-					$price = $getname[3];
+					$price = mikhmonReportSellingPrice($getData[$i], $profileSellingPrices);
 					echo $price;
 					echo "</td>";
 					echo "</tr>";
 				
-				$dataresume .= $getname[0].$getname[3];
-				$totalresume += $getname[3];
+				$dataresume .= $getname[0].mikhmonReportSellingPrice($getData[$i], $profileSellingPrices);
+				$totalresume += mikhmonReportSellingPrice($getData[$i], $profileSellingPrices);
 				$_SESSION['dataresume'] = $dataresume;
 				$_SESSION['totalresume'] = $TotalReg.'/'.$totalresume;
 				}
