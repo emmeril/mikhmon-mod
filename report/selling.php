@@ -134,6 +134,19 @@ if (!isset($_SESSION["mikhmon"])) {
 		$filedownload .= '-' . $service;
 	}
 	$TotalReg = count($getData);
+	$totalIncome = 0;
+	foreach ($getData as $reportRow) {
+		$reportParts = explode('-|-', $reportRow['name']);
+		if ($prefix != "" && substr($reportParts[2], 0, strlen($prefix)) != $prefix) {
+			continue;
+		}
+		$totalIncome += (float) $reportParts[3];
+	}
+	if (in_array($currency, $cekindo['indo'])) {
+		$formattedTotal = $currency . ' ' . number_format($totalIncome, 0, ',', '.');
+	} else {
+		$formattedTotal = $currency . ' ' . number_format($totalIncome, 2, '.', ',');
+	}
 	
 }
 ?>
@@ -170,56 +183,11 @@ if (!isset($_SESSION["mikhmon"])) {
         // Download CSV file
         downloadCSV(csv.join("\n"), filename);
         }
-
-// https://stackoverflow.com/questions/33218607/use-inline-css-to-apply-usd-currency-format-within-html-table
-function number_format(number, decimals, dec_point, thousands_sep) {
-
-  number = (number + '')
-    .replace(/[^0-9+\-Ee.]/g, '');
-  var n = !isFinite(+number) ? 0 : +number,
-    prec = !isFinite(+decimals) ? 0 : Math.abs(decimals),
-    sep = (typeof thousands_sep === 'undefined') ? ',' : thousands_sep,
-    dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
-    s = '',
-    toFixedFix = function(n, prec) {
-      var k = Math.pow(10, prec);
-      return '' + (Math.round(n * k) / k)
-        .toFixed(prec);
-    };
-  // Fix for IE parseFloat(0.55).toFixed(0) = 0;
-  s = (prec ? toFixedFix(n, prec) : '' + Math.round(n))
-    .split('.');
-  if (s[0].length > 3) {
-    s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
-  }
-  if ((s[1] || '')
-    .length < prec) {
-    s[1] = s[1] || '';
-    s[1] += new Array(prec - s[1].length + 1)
-      .join('0');
-  }
-  return s.join(dec);
-}
-        
 		window.onload=function() {
-          var sum = 0;
-          var cells = document.querySelectorAll("#dataTable tbody tr td:last-child");
-          for (var i = 0; i < cells.length; i++) {
-            var price = parseFloat(cells[i].textContent.trim());
-            if (!isNaN(price)) {
-              sum += price;
-            }
-          }
-          
-          var th = document.getElementById('total');
-    <?php if ($currency == in_array($currency, $cekindo['indo'])) {
-      echo 'th.innerHTML = "'.$currency.' " + number_format(th.innerHTML + (sum),"","",".") ;';
-		} else {
-			echo 'th.innerHTML = "'.$currency.' " + number_format(th.innerHTML + (sum),2,".",",") ;';
-		} ?>
-		
-		var tables = document.getElementsByTagName('tbody');
-    var table = tables[tables.length -1];
+		var table = document.querySelector('#dataTable tbody');
+		if (!table) {
+			return;
+		}
     var rows = table.rows;
     for(var i = 0, td; i < rows.length; i++){
         td = document.createElement('td');
@@ -352,7 +320,7 @@ $(document).ready(function(){
 				<tr>
 				  <th colspan=6 ><?= $_selling_report ?> <?= $filedownload . $fprefix; ?><b style="font-size:0;">,,,,,</b></th>
 				  <th style="text-align:right;"><?= $_total ?></th>
-				  <th style="text-align:right;" id="total"></th>
+				  <th style="text-align:right;" id="total"><?= htmlspecialchars($formattedTotal, ENT_QUOTES) ?></th>
 				</tr>
 				<tr>
 				  <th >&#8470;</th>
