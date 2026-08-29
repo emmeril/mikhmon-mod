@@ -176,8 +176,8 @@ $customers = mikhmonGetCustomers($session);
     </div>
     <p><small>Tombol Hapus dapat digunakan untuk menghapus data pelanggan saja atau sekaligus user Hotspot/PPPoE di MikroTik.</small></p>
     <div class="overflow box-bordered" style="max-height:65vh"><table id="dataTable" class="table table-bordered table-hover text-nowrap">
-      <thead><tr><th>No</th><th>Nama Pelanggan</th><th>Nomor HP</th><th>Alamat</th><th>Layanan</th><th>Username</th><th>Profile</th><th>Status</th><th>Aksi</th></tr></thead><tbody>
-      <?php if ($routerStatusText !== ''): ?><tr class="customer-info-row"><td colspan="9" class="text-center text-warning"><?= htmlspecialchars($routerStatusText, ENT_QUOTES); ?>; status user tidak dapat diperbarui.</td></tr><?php endif; ?>
+      <thead><tr><th>No</th><th>Nama Pelanggan</th><th>Nomor HP</th><th>Alamat</th><th>Layanan</th><th>Username</th><th>Profile</th><th>Status</th><th>Tanggal Jatuh Tempo</th><th>Aksi</th></tr></thead><tbody>
+      <?php if ($routerStatusText !== ''): ?><tr class="customer-info-row"><td colspan="10" class="text-center text-warning"><?= htmlspecialchars($routerStatusText, ENT_QUOTES); ?>; status user tidak dapat diperbarui.</td></tr><?php endif; ?>
       <?php foreach ($customers as $customerIndex => $customerRow): ?>
         <?php
           $customerService = isset($customerRow['service']) && $customerRow['service'] === 'pppoe' ? 'pppoe' : 'hotspot';
@@ -187,24 +187,24 @@ $customers = mikhmonGetCustomers($session);
           $isDisabled = !$userMissing && isset($linkedUser['disabled']) && ($linkedUser['disabled'] === 'true' || $linkedUser['disabled'] === 'yes');
           $hotspotExpired = $customerService === 'hotspot' && !$userMissing && isset($linkedUser['limit-uptime']) && $linkedUser['limit-uptime'] === '1s';
           $userExpired = $isDisabled || $hotspotExpired;
-          $validityText = '';
-          if (!$userMissing && !$userExpired && $customerService === 'hotspot' && !empty($linkedUser['comment']) && substr($linkedUser['comment'], 0, 3) !== 'vc-' && substr($linkedUser['comment'], 0, 3) !== 'up-') {
-            $validityText = $linkedUser['comment'];
-          } elseif (!$userMissing && !$userExpired && $customerService === 'pppoe') {
+          $dueDateText = '';
+          if (!$userMissing && $customerService === 'hotspot' && !empty($linkedUser['comment']) && substr($linkedUser['comment'], 0, 3) !== 'vc-' && substr($linkedUser['comment'], 0, 3) !== 'up-') {
+            $dueDateText = $linkedUser['comment'];
+          } elseif (!$userMissing && $customerService === 'pppoe') {
             $schedulerName = 'mikhmon-pppoe-' . $customerUsername;
             if (isset($customerSchedulers[$schedulerName]['next-run'])) {
-              $validityText = $customerSchedulers[$schedulerName]['next-run'];
+              $dueDateText = $customerSchedulers[$schedulerName]['next-run'];
             }
           }
           $statusText = $userMissing ? 'Tidak ditemukan' : ($userExpired ? 'Expired' : 'Aktif');
           $statusClass = $userMissing || $userExpired ? 'text-danger' : 'text-success';
           $statusFilter = $userMissing ? 'missing' : ($userExpired ? 'expired' : 'active');
         ?>
-        <tr class="customer-row" data-service="<?= htmlspecialchars($customerService, ENT_QUOTES); ?>" data-status="<?= $statusFilter; ?>"><td><?= $customerIndex + 1; ?></td><td><?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['phone']) ? $customerRow['phone'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['address']) ? $customerRow['address'] : '', ENT_QUOTES); ?></td><td><?= strtoupper(htmlspecialchars($customerService, ENT_QUOTES)); ?></td><td><?= htmlspecialchars($customerUsername, ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['profile']) ? $customerRow['profile'] : '', ENT_QUOTES); ?></td><td class="<?= $statusClass; ?>"><strong><?= $statusText; ?></strong><?php if ($validityText !== ''): ?><br><small>Validity: <?= htmlspecialchars($validityText, ENT_QUOTES); ?></small><?php endif; ?></td>
+        <tr class="customer-row" data-service="<?= htmlspecialchars($customerService, ENT_QUOTES); ?>" data-status="<?= $statusFilter; ?>"><td><?= $customerIndex + 1; ?></td><td><?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['phone']) ? $customerRow['phone'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['address']) ? $customerRow['address'] : '', ENT_QUOTES); ?></td><td><?= strtoupper(htmlspecialchars($customerService, ENT_QUOTES)); ?></td><td><?= htmlspecialchars($customerUsername, ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['profile']) ? $customerRow['profile'] : '', ENT_QUOTES); ?></td><td class="<?= $statusClass; ?>"><strong><?= $statusText; ?></strong></td><td><?= $dueDateText !== '' ? htmlspecialchars($dueDateText, ENT_QUOTES) : '-'; ?></td>
         <td><?php if ($userExpired): ?><form method="post" style="display:inline"><input type="hidden" name="customer_action" value="enable"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>"><button class="btn bg-success" type="submit"><i class="fa fa-unlock"></i> Aktifkan</button></form><?php endif; ?> <a class="btn bg-primary" href="./?customer=edit&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-edit"></i> Edit</a> <button type="button" class="btn bg-danger customer-delete-button" data-customer-id="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>" data-customer-name="<?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?>" data-customer-username="<?= htmlspecialchars($customerUsername, ENT_QUOTES); ?>"><i class="fa fa-trash"></i> Hapus</button></td>
       </tr><?php endforeach; ?>
-      <?php if (!$customers): ?><tr class="customer-info-row"><td colspan="9" class="text-center">Belum ada data pelanggan.</td></tr><?php endif; ?>
-      <tr id="customerNoResults" style="display:none"><td colspan="9" class="text-center">Data pelanggan tidak ditemukan.</td></tr>
+      <?php if (!$customers): ?><tr class="customer-info-row"><td colspan="10" class="text-center">Belum ada data pelanggan.</td></tr><?php endif; ?>
+      <tr id="customerNoResults" style="display:none"><td colspan="10" class="text-center">Data pelanggan tidak ditemukan.</td></tr>
       </tbody></table></div>
   </div>
 </div></div></div>
