@@ -202,12 +202,13 @@ function number_format(number, decimals, dec_point, thousands_sep) {
         
 		window.onload=function() {
           var sum = 0;
-          var dataTable = document.getElementById("selling");
-          
-          // use querySelector to find all second table cells
-          var cells = document.querySelectorAll("td + td + td + td + td + td");
-          for (var i = 0; i < cells.length; i++)
-          sum+=parseFloat(cells[i].firstChild.data);
+          var cells = document.querySelectorAll("#dataTable tbody tr td:last-child");
+          for (var i = 0; i < cells.length; i++) {
+            var price = parseFloat(cells[i].textContent.trim());
+            if (!isNaN(price)) {
+              sum += price;
+            }
+          }
           
           var th = document.getElementById('total');
     <?php if ($currency == in_array($currency, $cekindo['indo'])) {
