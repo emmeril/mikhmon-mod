@@ -181,12 +181,17 @@ class RouterosAPI
                         $CURRENT =& $PARSED[$x][];
                     }
                 } elseif ($x != '!done') {
-                    $MATCHES = array();
-                    if (preg_match_all('/[^=]+/i', $x, $MATCHES)) {
-                        if ($MATCHES[0][0] == 'ret') {
-                            $singlevalue = $MATCHES[0][1];
+                    if (substr($x, 0, 1) == '=') {
+                        $x = substr($x, 1);
+                    }
+                    $separator = strpos($x, '=');
+                    $key = $separator === false ? $x : substr($x, 0, $separator);
+                    $value = $separator === false ? '' : substr($x, $separator + 1);
+                    if ($key != '') {
+                        if ($key == 'ret') {
+                            $singlevalue = $value;
                         }
-                        $CURRENT[$MATCHES[0][0]] = (isset($MATCHES[0][1]) ? $MATCHES[0][1] : '');
+                        $CURRENT[$key] = $value;
                     }
                 }
             }
@@ -223,12 +228,17 @@ class RouterosAPI
                         $CURRENT =& $PARSED[$x][];
                     }
                 } elseif ($x != '!done') {
-                    $MATCHES = array();
-                    if (preg_match_all('/[^=]+/i', $x, $MATCHES)) {
-                        if ($MATCHES[0][0] == 'ret') {
-                            $singlevalue = $MATCHES[0][1];
+                    if (substr($x, 0, 1) == '=') {
+                        $x = substr($x, 1);
+                    }
+                    $separator = strpos($x, '=');
+                    $key = $separator === false ? $x : substr($x, 0, $separator);
+                    $value = $separator === false ? '' : substr($x, $separator + 1);
+                    if ($key != '') {
+                        if ($key == 'ret') {
+                            $singlevalue = $value;
                         }
-                        $CURRENT[$MATCHES[0][0]] = (isset($MATCHES[0][1]) ? $MATCHES[0][1] : '');
+                        $CURRENT[$key] = $value;
                     }
                 }
             }
