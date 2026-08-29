@@ -67,6 +67,12 @@ if (!isset($_SESSION["mikhmon"])) {
     $hunit = "items";
   }
 
+// get & counting PPPoE users and active sessions
+  $countpppusers = $API->comm("/ppp/secret/print", array("count-only" => ""));
+  $countpppactive = $API->comm("/ppp/active/print", array("count-only" => ""));
+  $pppuserunit = ($countpppusers == 1) ? "item" : "items";
+  $pppactiveunit = ($countpppactive == 1) ? "item" : "items";
+
   if ($livereport == "disable") {
     $logh = "457px";
     $lreport = "style='display:none;'";
@@ -226,6 +232,39 @@ if (!isset($_SESSION["mikhmon"])) {
               </div>
             </div>
           </div>
+          </div>
+          <div id="r_ppp" class="row">
+            <div class="card">
+              <div class="card-header"><h3><i class="fa fa-exchange"></i> PPPoE</h3></div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-4 col-box-6">
+                    <div class="box bg-blue bmh-75">
+                      <a onclick="cancelPage()" href="./?ppp=active&session=<?= $session; ?>">
+                        <h1><?= $countpppactive; ?> <span style="font-size:15px;"><?= $pppactiveunit; ?></span></h1>
+                        <div><i class="fa fa-wifi"></i> <?= $_ppp_active ?></div>
+                      </a>
+                    </div>
+                  </div>
+                  <div class="col-4 col-box-6">
+                    <div class="box bg-green bmh-75">
+                      <a onclick="cancelPage()" href="./?ppp=secrets&session=<?= $session; ?>">
+                        <h1><?= $countpppusers; ?> <span style="font-size:15px;"><?= $pppuserunit; ?></span></h1>
+                        <div><i class="fa fa-users"></i> <?= $_ppp_secrets ?></div>
+                      </a>
+                    </div>
+                  </div>
+                  <div class="col-4 col-box-6">
+                    <div class="box bg-yellow bmh-75">
+                      <a onclick="cancelPage()" href="./?ppp=addsecret&session=<?= $session; ?>">
+                        <h1><i class="fa fa-user-plus"></i> <span style="font-size:15px;"><?= $_add; ?></span></h1>
+                        <div><i class="fa fa-user-plus"></i> <?= $_ppp_secrets ?></div>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
             <div class="card">
               <div class="card-header"><h3><i class="fa fa-area-chart"></i> <?= $_traffic ?> </h3></div>
