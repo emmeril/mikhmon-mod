@@ -11,7 +11,6 @@ $customerError = '';
 $hotspotProfiles = array();
 $hotspotServers = array();
 $pppoeProfiles = array();
-$ipPools = array();
 
 function customerApiError($response) {
   if (!is_array($response)) {
@@ -34,11 +33,9 @@ if (!empty($routerConnected)) {
   $hotspotProfiles = $API->comm('/ip/hotspot/user/profile/print');
   $hotspotServers = $API->comm('/ip/hotspot/print');
   $pppoeProfiles = $API->comm('/ppp/profile/print');
-  $ipPools = $API->comm('/ip/pool/print');
   $hotspotProfiles = is_array($hotspotProfiles) && customerApiError($hotspotProfiles) === '' ? $hotspotProfiles : array();
   $hotspotServers = is_array($hotspotServers) && customerApiError($hotspotServers) === '' ? $hotspotServers : array();
   $pppoeProfiles = is_array($pppoeProfiles) && customerApiError($pppoeProfiles) === '' ? $pppoeProfiles : array();
-  $ipPools = is_array($ipPools) && customerApiError($ipPools) === '' ? $ipPools : array();
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['customer_action']) && $_POST['customer_action'] === 'create') {
@@ -69,22 +66,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['customer_action']) &&
           'password' => $password,
           'service' => 'pppoe',
           'profile' => $profile,
-          'local-address' => isset($_POST['local_address']) ? trim($_POST['local_address']) : '',
-          'remote-address' => isset($_POST['remote_address']) ? trim($_POST['remote_address']) : '',
-          'caller-id' => isset($_POST['caller_id']) ? trim($_POST['caller_id']) : '',
           'comment' => $customerName,
           'disabled' => 'no',
         );
       } else {
-        $dataLimit = isset($_POST['data_limit']) && $_POST['data_limit'] !== '' ? (int) $_POST['data_limit'] : 0;
-        $dataUnit = isset($_POST['data_unit']) ? (int) $_POST['data_unit'] : 1048576;
         $args = array(
           'server' => isset($_POST['hotspot_server']) ? $_POST['hotspot_server'] : 'all',
           'name' => $username,
           'password' => $password,
           'profile' => $profile,
-          'limit-uptime' => isset($_POST['time_limit']) && $_POST['time_limit'] !== '' ? $_POST['time_limit'] : '0',
-          'limit-bytes-total' => $dataLimit > 0 ? $dataLimit * $dataUnit : '0',
           'comment' => ($username === $password ? 'vc-' : 'up-') . $customerName,
           'disabled' => 'no',
         );
@@ -130,14 +120,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['customer_action']) &&
         <tr><td>Password</td><td><input class="form-control" type="password" name="password" required></td></tr>
         <tr class="hotspot-field"><td>Server Hotspot</td><td><select class="form-control" name="hotspot_server"><option value="all"<?= customerSelected('hotspot_server', 'all', 'all'); ?>>all</option><?php foreach ((array) $hotspotServers as $serverRow): ?><?php if (!isset($serverRow['name'])) continue; ?><option value="<?= htmlspecialchars($serverRow['name'], ENT_QUOTES); ?>"<?= customerSelected('hotspot_server', $serverRow['name']); ?>><?= htmlspecialchars($serverRow['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select></td></tr>
         <tr class="hotspot-field"><td>Profile Hotspot</td><td><select class="form-control" name="hotspot_profile"><option value="">Pilih profile</option><?php foreach ((array) $hotspotProfiles as $profileRow): ?><?php if (!isset($profileRow['name'])) continue; ?><option value="<?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?>"<?= customerSelected('hotspot_profile', $profileRow['name']); ?>><?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select></td></tr>
-        <tr class="hotspot-field"><td>Time Limit</td><td><input class="form-control" name="time_limit" placeholder="Contoh: 1d atau 12h" value="<?= htmlspecialchars(isset($_POST['time_limit']) ? $_POST['time_limit'] : '', ENT_QUOTES); ?>"></td></tr>
-        <tr class="hotspot-field"><td>Data Limit</td><td><div class="input-group"><div class="input-group-10 col-box-9"><input class="group-item group-item-l" type="number" min="0" name="data_limit" value="<?= htmlspecialchars(isset($_POST['data_limit']) ? $_POST['data_limit'] : '', ENT_QUOTES); ?>"></div><div class="input-group-2 col-box-3"><select class="group-item group-item-r" name="data_unit"><option value="1048576"<?= customerSelected('data_unit', '1048576', '1048576'); ?>>MB</option><option value="1073741824"<?= customerSelected('data_unit', '1073741824'); ?>>GB</option></select></div></div></td></tr>
         <tr class="pppoe-field"><td>Profile PPPoE</td><td><select class="form-control" name="pppoe_profile"><option value="">Pilih profile</option><?php foreach ((array) $pppoeProfiles as $profileRow): ?><?php if (!isset($profileRow['name'])) continue; ?><option value="<?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?>"<?= customerSelected('pppoe_profile', $profileRow['name']); ?>><?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select></td></tr>
-        <tr class="pppoe-field"><td>Local Address</td><td><input class="form-control" name="local_address" list="customerIpPools" value="<?= htmlspecialchars(isset($_POST['local_address']) ? $_POST['local_address'] : '', ENT_QUOTES); ?>" placeholder="Pilih IP pool atau ketik IP address"></td></tr>
-        <tr class="pppoe-field"><td>Remote Address</td><td><input class="form-control" name="remote_address" list="customerIpPools" value="<?= htmlspecialchars(isset($_POST['remote_address']) ? $_POST['remote_address'] : '', ENT_QUOTES); ?>" placeholder="Pilih IP pool atau ketik IP address"></td></tr>
-        <tr class="pppoe-field"><td>Caller ID</td><td><input class="form-control" name="caller_id" value="<?= htmlspecialchars(isset($_POST['caller_id']) ? $_POST['caller_id'] : '', ENT_QUOTES); ?>"></td></tr>
       </table>
-      <datalist id="customerIpPools"><?php foreach ((array) $ipPools as $poolRow): ?><?php if (!isset($poolRow['name'])) continue; ?><option value="<?= htmlspecialchars($poolRow['name'], ENT_QUOTES); ?>"><?= htmlspecialchars(isset($poolRow['ranges']) ? $poolRow['ranges'] : '', ENT_QUOTES); ?></option><?php endforeach; ?></datalist>
       <a class="btn bg-warning" href="./?customer=list&session=<?= rawurlencode($session); ?>"><i class="fa fa-close"></i> Batal</a>
       <button class="btn bg-primary" type="submit" onclick="loader()"><i class="fa fa-save"></i> Simpan & Buat User</button>
     </form>
