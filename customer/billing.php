@@ -65,6 +65,11 @@ function billingPhone($phone) {
   return $phone;
 }
 
+function billingMessageAmount($amount, $currency) {
+  $indoCurrency = isset($GLOBALS['cekindo']['indo']) && in_array($currency, $GLOBALS['cekindo']['indo']);
+  return $currency . ' ' . number_format((float) $amount, $indoCurrency ? 0 : 2, $indoCurrency ? ',' : '.', $indoCurrency ? '.' : ',');
+}
+
 $customers = mikhmonGetCustomers($session);
 $invoices = mikhmonGetInvoices($session);
 $hotspotProfiles = array();
@@ -226,7 +231,24 @@ foreach ($invoices as $invoice) {
           $prices = billingProfilePrice($service, isset($customer['profile']) ? $customer['profile'] : '', $hotspotProfiles, $pppoeProfiles);
           $amount = isset($invoice['amount']) ? (float) $invoice['amount'] : (float) ($prices['selling_price'] !== '' ? $prices['selling_price'] : $prices['price']);
           $phone = billingPhone(isset($customer['phone']) ? $customer['phone'] : '');
-          $invoiceText = 'Invoice ' . (isset($invoice['number']) ? $invoice['number'] : 'baru') . "\n" . (isset($customer['name']) ? $customer['name'] : '') . "\nLayanan: " . strtoupper($service) . "\nUsername: " . $username . "\nJumlah: " . $amount . "\nJatuh tempo: " . ($dueDate !== '' ? $dueDate : '-');
+          $messageBrand = isset($brandname) && trim((string) $brandname) !== '' ? trim((string) $brandname) : 'MIKHMON';
+          $invoiceNumber = isset($invoice['number']) ? $invoice['number'] : 'baru';
+          $customerName = isset($customer['name']) ? trim((string) $customer['name']) : '';
+          $invoiceText = "Yth. Bapak/Ibu " . $customerName . ",\n\n"
+            . "Dengan hormat,\n"
+            . "Berikut kami sampaikan tagihan layanan internet dari " . $messageBrand . ".\n\n"
+            . "DETAIL TAGIHAN\n"
+            . "No. Invoice: " . $invoiceNumber . "\n"
+            . "Nama Pelanggan: " . $customerName . "\n"
+            . "Layanan: " . strtoupper($service) . "\n"
+            . "Username: " . $username . "\n"
+            . "Jumlah Tagihan: " . billingMessageAmount($amount, $currency) . "\n"
+            . "Tanggal Jatuh Tempo: " . ($dueDate !== '' ? $dueDate : '-') . "\n\n"
+            . "Mohon melakukan pembayaran sebelum tanggal jatuh tempo melalui metode pembayaran yang telah tersedia."
+            . " Apabila pembayaran telah dilakukan, silakan konfirmasi kepada admin untuk proses verifikasi dan aktivasi layanan.\n\n"
+            . "Terima kasih atas kepercayaan Anda menggunakan layanan kami.\n\n"
+            . "Hormat kami,\n"
+            . $messageBrand;
           $waUrl = $phone !== '' ? 'https://wa.me/' . $phone . '?text=' . rawurlencode($invoiceText) : '';
         ?>
         <tr class="billing-row" data-status="<?= $invoiceStatus === 'paid' ? 'paid' : 'unpaid'; ?>"><td><?= $index + 1; ?></td><td><?= htmlspecialchars(isset($customer['name']) ? $customer['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customer['phone']) ? $customer['phone'] : '', ENT_QUOTES); ?></td><td><?= strtoupper($service); ?></td><td><?= htmlspecialchars($username, ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customer['profile']) ? $customer['profile'] : '', ENT_QUOTES); ?></td><td class="<?= $expired || $missing ? 'text-danger' : 'text-success'; ?>"><strong><?= $userStatus; ?></strong></td><td><?= htmlspecialchars($dueDateDisplay, ENT_QUOTES); ?></td><td><?= isset($invoice['number']) ? htmlspecialchars($invoice['number'], ENT_QUOTES) : '-'; ?></td><td class="<?= $invoiceStatusClass; ?>"><strong><?= $invoiceStatusText; ?></strong></td><td><?= $amount > 0 ? htmlspecialchars($currency . ' ' . number_format($amount, 0, ',', '.'), ENT_QUOTES) : '-'; ?></td>
