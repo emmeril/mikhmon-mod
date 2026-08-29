@@ -94,6 +94,11 @@ if (!isset($_SESSION["mikhmon"])) {
     $slog = "active";
     $mpage = $_hotspot_log;
     $lmenu = "menu-open";
+  } elseif ($billing == "1") {
+    $mcustomers = "active";
+    $customermenu = "menu-open";
+    $sbilling = "active";
+    $mpage = "Billing";
   } elseif ($customer == "list" || $customer == "add" || $customer == "edit") {
     $mcustomers = "active";
     $customermenu = "menu-open";
@@ -338,6 +343,7 @@ include('./info.php');
   <div class="dropdown-container <?= $customermenu; ?>">
     <a href="./?customer=add&session=<?= $session; ?>" class="<?= $saddcustomer; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> Tambah Pelanggan</a>
     <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> Daftar Pelanggan</a>
+    <a href="./?billing=1&session=<?= $session; ?>" class="<?= $sbilling; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-money"></i> Billing</a>
   </div>
   <!--quick print-->
   <a href="./?hotspot=quick-print&session=<?= $session; ?>" class="menu <?= $squick; ?>"> <i class="fa fa-print"></i> <?= $_quick_print ?> </a>

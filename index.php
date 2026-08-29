@@ -121,6 +121,7 @@ if (!isset($_SESSION["mikhmon"])) {
   $minterface = $_GET['interface'];
   $customer = $_GET['customer'];
   $customerid = $_GET['customer-id'];
+  $billing = $_GET['billing'];
 
 
   $pagehotspot = array('users','hosts','ipbinding','cookies','log','dhcp-leases');
@@ -168,6 +169,9 @@ if (!isset($_SESSION["mikhmon"])) {
   }
 
 // customer database
+  elseif ($billing == "1") {
+    include_once('./customer/billing.php');
+  }
   elseif ($customer == "list" && $customerid == "") {
     include_once('./customer/customers.php');
   }
