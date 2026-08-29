@@ -19,16 +19,75 @@ function mikhmonDefaultSyncSettings() {
 function mikhmonReadDatabase() {
   $path = mikhmonBackupPath();
   if (!is_file($path)) {
-    return array('version' => 2, 'routers' => array());
+    return array('version' => 2, 'routers' => array(), 'customers' => array());
   }
   $data = json_decode((string) @file_get_contents($path), true);
   if (!is_array($data)) {
-    return array('version' => 2, 'routers' => array());
+    return array('version' => 2, 'routers' => array(), 'customers' => array());
   }
   if (!isset($data['routers']) || !is_array($data['routers'])) {
     $data['routers'] = array();
   }
+  if (!isset($data['customers']) || !is_array($data['customers'])) {
+    $data['customers'] = array();
+  }
   return $data;
+}
+
+function mikhmonGetCustomers($session) {
+  $database = mikhmonReadDatabase();
+  $customers = isset($database['customers'][$session]) && is_array($database['customers'][$session]) ? $database['customers'][$session] : array();
+  return array_values($customers);
+}
+
+function mikhmonSaveCustomer($session, $id, $name, $phone, $address, $service) {
+  $database = mikhmonReadDatabase();
+  if (!isset($database['customers'][$session]) || !is_array($database['customers'][$session])) {
+    $database['customers'][$session] = array();
+  }
+  $service = strtolower($service) === 'pppoe' ? 'pppoe' : 'hotspot';
+  $customer = array(
+    'id' => $id !== '' ? (string) $id : 'customer-' . uniqid(),
+    'name' => trim(strip_tags($name)),
+    'phone' => trim(strip_tags($phone)),
+    'address' => trim(strip_tags($address)),
+    'service' => $service,
+    'updated_at' => time(),
+  );
+  if ($customer['name'] === '') {
+    return false;
+  }
+  $found = false;
+  foreach ($database['customers'][$session] as $index => $existing) {
+    if (isset($existing['id']) && $existing['id'] === $customer['id']) {
+      $database['customers'][$session][$index] = $customer;
+      $found = true;
+      break;
+    }
+  }
+  if (!$found) {
+    $database['customers'][$session][] = $customer;
+  }
+  return mikhmonWriteDatabase($database) ? $customer['id'] : false;
+}
+
+function mikhmonDeleteCustomer($session, $id) {
+  $database = mikhmonReadDatabase();
+  if (!isset($database['customers'][$session]) || !is_array($database['customers'][$session])) {
+    return false;
+  }
+  $removed = false;
+  foreach ($database['customers'][$session] as $index => $customer) {
+    if (isset($customer['id']) && (string) $customer['id'] === (string) $id) {
+      unset($database['customers'][$session][$index]);
+      $removed = true;
+    }
+  }
+  if (!$removed) {
+    return false;
+  }
+  $database['customers'][$session] = array_values($database['customers'][$session]);
+  return mikhmonWriteDatabase($database);
 }
 
 function mikhmonWriteDatabase($data) {

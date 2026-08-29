@@ -94,6 +94,9 @@ if (!isset($_SESSION["mikhmon"])) {
     $slog = "active";
     $mpage = $_hotspot_log;
     $lmenu = "menu-open";
+  } elseif ($customer == "list") {
+    $scustomers = "active";
+    $mpage = "Pelanggan";
   } elseif ($report == "userlog") {
     $log = "active";
     $sulog = "active";
@@ -329,6 +332,7 @@ include('./info.php');
     <a href="./?ppp=profiles&session=<?= $session; ?>" class="<?= $spprofile; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-pie-chart"></i> <?= $_ppp_profiles ?></a>
     <a href="./?ppp=active&session=<?= $session; ?>" class="<?= $spactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi"></i> <?= $_ppp_active ?></a>
   </div>
+  <a href="./?customer=list&session=<?= $session; ?>" class="menu <?= $scustomers; ?>"><i class="fa fa-address-card"></i> Pelanggan</a>
   <!--quick print-->
   <a href="./?hotspot=quick-print&session=<?= $session; ?>" class="menu <?= $squick; ?>"> <i class="fa fa-print"></i> <?= $_quick_print ?> </a>
   <!--vouchers-->

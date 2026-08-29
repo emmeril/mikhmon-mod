@@ -119,6 +119,8 @@ if (!isset($_SESSION["mikhmon"])) {
   $reportservice = $_GET['service'];
   $removereport = $_GET['remove-report'];
   $minterface = $_GET['interface'];
+  $customer = $_GET['customer'];
+  $customerid = $_GET['customer-id'];
 
 
   $pagehotspot = array('users','hosts','ipbinding','cookies','log','dhcp-leases');
@@ -163,6 +165,11 @@ if (!isset($_SESSION["mikhmon"])) {
 // hotspot log
   elseif ($hotspot == "log") {
     include_once('./hotspot/log.php');
+  }
+
+// customer database
+  elseif ($customer == "list") {
+    include_once('./customer/customers.php');
   }
 
 // hotspot log
