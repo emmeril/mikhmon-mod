@@ -36,6 +36,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
       $customerError = 'Data pelanggan tidak ditemukan.';
     }
+  } elseif ($action === 'delete_all') {
+    $deleteId = isset($_POST['customer_id']) ? (string) $_POST['customer_id'] : '';
+    $deleteCustomer = array();
+    foreach (mikhmonGetCustomers($session) as $customerRow) {
+      if (isset($customerRow['id']) && (string) $customerRow['id'] === $deleteId) {
+        $deleteCustomer = $customerRow;
+        break;
+      }
+    }
+    if (!$deleteCustomer) {
+      $customerError = 'Data pelanggan tidak ditemukan.';
+    } elseif (empty($routerConnected)) {
+      $customerError = 'Router MikroTik tidak terhubung. Data tidak dihapus.';
+    } else {
+      $deleteCommand = isset($deleteCustomer['service']) && $deleteCustomer['service'] === 'pppoe' ? '/ppp/secret' : '/ip/hotspot/user';
+      $deleteUsername = isset($deleteCustomer['username']) ? (string) $deleteCustomer['username'] : '';
+      $deleteRows = $deleteUsername !== '' ? $API->comm($deleteCommand . '/print', array('?name' => $deleteUsername)) : array();
+      $deleteError = customerListApiError($deleteRows);
+      if ($deleteError !== '') {
+        $customerError = 'Gagal membaca user MikroTik: ' . $deleteError;
+      } else {
+        $deleteOk = true;
+        if (isset($deleteRows[0]['.id'])) {
+          $deleteResponse = $API->comm($deleteCommand . '/remove', array('.id' => $deleteRows[0]['.id']));
+          $deleteResponseError = customerListApiError($deleteResponse);
+          if ($deleteResponseError !== '') {
+            $deleteOk = false;
+            $customerError = 'Gagal menghapus user MikroTik: ' . $deleteResponseError;
+          }
+        }
+        if ($deleteOk && $deleteUsername !== '') {
+          $cleanupNames = $deleteCommand === '/ppp/secret'
+            ? array('mikhmon-pppoe-' . $deleteUsername, 'mikhmon-pppoe-sale-' . $deleteUsername)
+            : array($deleteUsername);
+          foreach ($cleanupNames as $cleanupName) {
+            foreach (array('/system/scheduler', '/system/script') as $cleanupCommand) {
+              $cleanupRows = $API->comm($cleanupCommand . '/print', array('?name' => $cleanupName));
+              if (isset($cleanupRows[0]['.id'])) {
+                $API->comm($cleanupCommand . '/remove', array('.id' => $cleanupRows[0]['.id']));
+              }
+            }
+          }
+        }
+        if ($deleteOk) {
+          if (mikhmonDeleteCustomer($session, $deleteId)) {
+            $customerMessage = 'Pelanggan dan user MikroTik berhasil dihapus.';
+          } else {
+            $customerError = 'User MikroTik sudah dihapus, tetapi data pelanggan gagal dihapus.';
+          }
+        }
+      }
+    }
   } elseif ($action === 'enable') {
     $enableId = isset($_POST['customer_id']) ? (string) $_POST['customer_id'] : '';
     $enableCustomer = array();
@@ -122,7 +174,7 @@ $customers = mikhmonGetCustomers($session);
       </div></div>
       <div class="col-6 text-right"><button id="customerReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button><a class="btn bg-primary" href="./?customer=add&session=<?= rawurlencode($session); ?>"><i class="fa fa-user-plus"></i> Tambah Pelanggan</a></div>
     </div>
-    <p><small>Menghapus data pelanggan tidak menghapus user Hotspot/PPPoE di MikroTik.</small></p>
+    <p><small>Tombol Hapus dapat digunakan untuk menghapus data pelanggan saja atau sekaligus user Hotspot/PPPoE di MikroTik.</small></p>
     <div class="overflow box-bordered" style="max-height:65vh"><table id="dataTable" class="table table-bordered table-hover text-nowrap">
       <thead><tr><th>No</th><th>Nama Pelanggan</th><th>Nomor HP</th><th>Alamat</th><th>Layanan</th><th>Username</th><th>Profile</th><th>Status</th><th>Aksi</th></tr></thead><tbody>
       <?php if ($routerStatusText !== ''): ?><tr class="customer-info-row"><td colspan="9" class="text-center text-warning"><?= htmlspecialchars($routerStatusText, ENT_QUOTES); ?>; status user tidak dapat diperbarui.</td></tr><?php endif; ?>
@@ -132,7 +184,7 @@ $customers = mikhmonGetCustomers($session);
           $customerUsername = isset($customerRow['username']) ? (string) $customerRow['username'] : '';
           $linkedUser = isset($customerUsers[$customerService][$customerUsername]) ? $customerUsers[$customerService][$customerUsername] : array();
           $userMissing = $customerUsername === '' || empty($linkedUser);
-          $isDisabled = !$userMissing && isset($linkedUser['disabled']) && $linkedUser['disabled'] === 'true';
+          $isDisabled = !$userMissing && isset($linkedUser['disabled']) && ($linkedUser['disabled'] === 'true' || $linkedUser['disabled'] === 'yes');
           $hotspotExpired = $customerService === 'hotspot' && !$userMissing && isset($linkedUser['limit-uptime']) && $linkedUser['limit-uptime'] === '1s';
           $userExpired = $isDisabled || $hotspotExpired;
           $validityText = '';
@@ -149,13 +201,26 @@ $customers = mikhmonGetCustomers($session);
           $statusFilter = $userMissing ? 'missing' : ($userExpired ? 'expired' : 'active');
         ?>
         <tr class="customer-row" data-service="<?= htmlspecialchars($customerService, ENT_QUOTES); ?>" data-status="<?= $statusFilter; ?>"><td><?= $customerIndex + 1; ?></td><td><?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['phone']) ? $customerRow['phone'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['address']) ? $customerRow['address'] : '', ENT_QUOTES); ?></td><td><?= strtoupper(htmlspecialchars($customerService, ENT_QUOTES)); ?></td><td><?= htmlspecialchars($customerUsername, ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['profile']) ? $customerRow['profile'] : '', ENT_QUOTES); ?></td><td class="<?= $statusClass; ?>"><strong><?= $statusText; ?></strong><?php if ($validityText !== ''): ?><br><small>Validity: <?= htmlspecialchars($validityText, ENT_QUOTES); ?></small><?php endif; ?></td>
-        <td><?php if ($userExpired): ?><form method="post" style="display:inline"><input type="hidden" name="customer_action" value="enable"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>"><button class="btn bg-success" type="submit"><i class="fa fa-unlock"></i> Aktifkan</button></form><?php endif; ?> <a class="btn bg-primary" href="./?customer=edit&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-edit"></i> Edit</a> <form method="post" style="display:inline" onsubmit="return confirm('Hapus data pelanggan ini? User MikroTik tidak akan dihapus.');"><input type="hidden" name="customer_action" value="delete"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>"><button class="btn bg-danger" type="submit"><i class="fa fa-trash"></i> Hapus Data</button></form></td>
+        <td><?php if ($userExpired): ?><form method="post" style="display:inline"><input type="hidden" name="customer_action" value="enable"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>"><button class="btn bg-success" type="submit"><i class="fa fa-unlock"></i> Aktifkan</button></form><?php endif; ?> <a class="btn bg-primary" href="./?customer=edit&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-edit"></i> Edit</a> <button type="button" class="btn bg-danger customer-delete-button" data-customer-id="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>" data-customer-name="<?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?>" data-customer-username="<?= htmlspecialchars($customerUsername, ENT_QUOTES); ?>"><i class="fa fa-trash"></i> Hapus</button></td>
       </tr><?php endforeach; ?>
       <?php if (!$customers): ?><tr class="customer-info-row"><td colspan="9" class="text-center">Belum ada data pelanggan.</td></tr><?php endif; ?>
       <tr id="customerNoResults" style="display:none"><td colspan="9" class="text-center">Data pelanggan tidak ditemukan.</td></tr>
       </tbody></table></div>
   </div>
 </div></div></div>
+<div id="customerDeleteModal" style="display:none;position:fixed;z-index:1000;inset:0;background:rgba(0,0,0,.45);padding:12% 20px 20px">
+  <div class="card" style="max-width:460px;margin:auto">
+    <div class="card-header"><h3><i class="fa fa-trash"></i> Hapus Pelanggan</h3></div>
+    <div class="card-body">
+      <p id="customerDeleteText">Pilih jenis penghapusan.</p>
+      <form method="post" id="customerDeleteForm"><input type="hidden" name="customer_id" id="customerDeleteId"><input type="hidden" name="customer_action" id="customerDeleteAction" value="delete">
+        <button type="submit" class="btn bg-warning" onclick="return customerDeleteChoice('delete');"><i class="fa fa-database"></i> Hapus Data Saja</button>
+        <button type="submit" class="btn bg-danger" onclick="return customerDeleteChoice('delete_all');"><i class="fa fa-trash"></i> Hapus Semua</button>
+        <button type="button" class="btn bg-secondary" onclick="closeCustomerDelete()">Batal</button>
+      </form>
+    </div>
+  </div>
+</div>
 <script>
 $(function() {
   function filterCustomers() {
@@ -183,5 +248,16 @@ $(function() {
     filterCustomers();
   });
   filterCustomers();
+  $('.customer-delete-button').on('click', function() {
+    $('#customerDeleteId').val($(this).data('customer-id'));
+    $('#customerDeleteText').text('Hapus data pelanggan "' + $(this).data('customer-name') + '" saja, atau sekaligus user MikroTik "' + ($(this).data('customer-username') || '-') + '"?');
+    $('#customerDeleteModal').show();
+  });
 });
+function closeCustomerDelete() { $('#customerDeleteModal').hide(); }
+function customerDeleteChoice(action) {
+  if (action === 'delete_all' && !confirm('Hapus data pelanggan dan user MikroTik sekaligus? Tindakan ini tidak dapat dibatalkan tanpa restore backup.')) return false;
+  $('#customerDeleteAction').val(action);
+  return true;
+}
 </script>
