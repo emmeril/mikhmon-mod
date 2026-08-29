@@ -29,8 +29,10 @@ if (!is_array($profiles)) {
                 <th>Remote Address</th>
                 <th>Rate Limit</th>
                 <th class="text-right"><?= $_price . ' ' . $currency ?></th>
-                <th class="text-right"><?= $_selling_price . ' ' . $currency ?></th>
-                <th><?= $_comment ?></th>
+                  <th class="text-right"><?= $_selling_price . ' ' . $currency ?></th>
+                  <th>Expired</th>
+                  <th>Validity</th>
+                  <th><?= $_comment ?></th>
                 <th><?= $_action ?></th>
               </tr>
             </thead>
@@ -46,6 +48,8 @@ if (!is_array($profiles)) {
                   <td><?= htmlspecialchars(isset($profile['rate-limit']) ? $profile['rate-limit'] : '') ?></td>
                   <td class="text-right"><?= htmlspecialchars(pppProfilePriceFormat($meta['price'], $currency, $cekindo['indo'])) ?></td>
                   <td class="text-right"><?= htmlspecialchars(pppProfilePriceFormat($meta['selling-price'], $currency, $cekindo['indo'])) ?></td>
+                  <td><?= htmlspecialchars($meta['expmode']) ?></td>
+                  <td><?= htmlspecialchars($meta['validity']) ?></td>
                   <td><?= htmlspecialchars($meta['comment']) ?></td>
                   <td><a href="./?ppp=edit-profile&profile=<?= rawurlencode($profile['name']) ?>&session=<?= $session ?>"><i class="fa fa-edit"></i></a></td>
                 </tr>

@@ -9,8 +9,8 @@ if (!is_array($pools)) {
   $pools = array();
 }
 if (isset($_POST['save'])) {
-  $profileComment=pppProfileMetaEncode($_POST['price'],$_POST['selling-price'],$_POST['comment']);
-  $API->comm("/ppp/profile/set",array(".id"=>$profile['.id'],"name"=>trim($_POST['name']),"local-address"=>$_POST['local-address'],"remote-address"=>$_POST['remote-address'],"rate-limit"=>$_POST['rate-limit'],"dns-server"=>$_POST['dns-server'],"comment"=>$profileComment));
+  $profileComment=pppProfileMetaEncode($_POST['price'],$_POST['selling-price'],$_POST['comment'],$_POST['expmode'],$_POST['validity']);
+  $API->comm("/ppp/profile/set",array(".id"=>$profile['.id'],"name"=>trim($_POST['name']),"local-address"=>$_POST['local-address'],"remote-address"=>$_POST['remote-address'],"rate-limit"=>$_POST['rate-limit'],"dns-server"=>$_POST['dns-server'],"comment"=>$profileComment,"on-up"=>pppProfileOnUpScript($_POST['expmode'],$_POST['validity'])));
   echo "<script>window.location='./?ppp=profiles&session=" . $session . "'</script>"; exit;
 }
 function pv($key,$row){return htmlspecialchars(isset($row[$key])?$row[$key]:'',ENT_QUOTES);}
@@ -25,4 +25,6 @@ $profileMeta=pppProfileMetaDecode(isset($profile['comment'])?$profile['comment']
 <tr><td>Rate Limit</td><td><input class="form-control" name="rate-limit" value="<?= pv('rate-limit',$profile) ?>"></td></tr><tr><td>DNS Server</td><td><input class="form-control" name="dns-server" value="<?= pv('dns-server',$profile) ?>"></td></tr>
 <tr><td><?= $_price . ' ' . $currency ?></td><td><input class="form-control" type="number" min="0" step="any" name="price" value="<?= htmlspecialchars($profileMeta['price'],ENT_QUOTES) ?>"></td></tr>
 <tr><td><?= $_selling_price . ' ' . $currency ?></td><td><input class="form-control" type="number" min="0" step="any" name="selling-price" value="<?= htmlspecialchars($profileMeta['selling-price'],ENT_QUOTES) ?>"></td></tr>
+<tr><td>Expired Mode</td><td><select class="form-control" name="expmode"><option value="none"<?= $profileMeta['expmode']==='none'?' selected':'' ?>>Tidak ada</option><option value="remove"<?= $profileMeta['expmode']==='remove'?' selected':'' ?>>Remove user</option><option value="disable"<?= $profileMeta['expmode']==='disable'?' selected':'' ?>>Disable user</option></select></td></tr>
+<tr><td>Validity</td><td><input class="form-control" name="validity" value="<?= htmlspecialchars($profileMeta['validity'],ENT_QUOTES) ?>" placeholder="Contoh: 30d, 12h"></td></tr>
 <tr><td><?= $_comment ?></td><td><input class="form-control" name="comment" value="<?= htmlspecialchars($profileMeta['comment'],ENT_QUOTES) ?>"></td></tr></table></form></div></div></div></div>

@@ -7,11 +7,12 @@ if (!is_array($pools)) {
   $pools = array();
 }
 if (isset($_POST['save'])) {
-  $profileComment = pppProfileMetaEncode($_POST['price'], $_POST['selling-price'], $_POST['comment']);
+  $profileComment = pppProfileMetaEncode($_POST['price'], $_POST['selling-price'], $_POST['comment'], $_POST['expmode'], $_POST['validity']);
   $API->comm("/ppp/profile/add", array(
     "name" => trim($_POST['name']), "local-address" => $_POST['local-address'],
     "remote-address" => $_POST['remote-address'], "rate-limit" => $_POST['rate-limit'],
-    "dns-server" => $_POST['dns-server'], "comment" => $profileComment
+    "dns-server" => $_POST['dns-server'], "comment" => $profileComment,
+    "on-up" => pppProfileOnUpScript($_POST['expmode'], $_POST['validity'])
   ));
   echo "<script>window.location='./?ppp=profiles&session=" . $session . "'</script>"; exit;
 }
@@ -23,4 +24,6 @@ if (isset($_POST['save'])) {
 <tr><td>Rate Limit</td><td><input class="form-control" name="rate-limit" placeholder="10M/10M"></td></tr><tr><td>DNS Server</td><td><input class="form-control" name="dns-server"></td></tr>
 <tr><td><?= $_price . ' ' . $currency ?></td><td><input class="form-control" type="number" min="0" step="any" name="price"></td></tr>
 <tr><td><?= $_selling_price . ' ' . $currency ?></td><td><input class="form-control" type="number" min="0" step="any" name="selling-price"></td></tr>
+<tr><td>Expired Mode</td><td><select class="form-control" name="expmode"><option value="none">Tidak ada</option><option value="remove">Remove user</option><option value="disable">Disable user</option></select></td></tr>
+<tr><td>Validity</td><td><input class="form-control" name="validity" placeholder="Contoh: 30d, 12h"></td></tr>
 <tr><td><?= $_comment ?></td><td><input class="form-control" name="comment"></td></tr></table></form></div></div></div></div>
