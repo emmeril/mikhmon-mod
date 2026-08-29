@@ -37,6 +37,7 @@ if (!isset($_SESSION["mikhmon"])) {
 	$remdata = ($_POST['remdata']);
 	$prefix = $_GET['prefix'];
 	$service = $_GET['service'];
+	$profile = isset($_GET['profile']) ? trim($_GET['profile']) : '';
 	$serviceQuery = in_array($service, array('hotspot', 'pppoe')) ? '&service=' . $service : '';
 	
 
@@ -133,6 +134,21 @@ if (!isset($_SESSION["mikhmon"])) {
 		}));
 		$filedownload .= '-' . $service;
 	}
+	$reportProfiles = array();
+	foreach ($getData as $reportRow) {
+		$reportParts = explode('-|-', $reportRow['name']);
+		if (isset($reportParts[7]) && trim($reportParts[7]) !== '') {
+			$reportProfiles[trim($reportParts[7])] = true;
+		}
+	}
+	ksort($reportProfiles, SORT_NATURAL | SORT_FLAG_CASE);
+	if ($profile !== '') {
+		$getData = array_values(array_filter($getData, function ($row) use ($profile) {
+			$parts = explode('-|-', isset($row['name']) ? $row['name'] : '');
+			return isset($parts[7]) && trim($parts[7]) === $profile;
+		}));
+		$filedownload .= '-profile-' . $profile;
+	}
 	$TotalReg = count($getData);
 	$totalIncome = 0;
 	foreach ($getData as $reportRow) {
@@ -209,7 +225,7 @@ $(document).ready(function(){
 <div class="col-12">
 <div class="card">
 <div class="card-header">
-	<h3><i class=" fa fa-money"></i> <?= $_selling_report ?> <?= ucfirst($idhr) . ucfirst(substr($idbl,0,3).' '.substr($idbl,3,5));	if ($prefix != "") {echo " prefix [" . $prefix . "]";} ?> <small id="loader" style="display: none;" ><i><i class='fa fa-circle-o-notch fa-spin'></i> <?= $_processing ?> </i></small></h3>
+	<h3><i class=" fa fa-money"></i> <?= $_selling_report ?> <?= ucfirst($idhr) . ucfirst(substr($idbl,0,3).' '.substr($idbl,3,5));	if ($prefix != "") {echo " prefix [" . htmlspecialchars($prefix, ENT_QUOTES) . "]";} if ($profile != "") {echo " profile [" . htmlspecialchars($profile, ENT_QUOTES) . "]";} ?> <small id="loader" style="display: none;" ><i><i class='fa fa-circle-o-notch fa-spin'></i> <?= $_processing ?> </i></small></h3>
 </div>
 <div class="card-body">
 <div class="row">
@@ -294,6 +310,15 @@ $(document).ready(function(){
 										?>
     		</select>
 			</div>
+			<div class="input-group-2 col-box-4">
+			<select style="padding:5px;" class="group-item group-item-md" title="<?= $_profile ?>" id="P">
+				<option value=""><?= $_profile ?>: <?= $_all ?></option>
+				<?php foreach ($reportProfiles as $reportProfile => $unused) {
+					$selected = $profile === $reportProfile ? ' selected' : '';
+					echo '<option value="' . htmlspecialchars($reportProfile, ENT_QUOTES) . '"' . $selected . '>' . htmlspecialchars($reportProfile, ENT_QUOTES) . '</option>';
+				} ?>
+			</select>
+			</div>
             <div class="input-group-2 col-box-3">
 				<div style="padding:3.5px;"  class="group-item group-item-r text-center pointer" onclick="filterR(); loader();"><i class="fa fa-search"></i> Filter</div>
 			</div>
@@ -304,11 +329,16 @@ $(document).ready(function(){
 					var M = document.getElementById('M').value;
 					var Y = document.getElementById('Y').value;
 					var X = document.getElementById('filterTable').value;
+					var P = document.getElementById('P').value;
+					var extra = '&prefix=' + encodeURIComponent(X);
+					if (P !== '') {
+						extra += '&profile=' + encodeURIComponent(P);
+					}
 
 					if(D !== ""){
-						window.location='./?report=selling&idhr='+M+'/'+D+'/'+Y+'&prefix='+X+'<?= $serviceQuery ?>'+'&session=<?= $session; ?>';
+						window.location='./?report=selling&idhr='+M+'/'+D+'/'+Y+extra+'<?= $serviceQuery ?>&session=<?= $session; ?>';
 					}else if(D === ""){
-						window.location='./?report=selling&idbl='+M+Y+'&prefix='+X+'<?= $serviceQuery ?>'+'&session=<?= $session; ?>';
+						window.location='./?report=selling&idbl='+M+Y+extra+'<?= $serviceQuery ?>&session=<?= $session; ?>';
 					}
 					
 				}
