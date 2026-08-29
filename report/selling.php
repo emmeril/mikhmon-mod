@@ -231,7 +231,7 @@ function number_format(number, decimals, dec_point, thousands_sep) {
 $(document).ready(function(){
   $("#openResume").click(function(){
     notify("Calculating data");
-    window.location = "./?report=resume-report&idbl=<?= $idbl;?>&session=<?= $session;?>"
+    window.location = "./?report=resume-report&idbl=<?= $idbl;?><?= $serviceQuery ?>&session=<?= $session;?>"
   });
 });
 </script>
