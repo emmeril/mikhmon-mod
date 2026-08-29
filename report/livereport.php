@@ -74,10 +74,10 @@ include('../lang/'.$langid.'.php');
       "?owner" => "$idbl",
     ));
     $getSRBl = mikhmonFilterReportRecords($getSRBl);
-    $profileCosts = mikhmonReportProfileCosts(
-      $API->comm('/ip/hotspot/user/profile/print'),
-      $API->comm('/ppp/profile/print')
-    );
+    $hotspotProfiles = $API->comm('/ip/hotspot/user/profile/print');
+    $pppProfiles = $API->comm('/ppp/profile/print');
+    $profileCosts = mikhmonReportProfileCosts($hotspotProfiles, $pppProfiles);
+    $profileSellingPrices = mikhmonReportProfileSellingPrices($hotspotProfiles, $pppProfiles);
     $TotalRBl = count($getSRBl);
     $_SESSION[$session.'totalBl'] = $TotalRBl;
 /*
@@ -89,13 +89,13 @@ include('../lang/'.$langid.'.php');
     foreach($getSRBl as $row){
     
       if((explode("-|-", $row['name'])[0]) == $idhr){
-         $tHr += mikhmonReportSellingPrice($row);
-         $pHr += mikhmonReportNetProfit($row, $profileCosts);
+         $tHr += mikhmonReportSellingPrice($row, $profileSellingPrices);
+         $pHr += mikhmonReportNetProfit($row, $profileCosts, $profileSellingPrices);
          $TotalRHr += count((array)$row['source']); /*Modif line add (array) by github https://github.com/MasKawer*/
  
        }
-       $tBl += mikhmonReportSellingPrice($row);
-       $pBl += mikhmonReportNetProfit($row, $profileCosts);
+       $tBl += mikhmonReportSellingPrice($row, $profileSellingPrices);
+       $pBl += mikhmonReportNetProfit($row, $profileCosts, $profileSellingPrices);
 
       if($TotalRHr == ""){
         $TotalRHr = "0";

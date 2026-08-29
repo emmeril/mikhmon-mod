@@ -36,15 +36,26 @@ if (!function_exists('mikhmonReportParts')) {
 }
 
 if (!function_exists('mikhmonReportSellingPrice')) {
-	function mikhmonReportSellingPrice($row)
+	function mikhmonReportSellingPrice($row, $profileSellingPrices = array())
 	{
 		$parts = mikhmonReportParts($row);
+		$service = (isset($parts[9]) && strtolower(trim($parts[9])) === 'pppoe')
+			|| (isset($parts[5]) && strtolower(trim($parts[5])) === 'pppoe') ? 'pppoe' : 'hotspot';
+		$profile = isset($parts[7]) ? trim($parts[7]) : '';
+		$key = $service . '|' . $profile;
+
+		// Legacy Hotspot records stored HPP in field 3. Use the profile's
+		// Selling Price until that transaction format is updated.
+		if ($service === 'hotspot' && !isset($parts[9]) && isset($profileSellingPrices[$key])) {
+			return (float) $profileSellingPrices[$key];
+		}
+
 		return isset($parts[3]) && is_numeric(trim($parts[3])) ? (float) $parts[3] : 0;
 	}
 }
 
 if (!function_exists('mikhmonReportCostPrice')) {
-	function mikhmonReportCostPrice($row, $profileCosts = array())
+	function mikhmonReportCostPrice($row, $profileCosts = array(), $profileSellingPrices = array())
 	{
 		$parts = mikhmonReportParts($row);
 
@@ -57,14 +68,14 @@ if (!function_exists('mikhmonReportCostPrice')) {
 		$profile = isset($parts[7]) ? trim($parts[7]) : '';
 		$key = $service . '|' . $profile;
 
-		return isset($profileCosts[$key]) ? (float) $profileCosts[$key] : mikhmonReportSellingPrice($row);
+		return isset($profileCosts[$key]) ? (float) $profileCosts[$key] : mikhmonReportSellingPrice($row, $profileSellingPrices);
 	}
 }
 
 if (!function_exists('mikhmonReportNetProfit')) {
-	function mikhmonReportNetProfit($row, $profileCosts = array())
+	function mikhmonReportNetProfit($row, $profileCosts = array(), $profileSellingPrices = array())
 	{
-		return mikhmonReportSellingPrice($row) - mikhmonReportCostPrice($row, $profileCosts);
+		return mikhmonReportSellingPrice($row, $profileSellingPrices) - mikhmonReportCostPrice($row, $profileCosts, $profileSellingPrices);
 	}
 }
 
@@ -91,5 +102,31 @@ if (!function_exists('mikhmonReportProfileCosts')) {
 		}
 
 		return $costs;
+	}
+}
+
+if (!function_exists('mikhmonReportProfileSellingPrices')) {
+	function mikhmonReportProfileSellingPrices($hotspotProfiles, $pppProfiles)
+	{
+		$sellingPrices = array();
+
+		foreach (is_array($hotspotProfiles) ? $hotspotProfiles : array() as $profile) {
+			$parts = explode(',', isset($profile['on-login']) ? $profile['on-login'] : '');
+			$name = isset($profile['name']) ? trim($profile['name']) : '';
+			$sellingPrice = isset($parts[4]) ? trim($parts[4]) : '';
+			if ($name !== '' && is_numeric($sellingPrice) && (float) $sellingPrice > 0) {
+				$sellingPrices['hotspot|' . $name] = (float) $sellingPrice;
+			}
+		}
+
+		foreach (is_array($pppProfiles) ? $pppProfiles : array() as $profile) {
+			$name = isset($profile['name']) ? trim($profile['name']) : '';
+			$comment = isset($profile['comment']) ? $profile['comment'] : '';
+			if ($name !== '' && preg_match('/^\[MIKHMON-PPPOE price=[0-9.]* selling=([0-9.]*)/', $comment, $matches) && (float) $matches[1] > 0) {
+				$sellingPrices['pppoe|' . $name] = (float) $matches[1];
+			}
+		}
+
+		return $sellingPrices;
 	}
 }

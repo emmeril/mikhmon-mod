@@ -125,10 +125,10 @@ if (!isset($_SESSION["mikhmon"])) {
 	}
 
 	$getData = mikhmonFilterReportRecords($getData);
-	$profileCosts = mikhmonReportProfileCosts(
-		$API->comm('/ip/hotspot/user/profile/print'),
-		$API->comm('/ppp/profile/print')
-	);
+	$hotspotProfiles = $API->comm('/ip/hotspot/user/profile/print');
+	$pppProfiles = $API->comm('/ppp/profile/print');
+	$profileCosts = mikhmonReportProfileCosts($hotspotProfiles, $pppProfiles);
+	$profileSellingPrices = mikhmonReportProfileSellingPrices($hotspotProfiles, $pppProfiles);
 
 	if (in_array($service, array('hotspot', 'pppoe'))) {
 		$getData = array_values(array_filter($getData, function ($row) use ($service) {
@@ -161,8 +161,8 @@ if (!isset($_SESSION["mikhmon"])) {
 		if ($prefix != "" && substr($reportParts[2], 0, strlen($prefix)) != $prefix) {
 			continue;
 		}
-		$totalIncome += mikhmonReportSellingPrice($reportRow);
-		$totalProfit += mikhmonReportNetProfit($reportRow, $profileCosts);
+		$totalIncome += mikhmonReportSellingPrice($reportRow, $profileSellingPrices);
+		$totalProfit += mikhmonReportNetProfit($reportRow, $profileCosts, $profileSellingPrices);
 	}
 	if (in_array($currency, $cekindo['indo'])) {
 		$formattedTotal = $currency . ' ' . number_format($totalIncome, 0, ',', '.');
