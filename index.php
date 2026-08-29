@@ -74,7 +74,7 @@ if (!isset($_SESSION["mikhmon"])) {
   $getidentity = $API->comm("/system/identity/print");
   $identity = $getidentity[0]['name'];
   if ($routerConnected) {
-    mikhmonBackupRouterData($API, $session);
+    mikhmonSynchronizeRouterData($API, $session);
   }
   
 

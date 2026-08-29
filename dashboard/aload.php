@@ -36,6 +36,7 @@ include('../lang/'.$langid.'.php');
 // routeros api
   include_once('../lib/routeros_api.class.php');
   include_once('../lib/formatbytesbites.php');
+  include_once('../include/database.php');
   $API = new RouterosAPI();
   $API->debug = false;
 
@@ -43,7 +44,10 @@ include('../lang/'.$langid.'.php');
 
   if ($load == "sysresource") {
 
-    $API->connect($iphost, $userhost, decrypt($passwdhost));
+    if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
+      // Dashboard polling keeps the backup and recovery check running while Mikhmon is open.
+      mikhmonSynchronizeRouterData($API, $session);
+    }
 
 // get MikroTik system clock
     $getclock = $API->comm("/system/clock/print");

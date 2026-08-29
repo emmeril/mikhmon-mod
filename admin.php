@@ -140,6 +140,9 @@ if ($id == "login" || substr($url, -1) == "p") {
   include_once('./include/menu.php');
   include_once('./settings/uplogo.php');
 } elseif ($id == "database"  && !empty($session)) {
+  $API = new RouterosAPI();
+  $API->debug = false;
+  $API->connect($iphost, $userhost, decrypt($passwdhost));
   include_once('./include/menu.php');
   include_once('./settings/database.php');
 } elseif ($id == "reboot"  && !empty($session)) {
