@@ -110,16 +110,23 @@ if (!empty($routerConnected)) {
 $customers = mikhmonGetCustomers($session);
 ?>
 <div class="row"><div class="col-12"><div class="card">
-  <div class="card-header"><h3><i class="fa fa-address-card"></i> Pelanggan <span style="font-size:14px">&nbsp;|&nbsp; <?= count($customers); ?> pelanggan</span></h3></div>
+  <div class="card-header"><h3><i class="fa fa-address-card"></i> Pelanggan <span style="font-size:14px">&nbsp;|&nbsp; <span id="customerVisibleCount"><?= count($customers); ?></span> pelanggan</span></h3></div>
   <div class="card-body">
     <?php if ($customerMessage !== ''): ?><div class="box bg-success"><?= htmlspecialchars($customerMessage, ENT_QUOTES); ?></div><?php endif; ?>
     <?php if ($customerError !== ''): ?><div class="box bg-danger"><?= htmlspecialchars($customerError, ENT_QUOTES); ?></div><?php endif; ?>
-    <p><a class="btn bg-primary" href="./?customer=add&session=<?= rawurlencode($session); ?>"><i class="fa fa-user-plus"></i> Tambah Pelanggan</a></p>
+    <div class="row">
+      <div class="col-6 pd-t-5 pd-b-5"><div class="input-group">
+        <div class="input-group-4 col-box-4"><input id="customerSearch" type="text" style="padding:5.8px" class="group-item group-item-l" placeholder="<?= $_search ?>"></div>
+        <div class="input-group-4 col-box-4"><select id="customerServiceFilter" class="group-item group-item-m"><option value="all">Layanan: Semua</option><option value="hotspot">Hotspot</option><option value="pppoe">PPPoE</option></select></div>
+        <div class="input-group-4 col-box-4"><select id="customerStatusFilter" class="group-item group-item-r"><option value="all">Status: Semua</option><option value="active">Aktif</option><option value="expired">Expired</option><option value="missing">Tidak ditemukan</option></select></div>
+      </div></div>
+      <div class="col-6 text-right"><button id="customerReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button><a class="btn bg-primary" href="./?customer=add&session=<?= rawurlencode($session); ?>"><i class="fa fa-user-plus"></i> Tambah Pelanggan</a></div>
+    </div>
     <p><small>Menghapus data pelanggan tidak menghapus user Hotspot/PPPoE di MikroTik.</small></p>
     <div class="overflow box-bordered" style="max-height:65vh"><table id="dataTable" class="table table-bordered table-hover text-nowrap">
       <thead><tr><th>No</th><th>Nama Pelanggan</th><th>Nomor HP</th><th>Alamat</th><th>Layanan</th><th>Username</th><th>Profile</th><th>Status</th><th>Aksi</th></tr></thead><tbody>
-      <?php if ($routerStatusText !== ''): ?><tr><td colspan="9" class="text-center text-warning"><?= htmlspecialchars($routerStatusText, ENT_QUOTES); ?>; status user tidak dapat diperbarui.</td></tr><?php endif; ?>
-      <?php foreach ($customers as $customerIndex => $customerRow): ?><tr>
+      <?php if ($routerStatusText !== ''): ?><tr class="customer-info-row"><td colspan="9" class="text-center text-warning"><?= htmlspecialchars($routerStatusText, ENT_QUOTES); ?>; status user tidak dapat diperbarui.</td></tr><?php endif; ?>
+      <?php foreach ($customers as $customerIndex => $customerRow): ?>
         <?php
           $customerService = isset($customerRow['service']) && $customerRow['service'] === 'pppoe' ? 'pppoe' : 'hotspot';
           $customerUsername = isset($customerRow['username']) ? (string) $customerRow['username'] : '';
@@ -139,11 +146,42 @@ $customers = mikhmonGetCustomers($session);
           }
           $statusText = $userMissing ? 'Tidak ditemukan' : ($userExpired ? 'Expired' : 'Aktif');
           $statusClass = $userMissing || $userExpired ? 'text-danger' : 'text-success';
+          $statusFilter = $userMissing ? 'missing' : ($userExpired ? 'expired' : 'active');
         ?>
-        <td><?= $customerIndex + 1; ?></td><td><?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['phone']) ? $customerRow['phone'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['address']) ? $customerRow['address'] : '', ENT_QUOTES); ?></td><td><?= strtoupper(htmlspecialchars($customerService, ENT_QUOTES)); ?></td><td><?= htmlspecialchars($customerUsername, ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['profile']) ? $customerRow['profile'] : '', ENT_QUOTES); ?></td><td class="<?= $statusClass; ?>"><strong><?= $statusText; ?></strong><?php if ($validityText !== ''): ?><br><small>Validity: <?= htmlspecialchars($validityText, ENT_QUOTES); ?></small><?php endif; ?></td>
+        <tr class="customer-row" data-service="<?= htmlspecialchars($customerService, ENT_QUOTES); ?>" data-status="<?= $statusFilter; ?>"><td><?= $customerIndex + 1; ?></td><td><?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['phone']) ? $customerRow['phone'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['address']) ? $customerRow['address'] : '', ENT_QUOTES); ?></td><td><?= strtoupper(htmlspecialchars($customerService, ENT_QUOTES)); ?></td><td><?= htmlspecialchars($customerUsername, ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['profile']) ? $customerRow['profile'] : '', ENT_QUOTES); ?></td><td class="<?= $statusClass; ?>"><strong><?= $statusText; ?></strong><?php if ($validityText !== ''): ?><br><small>Validity: <?= htmlspecialchars($validityText, ENT_QUOTES); ?></small><?php endif; ?></td>
         <td><?php if ($userExpired): ?><form method="post" style="display:inline"><input type="hidden" name="customer_action" value="enable"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>"><button class="btn bg-success" type="submit"><i class="fa fa-unlock"></i> Aktifkan</button></form><?php endif; ?> <a class="btn bg-primary" href="./?customer=edit&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-edit"></i> Edit</a> <form method="post" style="display:inline" onsubmit="return confirm('Hapus data pelanggan ini? User MikroTik tidak akan dihapus.');"><input type="hidden" name="customer_action" value="delete"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>"><button class="btn bg-danger" type="submit"><i class="fa fa-trash"></i> Hapus Data</button></form></td>
       </tr><?php endforeach; ?>
-      <?php if (!$customers): ?><tr><td colspan="9" class="text-center">Belum ada data pelanggan.</td></tr><?php endif; ?>
+      <?php if (!$customers): ?><tr class="customer-info-row"><td colspan="9" class="text-center">Belum ada data pelanggan.</td></tr><?php endif; ?>
+      <tr id="customerNoResults" style="display:none"><td colspan="9" class="text-center">Data pelanggan tidak ditemukan.</td></tr>
       </tbody></table></div>
   </div>
 </div></div></div>
+<script>
+$(function() {
+  function filterCustomers() {
+    var search = $('#customerSearch').val().toLowerCase();
+    var service = $('#customerServiceFilter').val();
+    var status = $('#customerStatusFilter').val();
+    var visible = 0;
+    $('.customer-row').each(function() {
+      var row = $(this);
+      var matchesSearch = row.text().toLowerCase().indexOf(search) > -1;
+      var matchesService = service === 'all' || row.data('service') === service;
+      var matchesStatus = status === 'all' || row.data('status') === status;
+      var show = matchesSearch && matchesService && matchesStatus;
+      row.toggle(show);
+      if (show) visible++;
+    });
+    $('#customerVisibleCount').text(visible);
+    $('#customerNoResults').toggle(visible === 0 && $('.customer-row').length > 0);
+  }
+  $('#customerSearch').on('input', filterCustomers);
+  $('#customerServiceFilter, #customerStatusFilter').on('change', filterCustomers);
+  $('#customerReset').on('click', function() {
+    $('#customerSearch').val('');
+    $('#customerServiceFilter, #customerStatusFilter').val('all');
+    filterCustomers();
+  });
+  filterCustomers();
+});
+</script>
