@@ -155,8 +155,7 @@ if ($id == "login" || substr($url, -1) == "p") {
   fclose($f);
   echo "<script>window.location='./admin.php?id=sessions'</script>";
 } elseif ($id == "about") {
-  include_once('./include/menu.php');
-  include_once('./include/about.php');
+  echo "<script>window.location='./admin.php?id=sessions'</script>";
 } elseif ($id == "logout") {
   include_once('./include/menu.php');
   echo "<b class='cl-w'><i class='fa fa-circle-o-notch fa-spin' style='font-size:24px'></i> Logout...</b>";
@@ -182,4 +181,3 @@ if ($id == "login" || substr($url, -1) == "p") {
 <?php include('./include/info.php'); ?>
 </body>
 </html>
-

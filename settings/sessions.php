@@ -29,6 +29,10 @@ if (!isset($_SESSION["mikhmon"])) {
 
     $suseradm = ($_POST['useradm']);
     $spassadm = encrypt($_POST['passadm']);
+    $sbrandname = trim(strip_tags($_POST['brandname']));
+    if ($sbrandname == '') {
+      $sbrandname = 'MIKHMON';
+    }
     $logobt = ($_POST['logobt']);
     $qrbt = ($_POST['qrbt']);
 
@@ -48,6 +52,8 @@ if (!isset($_SESSION["mikhmon"])) {
           $handle = fopen($key, 'w') or die('Cannot open file:  ' . $key);
           $data = $gen;
           fwrite($handle, $data);
+    $brandConfig = "<?php\n\$brandname = " . var_export($sbrandname, true) . ";\n?>\n";
+    file_put_contents('./include/brand.php', $brandConfig);
     echo "<script>window.location='./admin.php?id=sessions'</script>";
   }
 
@@ -124,6 +130,9 @@ if (!isset($_SESSION["mikhmon"])) {
               </div>
             <div class="card-body">
       <table class="table table-sm">
+        <tr>
+          <td class="align-middle">Brand Name</td><td><input class="form-control" type="text" maxlength="30" name="brandname" value="<?= htmlspecialchars($brandname, ENT_QUOTES); ?>" required="1"/></td>
+        </tr>
         <tr>
           <td class="align-middle"><?= $_user_name ?> </td><td><input class="form-control" id="useradm" type="text" size="10" name="useradm" title="User Admin" value="<?= $useradm; ?>" required="1"/></td>
         </tr>

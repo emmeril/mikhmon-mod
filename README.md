@@ -6,6 +6,8 @@ Copy `include/config.example.php` to `include/config.php` before first use.
 The generated `include/config.php` contains administrator and router
 credentials and is intentionally excluded from Git.
 
+Change the navigation brand from `Admin Settings > Brand Name`.
+
 #### Download update.zip
 [update.zip](https://raw.githubusercontent.com/laksa19/laksa19.github.io/master/download/update.zip){:target="_blank"}
 

@@ -18,6 +18,7 @@
 session_start();
 // hide all error
 error_reporting(0);
+include_once('./include/brand.php');
 
 if (!isset($_SESSION["mikhmon"])) {
   header("Location:../admin.php?id=login");
@@ -140,9 +141,6 @@ if (!isset($_SESSION["mikhmon"])) {
   } elseif ($userbyname != "") {
     $mpage = $_users;
     $susers = "active";
-  } elseif ($hotspot == "about") {
-    $mpage = $_about;
-    $sabout = "active";
   } elseif ($id == "sessions" || $id == "remove" || $router == "new") {
     $ssesslist = "active";
     $mpage = $_admin_settings;
@@ -152,9 +150,6 @@ if (!isset($_SESSION["mikhmon"])) {
   } elseif ($id == "settings" || $id == "connect") {
     $ssettings = "active";
     $mpage = $_session_settings;
-  } elseif ($id == "about") {
-    $sabout = "active";
-    $mpage = $_about;
   } elseif ($id == "uplogo") {
     $suplogo = "active";
     $mpage = $_upload_logo;
@@ -177,7 +172,7 @@ if($idleto != "disable"){
 
 <div id="navbar" class="navbar">
   <div class="navbar-left">
-    <a id="brand" class="text-center" href="javascript:void(0)">MIKHMON</a>
+    <a id="brand" class="text-center" href="javascript:void(0)"><?= htmlspecialchars($brandname, ENT_QUOTES) ?></a>
 
 <a id="openNav" class="navbar-hover" href="javascript:void(0)"><i class="fa fa-bars"></i></a>
 <a id="closeNav" class="navbar-hover" href="javascript:void(0)"><i class="fa fa-bars"></i></a>
@@ -224,7 +219,6 @@ if($idleto != "disable"){
 } ?>  
   <a href="./admin.php?id=sessions" class="menu <?= $ssesslist; ?>"><i class="fa fa-gear"></i> <?= $_admin_settings ?></a>
   <a href="./admin.php?id=settings&router=new-<?= rand(1111,9999) ?>" class="menu <?= $snsettings ?>"><i class="fa fa-plus"></i> <?= $_add_router ?></a>
-  <a href="./admin.php?id=about" class="menu <?= $sabout; ?>"><i class="fa fa-info-circle"></i> <?= $_about ?></a>
 
 </div>
 
@@ -252,7 +246,7 @@ include('./info.php');
 
 <div id="navbar" class="navbar">
   <div class="navbar-left">
-    <a id="brand" class="text-center" href="./?session=<?= $session; ?>">MIKHMON</a>
+    <a id="brand" class="text-center" href="./?session=<?= $session; ?>"><?= htmlspecialchars($brandname, ENT_QUOTES) ?></a>
 
 <a id="openNav" class="navbar-hover" href="javascript:void(0)"><i class="fa fa-bars"></i></a>
 <a id="closeNav" class="navbar-hover" href="javascript:void(0)"><i class="fa fa-bars"></i></a>
@@ -373,8 +367,6 @@ include('./info.php');
   <a href="./?hotspot=uplogo&session=<?= $session; ?>" class="menu <?= $uplogo; ?>"> <i class="fa fa-upload "></i> <?= $_upload_logo ?> </a>
   <a href="./?hotspot=template-editor&template=default&session=<?= $session; ?>" class="menu <?= $teditor; ?>"> <i class="fa fa-edit "></i> <?= $_template_editor ?> </a>          
   </div>
-  <!--about-->
-  <a href="./?hotspot=about&session=<?= $session; ?>" class="menu <?= $sabout; ?>"><i class="fa fa-info-circle"></i> <?= $_about ?></a>
 
 </div>
 <script>

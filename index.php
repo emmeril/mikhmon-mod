@@ -167,9 +167,9 @@ if (!isset($_SESSION["mikhmon"])) {
     include_once('./report/userlog.php');
   }
 
-// about
+// about was removed from the navigation; redirect old bookmarks home
   elseif ($hotspot == "about") {
-    include_once('./include/about.php');
+    echo "<script>window.location='./?session=" . $session . "'</script>";
   }
 
 // bad request
