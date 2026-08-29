@@ -153,6 +153,9 @@ if (!isset($_SESSION["mikhmon"])) {
   } elseif ($id == "uplogo") {
     $suplogo = "active";
     $mpage = $_upload_logo;
+  } elseif ($id == "database") {
+    $sdatabase = "active";
+    $mpage = "Database Backup";
   } elseif ($id == "editor") {
     $seditor = "active";
     $mpage = $_template_editor;
@@ -207,12 +210,13 @@ if($idleto != "disable"){
 
 <div id="sidenav" class="sidenav">
 <?php if (($id == "settings" && $session == "new") || $id == "settings" && $router == "new") {
-}else if ($id == "settings" || $id == "editor"|| $id == "uplogo" || $id == "connect"){
+}else if ($id == "settings" || $id == "editor"|| $id == "uplogo" || $id == "database" || $id == "connect"){
 ?>  
   <div class="menu text-center align-middle card-header" style="border-radius:0;"><h3 id="MikhmonSession"><?= $session; ?></h3></div>
   <a class="connect menu <?= $shome; ?>" id="<?= $session; ?>&c=settings"><i class='fa fa-tachometer'></i> <?= $_dashboard ?></a>
   <a  href="./admin.php?id=settings&session=<?= $session; ?>" class="menu <?= $ssettings; ?>" title="Mikhmon Settings"><i class='fa fa-gear'></i> <?= $_session_settings ?></a>
   <a href="./admin.php?id=uplogo&session=<?= $session; ?>" class="menu <?= $suplogo; ?>"><i class="fa fa-upload "></i> <?= $_upload_logo ?></a>
+  <a href="./admin.php?id=database&session=<?= $session; ?>" class="menu <?= $sdatabase; ?>"><i class="fa fa-database"></i> Database Backup</a>
   <a href="./admin.php?id=editor&template=default&session=<?= $session; ?>" class="menu <?= $seditor; ?>"><i class="fa fa-edit"></i> <?= $_template_editor ?></a>
   <div class="menu spa"></div>
 <?php 
@@ -365,6 +369,7 @@ include('./info.php');
   <a href="./admin.php?id=settings&session=<?= $session; ?>" class="menu "> <i class="fa fa-gear "></i> <?= $_session_settings ?> </a>
   <a href="./admin.php?id=sessions" class="menu "> <i class="fa fa-gear "></i> <?= $_admin_settings ?> </a>
   <a href="./?hotspot=uplogo&session=<?= $session; ?>" class="menu <?= $uplogo; ?>"> <i class="fa fa-upload "></i> <?= $_upload_logo ?> </a>
+  <a href="./admin.php?id=database&session=<?= $session; ?>" class="menu <?= $sdatabase; ?>"><i class="fa fa-database"></i> Database Backup</a>
   <a href="./?hotspot=template-editor&template=default&session=<?= $session; ?>" class="menu <?= $teditor; ?>"> <i class="fa fa-edit "></i> <?= $_template_editor ?> </a>          
   </div>
 

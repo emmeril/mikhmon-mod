@@ -5,6 +5,7 @@
 .DS_Store
 Thumbs.db
 *.log
+/data/*.json
+/data/*.tmp.*
 .idea/
 .vscode/
-

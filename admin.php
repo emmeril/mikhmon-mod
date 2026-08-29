@@ -34,6 +34,7 @@ $logo = $_GET['logo'];
 $ids = array(
   "editor",
   "uplogo",
+  "database",
   "settings",
 );
 
@@ -138,6 +139,9 @@ if ($id == "login" || substr($url, -1) == "p") {
 } elseif ($id == "uplogo"  && !empty($session)) {
   include_once('./include/menu.php');
   include_once('./settings/uplogo.php');
+} elseif ($id == "database"  && !empty($session)) {
+  include_once('./include/menu.php');
+  include_once('./settings/database.php');
 } elseif ($id == "reboot"  && !empty($session)) {
   include_once('./process/reboot.php');
 } elseif ($id == "shutdown"  && !empty($session)) {

@@ -67,12 +67,15 @@ if (!isset($_SESSION["mikhmon"])) {
 // routeros api
   include_once('./lib/routeros_api.class.php');
   include_once('./lib/formatbytesbites.php');
+  include_once('./include/database.php');
   $API = new RouterosAPI();
   $API->debug = false;
-  $API->connect($iphost, $userhost, decrypt($passwdhost));
-
+  $routerConnected = $API->connect($iphost, $userhost, decrypt($passwdhost));
   $getidentity = $API->comm("/system/identity/print");
   $identity = $getidentity[0]['name'];
+  if ($routerConnected) {
+    mikhmonBackupRouterData($API, $session);
+  }
   
 
 // get variable
