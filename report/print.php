@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 session_start();
+include_once(__DIR__ . '/reportrecord.php');
 // hide all error
 error_reporting(0);
 if (!isset($_SESSION["mikhmon"])) {
@@ -71,9 +72,12 @@ if (!isset($_SESSION["mikhmon"])) {
 			if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
 				$API->write('/system/script/print', false);
 				$API->write('?source=' . $idhr . '', false);
-				$API->write('=.proplist=.id');
+				$API->write('=.proplist=.id,name');
 				$ARREMD = $API->read();
 				for ($i = 0; $i < count($ARREMD); $i++) {
+					if (!mikhmonIsReportRecord($ARREMD[$i])) {
+						continue;
+					}
 					$API->write('/system/script/remove', false);
 					$API->write('=.id=' . $ARREMD[$i]['.id']);
 					$READ = $API->read();
@@ -84,9 +88,12 @@ if (!isset($_SESSION["mikhmon"])) {
 			if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
 				$API->write('/system/script/print', false);
 				$API->write('?owner=' . $idbl . '', false);
-				$API->write('=.proplist=.id');
+				$API->write('=.proplist=.id,name');
 				$ARREMD = $API->read();
 				for ($i = 0; $i < count($ARREMD); $i++) {
+					if (!mikhmonIsReportRecord($ARREMD[$i])) {
+						continue;
+					}
 					$API->write('/system/script/remove', false);
 					$API->write('=.id=' . $ARREMD[$i]['.id']);
 					$READ = $API->read();
@@ -110,7 +117,6 @@ if (!isset($_SESSION["mikhmon"])) {
 			$getData = $API->comm("/system/script/print", array(
 				"?source" => "$idhr",
 			));
-			$TotalReg = count($getData);
 		}
 		$filedownload = $idhr;
 		$shf = "hidden";
@@ -120,17 +126,13 @@ if (!isset($_SESSION["mikhmon"])) {
 			$getData = $API->comm("/system/script/print", array(
 				"?owner" => "$idbl",
 			));
-			$TotalReg = count($getData);
 		}
 		$filedownload = $idbl;
 		$shf = "hidden";
 		$shd = "inline-block";
 	} elseif ($idhr == "" || $idbl == "") {
 		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-			$getData = $API->comm("/system/script/print", array(
-				"?comment" => "mikhmon",
-			));
-			$TotalReg = count($getData);
+			$getData = $API->comm("/system/script/print");
 		}
 		$filedownload = "all";
 		$shf = "text";
@@ -140,21 +142,22 @@ if (!isset($_SESSION["mikhmon"])) {
 			$getData = $API->comm("/system/script/print", array(
 				"?owner" => "$idbl",
 			));
-			$TotalReg = count($getData);
 		}
 		$filedownload = $idbl;
 		$shf = "hidden";
 		$shd = "inline-block";
 	}
 
-	if (in_array($service, array('hotspot', 'pppoe')) && is_array($getData)) {
+	$getData = mikhmonFilterReportRecords($getData);
+
+	if (in_array($service, array('hotspot', 'pppoe'))) {
 		$getData = array_values(array_filter($getData, function ($row) use ($service) {
 			$parts = explode('-|-', isset($row['name']) ? $row['name'] : '');
 			$type = (isset($parts[9]) && strtolower($parts[9]) == 'pppoe') || (isset($parts[5]) && strtolower($parts[5]) == 'pppoe') ? 'pppoe' : 'hotspot';
 			return $type == $service;
 		}));
-		$TotalReg = count($getData);
 	}
+	$TotalReg = count($getData);
 	
 }
 ?>

@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 session_start();
+include_once(__DIR__ . '/reportrecord.php');
 // hide all error
 error_reporting(0);
 if (!isset($_SESSION["mikhmon"])) {
@@ -29,9 +30,9 @@ if (!isset($_SESSION["mikhmon"])) {
 
 	if (strlen($idhr) > "0") {
 		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-			$API->write('/system/script/print', false);
-			$API->write('?=source=' . $idhr . '');
-			$ARRAY = $API->read();
+			$ARRAY = $API->comm('/system/script/print', array(
+				'?source' => $idhr,
+			));
 			$API->disconnect();
 		}
 		$filedownload = $idhr;
@@ -39,9 +40,9 @@ if (!isset($_SESSION["mikhmon"])) {
 		$shd = "text";
 	} elseif (strlen($idbl) > "0") {
 		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-			$API->write('/system/script/print', false);
-			$API->write('?=owner=' . $idbl . '');
-			$ARRAY = $API->read();
+			$ARRAY = $API->comm('/system/script/print', array(
+				'?owner' => $idbl,
+			));
 			$API->disconnect();
 		}
 		$filedownload = $idbl;
@@ -49,15 +50,14 @@ if (!isset($_SESSION["mikhmon"])) {
 		$shd = "text";
 	} elseif ($idhr == "" || $idbl == "") {
 		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-			$API->write('/system/script/print', false);
-			$API->write('?=comment=mikhmon');
-			$ARRAY = $API->read();
+			$ARRAY = $API->comm('/system/script/print');
 			$API->disconnect();
 		}
 		$filedownload = "all";
 		$shf = "text";
 		$shd = "hidden";
 	}
+	$ARRAY = mikhmonFilterReportRecords($ARRAY);
 }
 ?>
 		<script>
