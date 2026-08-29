@@ -94,8 +94,10 @@ if (!isset($_SESSION["mikhmon"])) {
     $slog = "active";
     $mpage = $_hotspot_log;
     $lmenu = "menu-open";
-  } elseif ($customer == "list") {
-    $scustomers = "active";
+  } elseif ($customer == "list" || $customer == "add") {
+    $mcustomers = "active";
+    $customermenu = "menu-open";
+    if ($customer == "add") { $saddcustomer = "active"; } else { $scustomers = "active"; }
     $mpage = "Pelanggan";
   } elseif ($report == "userlog") {
     $log = "active";
@@ -332,7 +334,11 @@ include('./info.php');
     <a href="./?ppp=profiles&session=<?= $session; ?>" class="<?= $spprofile; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-pie-chart"></i> <?= $_ppp_profiles ?></a>
     <a href="./?ppp=active&session=<?= $session; ?>" class="<?= $spactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi"></i> <?= $_ppp_active ?></a>
   </div>
-  <a href="./?customer=list&session=<?= $session; ?>" class="menu <?= $scustomers; ?>"><i class="fa fa-address-card"></i> Pelanggan</a>
+  <div class="dropdown-btn <?= $mcustomers; ?>"><i class="fa fa-address-card"></i> Pelanggan <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-container <?= $customermenu; ?>">
+    <a href="./?customer=add&session=<?= $session; ?>" class="<?= $saddcustomer; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> Tambah Pelanggan</a>
+    <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> Daftar Pelanggan</a>
+  </div>
   <!--quick print-->
   <a href="./?hotspot=quick-print&session=<?= $session; ?>" class="menu <?= $squick; ?>"> <i class="fa fa-print"></i> <?= $_quick_print ?> </a>
   <!--vouchers-->

@@ -40,18 +40,27 @@ function mikhmonGetCustomers($session) {
   return array_values($customers);
 }
 
-function mikhmonSaveCustomer($session, $id, $name, $phone, $address, $service) {
+function mikhmonSaveCustomer($session, $id, $name, $phone, $address, $service, $username = '', $profile = '') {
   $database = mikhmonReadDatabase();
   if (!isset($database['customers'][$session]) || !is_array($database['customers'][$session])) {
     $database['customers'][$session] = array();
   }
   $service = strtolower($service) === 'pppoe' ? 'pppoe' : 'hotspot';
+  $existingCustomer = array();
+  foreach ($database['customers'][$session] as $existing) {
+    if ($id !== '' && isset($existing['id']) && (string) $existing['id'] === (string) $id) {
+      $existingCustomer = $existing;
+      break;
+    }
+  }
   $customer = array(
     'id' => $id !== '' ? (string) $id : 'customer-' . uniqid(),
     'name' => trim(strip_tags($name)),
     'phone' => trim(strip_tags($phone)),
     'address' => trim(strip_tags($address)),
     'service' => $service,
+    'username' => $username !== '' ? trim(strip_tags($username)) : (isset($existingCustomer['username']) ? $existingCustomer['username'] : ''),
+    'profile' => $profile !== '' ? trim(strip_tags($profile)) : (isset($existingCustomer['profile']) ? $existingCustomer['profile'] : ''),
     'updated_at' => time(),
   );
   if ($customer['name'] === '') {

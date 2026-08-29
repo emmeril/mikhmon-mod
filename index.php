@@ -172,6 +172,10 @@ if (!isset($_SESSION["mikhmon"])) {
     include_once('./customer/customers.php');
   }
 
+  elseif ($customer == "add") {
+    include_once('./customer/addcustomer.php');
+  }
+
 // hotspot log
   elseif ($report == "userlog") {
     include_once('./report/userlog.php');
