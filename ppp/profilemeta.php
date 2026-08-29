@@ -49,7 +49,7 @@ function pppProfileOnUpScript($expmode, $validity, $profileName = '', $price = '
   $script = ':local u $user; :local addr $"remote-address"; :local marker ("mikhmon-pppoe-sale-" . $u); ';
 
   if ($reportPrice !== '') {
-    $script .= ':if ([:len [/system script find where name=$marker]] = 0) do={ :local date [/system clock get date]; :local time [/system clock get time]; :local month [:pick $date 0 3]; :local year [:pick $date 7 11]; :local record ("$date-|-$time-|-$u-|-'. $reportPrice .'-|-$addr-|-PPPoE-|-'. $validity .'-|-'. $profileName .'-|-PPPoE-|-pppoe"); /system script add name=$record owner=("$month$year") source=$date comment="mikhmon"; /system script add name=$marker comment="mikhmon-pppoe-marker"; }; ';
+    $script .= ':if ([:len [/system script find where name=$marker]] = 0) do={ :local date [/system clock get date]; :local time [/system clock get time]; :local month [:pick $date 0 3]; :local year [:pick $date 7 11]; :local record ("$date-|-$time-|-$u-|-'. $reportPrice .'-|-$addr-|-PPPoE-|-'. $validity .'-|-'. $profileName .'-|-PPPoE-|-pppoe-|-'. $price .'"); /system script add name=$record owner=("$month$year") source=$date comment="mikhmon"; /system script add name=$marker comment="mikhmon-pppoe-marker"; }; ';
   }
 
   if ($expmode === 'none' || $validity === '') {

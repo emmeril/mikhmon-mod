@@ -54,6 +54,7 @@ $_hotspot_name = "Nombre Hotspot";
 $_hotspot_users = "Usuarios Hotspot";
 $_hours = "horas";
 $_income = "Ingresos";
+$_net_profit = "Beneficio neto";
 $_idle_timeout = "Tiempo de inactividad";
 $_interface = "Inteface";
 $_ip_bindings = "IP Bindings";

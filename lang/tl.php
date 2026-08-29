@@ -55,6 +55,7 @@ $_hotspot_users = "Hotspot User";
 $_hours = "Oras";
 $_idle_timeout = "Idle Timeout";
 $_income = "Kita";
+$_net_profit = "Net Profit";
 $_interface = "Pangharap";
 $_ip_bindings = "IP Bindings";
 $_last_generate = "Huling nagawan";

@@ -39,6 +39,7 @@ if (!isset($_SESSION["mikhmon"])) {
   include_once('../lib/formatbytesbites.php');
   $API = new RouterosAPI();
   $API->debug = false;
+	$API->connect($iphost, $userhost, decrypt($passwdhost));
 
 	$idhr = $_GET['idhr'];
 	$idbl = $_GET['idbl'];
@@ -150,6 +151,10 @@ if (!isset($_SESSION["mikhmon"])) {
 	}
 
 	$getData = mikhmonFilterReportRecords($getData);
+	$profileCosts = mikhmonReportProfileCosts(
+		$API->comm('/ip/hotspot/user/profile/print'),
+		$API->comm('/ppp/profile/print')
+	);
 
 	if (in_array($service, array('hotspot', 'pppoe'))) {
 		$getData = array_values(array_filter($getData, function ($row) use ($service) {
@@ -166,6 +171,29 @@ if (!isset($_SESSION["mikhmon"])) {
 		$fprefix .= '-profile-[' . $profile . ']';
 	}
 	$TotalReg = count($getData);
+	$totalProfit = 0;
+	for ($i = 0; $i < $TotalReg; $i++) {
+		$parts = mikhmonReportParts($getData[$i]);
+		$include = true;
+		if ($fcomment != "" || $pcomment == "!!") {
+			$include = isset($parts[8]) && strpos($parts[8], $fcomment) !== false;
+		} elseif ($prefix != "") {
+			$include = isset($parts[2]) && substr($parts[2], 0, strlen($prefix)) == $prefix;
+		} elseif ($range != "") {
+			$rangeParts = explode('-', $range, 2);
+			$rangeDays = range((int) $rangeParts[0], (int) $rangeParts[1]);
+			$day = isset($parts[0]) ? (int) substr($parts[0], 4, 2) : 0;
+			$include = in_array($day, $rangeDays, true);
+		}
+		if ($include) {
+			$totalProfit += mikhmonReportNetProfit($getData[$i], $profileCosts);
+		}
+	}
+	if (in_array($currency, $cekindo['indo'])) {
+		$formattedProfit = $currency . ' ' . number_format($totalProfit, 0, ',', '.');
+	} else {
+		$formattedProfit = $currency . ' ' . number_format($totalProfit, 2, '.', ',');
+	}
 	
 }
 ?>
@@ -295,6 +323,11 @@ function number_format(number, decimals, dec_point, thousands_sep) {
 				  <th style="text-align:left;" colspan=5 ><?= $_selling_report ?> <?= $trange.$filedownload . $fprefix; ?><b style="font-size:0;">,,,</b></th>
 				  <th style="text-align:right;"><?= $_total ?></th>
 				  <th style="text-align:right;" id="total"></th>
+				</tr>
+				<tr>
+				  <th style="text-align:left;" colspan=5></th>
+				  <th style="text-align:right;"><?= $_net_profit ?></th>
+				  <th style="text-align:right;"><?= htmlspecialchars($formattedProfit, ENT_QUOTES) ?></th>
 				</tr>
 				<tr style="text-align:left;">
 				  <th >&#8470;</th>

@@ -74,6 +74,10 @@ include('../lang/'.$langid.'.php');
       "?owner" => "$idbl",
     ));
     $getSRBl = mikhmonFilterReportRecords($getSRBl);
+    $profileCosts = mikhmonReportProfileCosts(
+      $API->comm('/ip/hotspot/user/profile/print'),
+      $API->comm('/ppp/profile/print')
+    );
     $TotalRBl = count($getSRBl);
     $_SESSION[$session.'totalBl'] = $TotalRBl;
 /*
@@ -85,11 +89,13 @@ include('../lang/'.$langid.'.php');
     foreach($getSRBl as $row){
     
       if((explode("-|-", $row['name'])[0]) == $idhr){
-         $tHr += explode("-|-", $row['name'])[3];
+         $tHr += mikhmonReportSellingPrice($row);
+         $pHr += mikhmonReportNetProfit($row, $profileCosts);
          $TotalRHr += count((array)$row['source']); /*Modif line add (array) by github https://github.com/MasKawer*/
  
        }
-       $tBl += explode("-|-", $row['name'])[3];
+       $tBl += mikhmonReportSellingPrice($row);
+       $pBl += mikhmonReportNetProfit($row, $profileCosts);
 
       if($TotalRHr == ""){
         $TotalRHr = "0";
@@ -114,17 +120,25 @@ include('../lang/'.$langid.'.php');
                           if ($currency == in_array($currency, $cekindo['indo'])) {
                             $dincome = number_format((float)$tHr, 0, ",", ".");
                             $mincome = number_format((float)$tBl, 0, ",", ".");
+                            $dprofit = number_format((float)$pHr, 0, ",", ".");
+                            $mprofit = number_format((float)$pBl, 0, ",", ".");
                             $_SESSION[$session.'dincome'] = $dincome;
                             $_SESSION[$session.'mincome'] = $mincome;
+                            $_SESSION[$session.'dprofit'] = $dprofit;
+                            $_SESSION[$session.'mprofit'] = $mprofit;
                           }else{
                             $dincome = number_format((float)$tHr, 2);
                             $mincome = number_format((float)$tBl, 2);
+                            $dprofit = number_format((float)$pHr, 2);
+                            $mprofit = number_format((float)$pBl, 2);
                             $_SESSION[$session.'dincome'] = $dincome;
                             $_SESSION[$session.'mincome'] = $mincome;
+                            $_SESSION[$session.'dprofit'] = $dprofit;
+                            $_SESSION[$session.'mprofit'] = $mprofit;
                           }
                             echo $_income."<br/>" . "
                           ".$_today." " . $TotalRHr . " trx : " . $currency . " " . $dincome . "<br/>
-                          ".$_this_month." " . $TotalRBl . " trx : " . $currency . " " . $mincome;
+                          ".$_this_month." " . $TotalRBl . " trx : " . $currency . " " . $mincome . "<br/>" . $_net_profit . "<br/>" . $_today . ": " . $currency . " " . $dprofit . "<br/>" . $_this_month . ": " . $currency . " " . $mprofit;
                           ?>
                         </div>
                     </span>

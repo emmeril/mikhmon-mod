@@ -125,6 +125,10 @@ if (!isset($_SESSION["mikhmon"])) {
 	}
 
 	$getData = mikhmonFilterReportRecords($getData);
+	$profileCosts = mikhmonReportProfileCosts(
+		$API->comm('/ip/hotspot/user/profile/print'),
+		$API->comm('/ppp/profile/print')
+	);
 
 	if (in_array($service, array('hotspot', 'pppoe'))) {
 		$getData = array_values(array_filter($getData, function ($row) use ($service) {
@@ -151,17 +155,24 @@ if (!isset($_SESSION["mikhmon"])) {
 	}
 	$TotalReg = count($getData);
 	$totalIncome = 0;
+	$totalProfit = 0;
 	foreach ($getData as $reportRow) {
 		$reportParts = explode('-|-', $reportRow['name']);
 		if ($prefix != "" && substr($reportParts[2], 0, strlen($prefix)) != $prefix) {
 			continue;
 		}
-		$totalIncome += (float) $reportParts[3];
+		$totalIncome += mikhmonReportSellingPrice($reportRow);
+		$totalProfit += mikhmonReportNetProfit($reportRow, $profileCosts);
 	}
 	if (in_array($currency, $cekindo['indo'])) {
 		$formattedTotal = $currency . ' ' . number_format($totalIncome, 0, ',', '.');
 	} else {
 		$formattedTotal = $currency . ' ' . number_format($totalIncome, 2, '.', ',');
+	}
+	if (in_array($currency, $cekindo['indo'])) {
+		$formattedProfit = $currency . ' ' . number_format($totalProfit, 0, ',', '.');
+	} else {
+		$formattedProfit = $currency . ' ' . number_format($totalProfit, 2, '.', ',');
 	}
 	
 }
@@ -349,8 +360,13 @@ $(document).ready(function(){
 				<thead class="thead-light">
 				<tr>
 				  <th colspan=6 ><?= $_selling_report ?> <?= $filedownload . $fprefix; ?><b style="font-size:0;">,,,,,</b></th>
-				  <th style="text-align:right;"><?= $_total ?></th>
+				  <th style="text-align:right;"><?= $_income ?></th>
 				  <th style="text-align:right;" id="total"><?= htmlspecialchars($formattedTotal, ENT_QUOTES) ?></th>
+				</tr>
+				<tr>
+				  <th colspan="6"></th>
+				  <th style="text-align:right;"><?= $_net_profit ?></th>
+				  <th style="text-align:right;"><?= htmlspecialchars($formattedProfit, ENT_QUOTES) ?></th>
 				</tr>
 				<tr>
 				  <th >&#8470;</th>

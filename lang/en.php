@@ -55,6 +55,7 @@ $_hotspot_users = "Hotspot User";
 $_hours = "hours";
 $_idle_timeout = "Idle Timeout";
 $_income = "Income";
+$_net_profit = "Net Profit";
 $_interface = "Interface";
 $_ip_bindings = "IP Bindings";
 $_last_generate = "Last Generate";

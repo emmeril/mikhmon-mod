@@ -55,6 +55,7 @@ $_hotspot_users = "Hotspot Kullanıcısı";
 $_hours = "saat";
 $_idle_timeout = "Boşta Kalma Zaman Aşımı";
 $_income = "Gelir";
+$_net_profit = "Net Kar";
 $_interface = "Arayüz";
 $_ip_bindings = "IP Bağlantıları";
 $_last_generate = "Son Oluşturma";

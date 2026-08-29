@@ -400,7 +400,7 @@ if (!isset($_SESSION["mikhmon"])) {
                           if ($_SESSION[$session.'sdate'] == $_SESSION[$session.'idhr']){
                             echo $_income." <br/>" . "
                           ".$_today." " . $_SESSION[$session.'totalHr'] . " trx : " . $currency . " " . $_SESSION[$session.'dincome']. "<br/>
-                          ".$_this_month." " . $_SESSION[$session.'totalBl'] . " trx : " . $currency . " " . $_SESSION[$session.'mincome'];
+                          ".$_this_month." " . $_SESSION[$session.'totalBl'] . " trx : " . $currency . " " . $_SESSION[$session.'mincome'] . "<br/>" . $_net_profit . "<br/>" . $_today . ": " . $currency . " " . (isset($_SESSION[$session.'dprofit']) ? $_SESSION[$session.'dprofit'] : '0') . "<br/>" . $_this_month . ": " . $currency . " " . (isset($_SESSION[$session.'mprofit']) ? $_SESSION[$session.'mprofit'] : '0');
                           }else{
                             echo "<div id='loader' ><i><span> <i class='fa fa-circle-o-notch fa-spin'></i> ". $_processing." </i></div>";
                           }

@@ -54,6 +54,7 @@ $_hotspot_name = "Nama Hotspot";
 $_hotspot_users = "Pengguna Hotspot";
 $_hours = "jam";
 $_income = "Pendapatan";
+$_net_profit = "Keuntungan Bersih";
 $_idle_timeout = "Idle Timeout";
 $_interface = "Antarmuka";
 $_ip_bindings = "Mengikat IP";
