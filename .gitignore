@@ -1,0 +1,10 @@
+# Local Mikhmon configuration contains router and administrator credentials.
+/include/config.php
+
+# Runtime and editor files.
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+

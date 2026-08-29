@@ -1,0 +1,14 @@
+<?php
+error_reporting(0);
+if (!isset($_SESSION["mikhmon"])) { header("Location:../admin.php?id=login"); exit; }
+$name = $_GET['secret']; $rows = $API->comm('/ppp/secret/print', array('?name'=>$name)); $user = isset($rows[0]) ? $rows[0] : array();
+if (!$user || !isset($user['.id'])) { echo '<div class="card"><div class="card-body">User PPP tidak ditemukan.</div></div>'; return; }
+$profiles = $API->comm('/ppp/profile/print');
+if (isset($_POST['save'])) {
+  $args = array('.id'=>$user['.id'],'name'=>trim($_POST['name']),'service'=>$_POST['service'],'profile'=>$_POST['profile'],'local-address'=>$_POST['local-address'],'remote-address'=>$_POST['remote-address'],'caller-id'=>$_POST['caller-id'],'comment'=>$_POST['comment']);
+  if ($_POST['password'] !== '') $args['password'] = $_POST['password'];
+  $API->comm('/ppp/secret/set',$args); echo "<script>window.location='./?ppp=secrets&session=".$session."'</script>"; exit;
+}
+function val($k,$u){return htmlspecialchars(isset($u[$k])?$u[$k]:'',ENT_QUOTES);}
+?>
+<div class="row"><div class="col-8"><div class="card box-bordered"><div class="card-header"><h3><i class="fa fa-edit"></i> <?= $_edit_user ?>: <?= val('name',$user) ?></h3></div><div class="card-body"><form method="post" autocomplete="off"><a class="btn bg-warning" href="./?ppp=secrets&session=<?= $session ?>"><i class="fa fa-close"></i> <?= $_close ?></a> <button class="btn bg-primary" name="save"><i class="fa fa-save"></i> <?= $_save ?></button><table class="table"><tr><td><?= $_user_name ?></td><td><input class="form-control" name="name" value="<?= val('name',$user) ?>" required></td></tr><tr><td><?= $_password ?></td><td><input class="form-control" type="password" name="password" placeholder="(tidak diubah)"></td></tr><tr><td>Service</td><td><select class="form-control" name="service"><option <?= (isset($user['service'])&&$user['service']=='pppoe')?'selected':'' ?>>pppoe</option><option <?= (isset($user['service'])&&$user['service']=='any')?'selected':'' ?>>any</option></select></td></tr><tr><td><?= $_profile ?></td><td><select class="form-control" name="profile"><option></option><?php foreach($profiles as $p) echo '<option '.((isset($user['profile'])&&$user['profile']==$p['name'])?'selected':'').'>'.htmlspecialchars($p['name']).'</option>'; ?></select></td></tr><tr><td>Local Address</td><td><input class="form-control" name="local-address" value="<?= val('local-address',$user) ?>"></td></tr><tr><td>Remote Address</td><td><input class="form-control" name="remote-address" value="<?= val('remote-address',$user) ?>"></td></tr><tr><td>Caller ID</td><td><input class="form-control" name="caller-id" value="<?= val('caller-id',$user) ?>"></td></tr><tr><td><?= $_comment ?></td><td><input class="form-control" name="comment" value="<?= val('comment',$user) ?>"></td></tr></table></form></div></div></div></div>
