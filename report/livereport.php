@@ -136,9 +136,9 @@ include('../lang/'.$langid.'.php');
                             $_SESSION[$session.'dprofit'] = $dprofit;
                             $_SESSION[$session.'mprofit'] = $mprofit;
                           }
-                            echo $_income."<br/>" . "
+                            echo "<b>" . $_income . "</b><br/>" . "
                           ".$_today." " . $TotalRHr . " trx : " . $currency . " " . $dincome . "<br/>
-                          ".$_this_month." " . $TotalRBl . " trx : " . $currency . " " . $mincome . "<br/>" . $_net_profit . "<br/>" . $_today . ": " . $currency . " " . $dprofit . "<br/>" . $_this_month . ": " . $currency . " " . $mprofit;
+                          ".$_this_month." " . $TotalRBl . " trx : " . $currency . " " . $mincome . "<hr style='margin:5px 0;border:0;border-top:1px solid currentColor;opacity:.35'><b>" . $_net_profit . "</b><br/>" . $_today . ": " . $currency . " " . $dprofit . "<br/>" . $_this_month . ": " . $currency . " " . $mprofit;
                           ?>
                         </div>
                     </span>
