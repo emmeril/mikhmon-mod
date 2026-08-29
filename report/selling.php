@@ -360,7 +360,7 @@ $(document).ready(function(){
 					<th ><?= $_profile ?></th>
 					<th >Type</th>
 					<th ><?= $_comment ?></th>
-					<th style="text-align:right;"> <?= $_price ?></th>
+					<th style="text-align:right;"> <?= $_selling_price ?></th>
 				</tr>
 				</thead>
 				<tbody>

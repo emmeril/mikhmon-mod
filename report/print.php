@@ -303,7 +303,7 @@ function number_format(number, decimals, dec_point, thousands_sep) {
 					<th ><?= $_user_name ?></th>
 					<th ><?= $_profile ?></th>
 					<th ><?= $_comment ?></th>
-					<th style="text-align:right;"> <?= $_price; ?></th>
+					<th style="text-align:right;"> <?= $_selling_price; ?></th>
 				</tr>
 				
 				<tbody id="tbody">

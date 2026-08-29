@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 session_start();
+include_once(__DIR__ . '/profileprice.php');
 // hide all error
 error_reporting(0);
 if (!isset($_SESSION["mikhmon"])) {
@@ -38,16 +39,9 @@ if (!isset($_SESSION["mikhmon"])) {
     $getprice = ($_POST['price']);
     $getsprice = ($_POST['sprice']);
     $addrpool = ($_POST['ppool']);
-    if ($getprice == "") {
-      $price = "0";
-    } else {
-      $price = $getprice;
-    }
-    if ($getsprice == "") {
-      $sprice = "0";
-    } else {
-      $sprice = $getsprice;
-    }
+    $price = mikhmonNormalizeProfilePrice($getprice);
+    $sprice = mikhmonNormalizeProfilePrice($getsprice);
+    $reportPrice = mikhmonProfileReportPrice($price, $sprice);
     $getlock = ($_POST['lockunlock']);
     if ($getlock == "Enable") {
       $lock = '; [:local mac $"mac-address"; /ip hotspot user set mac-address=$mac [find where name=$user]]';
@@ -60,7 +54,7 @@ if (!isset($_SESSION["mikhmon"])) {
 
     $parent = ($_POST['parent']);
     
-    $record = '; :local mac $"mac-address"; :local time [/system clock get time ]; /system script add name="$date-|-$time-|-$user-|-'.$price.'-|-$address-|-$mac-|-' . $validity . '-|-'.$name.'-|-$comment" owner="$month$year" source="$date" comment="mikhmon"';
+    $record = '; :local mac $"mac-address"; :local time [/system clock get time ]; /system script add name="$date-|-$time-|-$user-|-'.$reportPrice.'-|-$address-|-$mac-|-' . $validity . '-|-'.$name.'-|-$comment" owner="$month$year" source="$date" comment="mikhmon"';
     
     $onlogin = ':put (",'.$expmode.',' . $price . ',' . $validity . ','.$sprice.',,' . $getlock . ',"); {:local comment [ /ip hotspot user get [/ip hotspot user find where name="$user"] comment]; :local ucode [:pic $comment 0 2]; :if ($ucode = "vc" or $ucode = "up" or $comment = "") do={ :local date [ /system clock get date ];:local year [ :pick $date 7 11 ];:local month [ :pick $date 0 3 ]; /sys sch add name="$user" disable=no start-date=$date interval="' . $validity . '"; :delay 5s; :local exp [ /sys sch get [ /sys sch find where name="$user" ] next-run]; :local getxp [len $exp]; :if ($getxp = 15) do={ :local d [:pic $exp 0 6]; :local t [:pic $exp 7 16]; :local s ("/"); :local exp ("$d$s$year $t"); /ip hotspot user set comment="$exp" [find where name="$user"];}; :if ($getxp = 8) do={ /ip hotspot user set comment="$date $exp" [find where name="$user"];}; :if ($getxp > 15) do={ /ip hotspot user set comment="$exp" [find where name="$user"];};:delay 5s; /sys sch remove [find where name="$user"]';
     
@@ -185,10 +179,10 @@ if (!isset($_SESSION["mikhmon"])) {
     <td class="align-middle"><?= $_grace_period ?></td><td><input class="form-control" type="text" id="gracepi" size="4" autocomplete="off" name="graceperiod" placeholder="5m" value="5m" required="1"></td>
   </tr>
   <tr>
-    <td class="align-middle"><?= $_price.' '.$currency; ?></td><td><input class="form-control" type="text" size="10" min="0" name="price" value="" ></td>
+    <td class="align-middle"><?= $_price.' '.$currency; ?></td><td><input class="form-control" type="number" step="any" min="0" name="price" value="" ></td>
   </tr>
   <tr>
-    <td class="align-middle"><?= $_selling_price.' '.$currency; ?></td><td><input class="form-control" type="text" size="10" min="0" name="sprice" value="" ></td>
+    <td class="align-middle"><?= $_selling_price.' '.$currency; ?></td><td><input class="form-control" type="number" step="any" min="0" name="sprice" value="" ></td>
   </tr>
   <tr>
     <td><?= $_lock_user ?></td><td>
