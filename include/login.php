@@ -17,6 +17,11 @@
  */
 session_start();
 
+include_once('./include/brand.php');
+
+$loginLogo = is_file('./img/login-logo.png') ? 'img/login-logo.png' : 'img/favicon.png';
+$loginLogo .= '?v=' . (is_file('./img/login-logo.png') ? filemtime('./img/login-logo.png') : filemtime('./img/favicon.png'));
+
 
 ?>
 
@@ -27,10 +32,10 @@ session_start();
     </div>
     <div class="card-body">
       <div class="text-center pd-5">
-        <img src="img/favicon.png" alt="MIKHMON Logo">
+        <img src="<?= htmlspecialchars($loginLogo, ENT_QUOTES); ?>" alt="<?= htmlspecialchars($brandname, ENT_QUOTES); ?> Logo">
       </div>
       <div  class="text-center">
-      <span style="font-size: 25px; margin: 10px;">MIKHMON</span>
+      <span style="font-size: 25px; margin: 10px;"><?= htmlspecialchars($brandname, ENT_QUOTES); ?></span>
       </div>
       <center>
       <form autocomplete="off" action="" method="post">

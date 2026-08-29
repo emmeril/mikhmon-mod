@@ -58,7 +58,7 @@ if (!isset($_SESSION["mikhmon"])) {
       $uploadOk = 0;
     }
 // Allow certain file formats
-    if (basename($_FILES["UploadLogo"]["name"] != "logo-" . $session . ".png")) {
+    if (basename($_FILES["UploadLogo"]["name"]) != "logo-" . $session . ".png") {
       if ($currency == in_array($currency, $cekindo['indo'])) {
         $galat = '<div class="box bg-danger"></i> Alert!<br>  Hanya bisa upload logo-' . $session . '.png. </div>';
       } else {
@@ -77,6 +77,8 @@ if (!isset($_SESSION["mikhmon"])) {
 // if everything is ok, try to upload file
     } else {
       if (move_uploaded_file($_FILES["UploadLogo"]["tmp_name"], $logo_file)) {
+        // Keep the latest uploaded router logo available on the login form.
+        copy($logo_file, "./img/login-logo.png");
         if ($currency == in_array($currency, $cekindo['indo'])) {
           $galat = '<div class="box bg-success"></i> Alert!<br>  Success!</h5> File ' . basename($_FILES["UploadLogo"]["name"]) . ' telah diupload. </div>';
         } else {
