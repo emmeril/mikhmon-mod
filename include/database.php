@@ -12,7 +12,7 @@ function mikhmonBackupPath() {
 
 function mikhmonDefaultSyncSettings() {
   return array(
-    'interval' => 60,
+    'interval' => 86400,
   );
 }
 
@@ -82,6 +82,10 @@ function mikhmonNormalizeRouterRecord($record, $session) {
   $record['latest'] = isset($record['latest']) && is_array($record['latest']) ? mikhmonSnapshotCore($record['latest']) : mikhmonSnapshotCore(array());
   $record['history'] = isset($record['history']) && is_array($record['history']) ? $record['history'] : array();
   $record['settings'] = array_merge($settings, isset($record['settings']) && is_array($record['settings']) ? $record['settings'] : array());
+  // Migrate the previous per-minute default to the daily backup policy.
+  if ((int) $record['settings']['interval'] <= 60) {
+    $record['settings']['interval'] = 86400;
+  }
   $record['last_checked_at'] = isset($record['last_checked_at']) ? (int) $record['last_checked_at'] : 0;
   if (!empty($record['latest'])) {
     $record['latest']['session'] = (string) $session;
