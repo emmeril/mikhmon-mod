@@ -15,9 +15,7 @@ if (isset($_POST['database_action'])) {
     $backupMessage = 'Backup berhasil disimpan: ' . count($snapshot['hotspot_users']) . ' user Hotspot dan ' . count($snapshot['ppp_secrets']) . ' user PPPoE.';
   } elseif ($_POST['database_action'] === 'sync') {
     $syncResult = mikhmonSynchronizeRouterData($API, $session, true);
-    if ($syncResult['status'] === 'recovered') {
-      $backupMessage = 'Sinkronisasi otomatis memulihkan ' . $syncResult['result']['users'] . ' user dan ' . $syncResult['result']['profiles'] . ' profile yang hilang.';
-    } elseif ($syncResult['status'] === 'router-error') {
+    if ($syncResult['status'] === 'router-error') {
       $backupError = 'Router tidak dapat dibaca. Backup lama tetap dipertahankan.';
     } else {
       $backupMessage = 'Sinkronisasi selesai dan backup terbaru tersimpan.';
@@ -43,11 +41,10 @@ $updatedAt = !empty($snapshot['updated_at']) ? date('Y-m-d H:i:s', (int) $snapsh
   <div class="card-body">
     <?php if ($backupMessage !== ''): ?><div class="box bg-success"><?= htmlspecialchars($backupMessage, ENT_QUOTES); ?></div><?php endif; ?>
     <?php if ($backupError !== ''): ?><div class="box bg-danger"><?= htmlspecialchars($backupError, ENT_QUOTES); ?></div><?php endif; ?>
-    <p>Backup lokal menyimpan user dan profile Hotspot/PPPoE agar dapat dipulihkan jika data di MikroTik hilang.</p>
-    <p><strong>Backup terakhir:</strong> <?= htmlspecialchars($updatedAt, ENT_QUOTES); ?> &nbsp; | &nbsp; Hotspot: <?= count($snapshot['hotspot_users']); ?> &nbsp; | &nbsp; PPPoE: <?= count($snapshot['ppp_secrets']); ?> &nbsp; | &nbsp; <strong>Auto-sync:</strong> <?= $record['settings']['auto_sync'] ? 'Aktif' : 'Nonaktif'; ?></p>
-    <?php if (!empty($record['last_recovery']['time'])): ?><p><strong>Pemulihan terakhir:</strong> <?= date('Y-m-d H:i:s', (int) $record['last_recovery']['time']); ?> (<?= (int) $record['last_recovery']['users']; ?> user)</p><?php endif; ?>
+    <p>Backup otomatis hanya membaca data dari MikroTik. Data tidak pernah dikembalikan ke router tanpa menekan tombol Restore.</p>
+    <p><strong>Backup terakhir:</strong> <?= htmlspecialchars($updatedAt, ENT_QUOTES); ?> &nbsp; | &nbsp; Hotspot: <?= count($snapshot['hotspot_users']); ?> &nbsp; | &nbsp; PPPoE: <?= count($snapshot['ppp_secrets']); ?> &nbsp; | &nbsp; <strong>Auto-backup:</strong> Aktif</p>
     <form method="post" style="display:inline-block;margin-right:8px"><input type="hidden" name="database_action" value="backup"><button class="btn bg-primary" type="submit"><i class="fa fa-save"></i> Backup Sekarang</button></form>
-    <form method="post" style="display:inline-block;margin-right:8px"><input type="hidden" name="database_action" value="sync"><button class="btn bg-orange" type="submit"><i class="fa fa-refresh"></i> Sync Sekarang</button></form>
+    <form method="post" style="display:inline-block;margin-right:8px"><input type="hidden" name="database_action" value="sync"><button class="btn bg-orange" type="submit"><i class="fa fa-refresh"></i> Sync Backup Sekarang</button></form>
     <form method="post" style="display:inline-block" onsubmit="return confirm('Restore akan menambahkan user yang belum ada di MikroTik. Lanjutkan?');"><input type="hidden" name="database_action" value="restore"><select name="restore_type" class="pd-5"><option value="all">Semua</option><option value="hotspot">Hotspot</option><option value="pppoe">PPPoE</option></select> <select name="restore_version" class="pd-5"><option value="latest">Backup terbaru</option><?php foreach ($record['history'] as $historyIndex => $historySnapshot): ?><option value="history-<?= (int) $historyIndex; ?>"><?= date('Y-m-d H:i:s', (int) $historySnapshot['updated_at']); ?></option><?php endforeach; ?></select> <button class="btn bg-green" type="submit"><i class="fa fa-upload"></i> Restore</button></form>
   </div>
 </div></div></div>

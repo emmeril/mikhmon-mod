@@ -1,5 +1,5 @@
 <?php
-// Versioned local snapshots provide automatic backup and guarded recovery.
+// Versioned local snapshots sync automatically from MikroTik; restore is manual.
 
 function mikhmonBackupPath() {
   $directory = dirname(__DIR__) . '/data';
@@ -12,10 +12,7 @@ function mikhmonBackupPath() {
 
 function mikhmonDefaultSyncSettings() {
   return array(
-    'auto_sync' => true,
     'interval' => 60,
-    'recovery_percent' => 80,
-    'minimum_missing' => 5,
   );
 }
 
@@ -80,14 +77,12 @@ function mikhmonNormalizeRouterRecord($record, $session) {
       'history' => array(),
       'settings' => $settings,
       'last_checked_at' => isset($record['updated_at']) ? (int) $record['updated_at'] : 0,
-      'last_recovery' => array(),
     );
   }
   $record['latest'] = isset($record['latest']) && is_array($record['latest']) ? mikhmonSnapshotCore($record['latest']) : mikhmonSnapshotCore(array());
   $record['history'] = isset($record['history']) && is_array($record['history']) ? $record['history'] : array();
   $record['settings'] = array_merge($settings, isset($record['settings']) && is_array($record['settings']) ? $record['settings'] : array());
   $record['last_checked_at'] = isset($record['last_checked_at']) ? (int) $record['last_checked_at'] : 0;
-  $record['last_recovery'] = isset($record['last_recovery']) && is_array($record['last_recovery']) ? $record['last_recovery'] : array();
   if (!empty($record['latest'])) {
     $record['latest']['session'] = (string) $session;
   }
@@ -125,7 +120,7 @@ function mikhmonSnapshotFingerprint($snapshot) {
 
 function mikhmonStoreSnapshot(&$record, $snapshot) {
   $snapshot = mikhmonSnapshotCore($snapshot);
-  if (!empty($record['latest']) && mikhmonSnapshotFingerprint($record['latest']) !== mikhmonSnapshotFingerprint($snapshot)) {
+  if (!empty($record['latest']['updated_at']) && mikhmonSnapshotFingerprint($record['latest']) !== mikhmonSnapshotFingerprint($snapshot)) {
     array_unshift($record['history'], mikhmonSnapshotCore($record['latest']));
     $record['history'] = array_slice($record['history'], 0, 10);
   }
@@ -158,28 +153,6 @@ function mikhmonRowsByName($rows) {
     }
   }
   return $named;
-}
-
-function mikhmonShouldAutoRecover($backupRows, $currentRows, $settings) {
-  $backupCount = count((array) $backupRows);
-  $currentNames = mikhmonRowsByName($currentRows);
-  if ($backupCount === 0) {
-    return false;
-  }
-  $missing = 0;
-  foreach (mikhmonRowsByName($backupRows) as $name => $row) {
-    if (!isset($currentNames[$name])) {
-      $missing++;
-    }
-  }
-  if ($missing === 0) {
-    return false;
-  }
-  if (count($currentNames) === 0) {
-    return $backupCount >= 3;
-  }
-  $percent = ($missing / $backupCount) * 100;
-  return $missing >= (int) $settings['minimum_missing'] && $percent >= (int) $settings['recovery_percent'];
 }
 
 function mikhmonRestoreFields($row, $allowed) {
@@ -232,30 +205,6 @@ function mikhmonSynchronizeRouterData($API, $session, $force = false) {
   if ($current === false) {
     return array('status' => 'router-error', 'record' => $record);
   }
-  if (empty($record['latest'])) {
-    mikhmonStoreSnapshot($record, $current);
-    $database['routers'][$session] = $record;
-    mikhmonWriteDatabase($database);
-    return array('status' => 'initialized', 'record' => $record);
-  }
-
-  $recoverHotspot = !empty($record['settings']['auto_sync']) && mikhmonShouldAutoRecover($record['latest']['hotspot_users'], $current['hotspot_users'], $record['settings']);
-  $recoverPppoe = !empty($record['settings']['auto_sync']) && mikhmonShouldAutoRecover($record['latest']['ppp_secrets'], $current['ppp_secrets'], $record['settings']);
-  if ($recoverHotspot || $recoverPppoe) {
-    $type = $recoverHotspot && $recoverPppoe ? 'all' : ($recoverHotspot ? 'hotspot' : 'pppoe');
-    $restored = mikhmonRestoreSnapshot($API, $record['latest'], $type);
-    $record['last_checked_at'] = time();
-    $record['last_recovery'] = array(
-      'time' => time(),
-      'type' => $type,
-      'users' => $restored['users'],
-      'profiles' => $restored['profiles'],
-    );
-    $database['routers'][$session] = $record;
-    mikhmonWriteDatabase($database);
-    return array('status' => 'recovered', 'record' => $record, 'result' => $restored);
-  }
-
   mikhmonStoreSnapshot($record, $current);
   $database['routers'][$session] = $record;
   mikhmonWriteDatabase($database);
@@ -272,16 +221,8 @@ function mikhmonRestoreRouterData($API, $session, $type = 'all', $version = 'lat
       $snapshot = mikhmonSnapshotCore($record['history'][$index]);
     }
   }
-  if (empty($snapshot)) {
+  if (empty($snapshot['updated_at'])) {
     return array('error' => 'No backup found for this router session.');
   }
   return mikhmonRestoreSnapshot($API, $snapshot, $type);
-}
-
-function mikhmonSetAutoSync($session, $enabled) {
-  $database = mikhmonReadDatabase();
-  $record = mikhmonGetRouterRecord($database, $session);
-  $record['settings']['auto_sync'] = (bool) $enabled;
-  $database['routers'][$session] = $record;
-  return mikhmonWriteDatabase($database);
 }

@@ -45,7 +45,7 @@ include('../lang/'.$langid.'.php');
   if ($load == "sysresource") {
 
     if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-      // Dashboard polling keeps the backup and recovery check running while Mikhmon is open.
+      // Dashboard polling keeps versioned backups current while Mikhmon is open.
       mikhmonSynchronizeRouterData($API, $session);
     }
 
