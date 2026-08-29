@@ -8,6 +8,25 @@ credentials and is intentionally excluded from Git.
 
 Change the navigation brand from `Admin Settings > Brand Name`.
 
+#### Production with PM2
+
+Install PHP and PM2 on the server, then start Mikhmon from the project root:
+
+```bash
+pm2 start ecosystem.config.js --env production
+pm2 save
+```
+
+The application listens on `0.0.0.0:80` by default. Set a different host
+or port before starting PM2 when needed:
+
+```bash
+MIKHMON_HOST=127.0.0.1 MIKHMON_PORT=9000 pm2 start ecosystem.config.js --env production
+```
+
+Run `pm2 startup` and follow the command it prints if the application should
+start automatically after a server reboot.
+
 #### Automatic daily backup
 
 Mikhmon keeps a local, versioned backup of Hotspot and PPPoE users/profiles.
