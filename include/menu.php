@@ -94,7 +94,7 @@ if (!isset($_SESSION["mikhmon"])) {
     $slog = "active";
     $mpage = $_hotspot_log;
     $lmenu = "menu-open";
-  } elseif ($customer == "list" || $customer == "add") {
+  } elseif ($customer == "list" || $customer == "add" || $customer == "edit") {
     $mcustomers = "active";
     $customermenu = "menu-open";
     if ($customer == "add") { $saddcustomer = "active"; } else { $scustomers = "active"; }

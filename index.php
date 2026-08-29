@@ -168,11 +168,11 @@ if (!isset($_SESSION["mikhmon"])) {
   }
 
 // customer database
-  elseif ($customer == "list") {
+  elseif ($customer == "list" && $customerid == "") {
     include_once('./customer/customers.php');
   }
 
-  elseif ($customer == "add") {
+  elseif ($customer == "add" || $customer == "edit" || ($customer == "list" && $customerid != "")) {
     include_once('./customer/addcustomer.php');
   }
 
