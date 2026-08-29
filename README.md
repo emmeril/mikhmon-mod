@@ -8,6 +8,20 @@ credentials and is intentionally excluded from Git.
 
 Change the navigation brand from `Admin Settings > Brand Name`.
 
+#### Automatic daily backup
+
+Mikhmon keeps a local, versioned backup of Hotspot and PPPoE users/profiles.
+The web application backs up when a router session is accessed. For a backup
+that runs even when nobody opens Mikhmon, add a daily system cron entry:
+
+```cron
+5 0 * * * /usr/bin/php /path/to/mikhmon/cron/backup.php >> /path/to/mikhmon/data/backup-cron.log 2>&1
+```
+
+Backup is one-way (`MikroTik -> local database`). Restore is always manual
+from `Settings > Database Backup`; automatic recovery is intentionally disabled
+so expired or intentionally deleted users are not recreated.
+
 #### Download update.zip
 [update.zip](https://raw.githubusercontent.com/laksa19/laksa19.github.io/master/download/update.zip){:target="_blank"}
 
