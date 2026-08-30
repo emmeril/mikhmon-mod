@@ -29,6 +29,10 @@ roleTestAssert(mikhmonSaveUser('', 'Duplikat', 'MITRA1', 'mitra', 'router-a', 's
 $customerOne = mikhmonSaveCustomer('router-a', '', 'Pelanggan A', '', '', 'hotspot', 'cust-a', 'basic', $mitraId);
 $customerTwo = mikhmonSaveCustomer('router-a', '', 'Pelanggan B', '', '', 'pppoe', 'cust-b', 'basic', '');
 roleTestAssert($customerOne !== false && $customerTwo !== false, 'customers can be assigned');
+$sameNameCustomer = mikhmonSaveCustomer('router-a', '', '  pelanggan   a ', '', '', 'pppoe', 'cust-a-home', 'home', '');
+roleTestAssert($sameNameCustomer === $customerOne, 'same normalized customer name reuses the existing customer');
+roleTestAssert(count(mikhmonCustomerServices(mikhmonFindCustomer('router-a', $customerOne))) === 2, 'one customer can own multiple services');
+roleTestAssert(count(mikhmonGetCustomers('router-a')) === 2, 'same-name records do not create duplicate customers');
 roleTestAssert(mikhmonAssignedCustomerCount($mitraId) === 1, 'assigned customer count is tracked');
 
 mikhmonSetLoginSession(mikhmonFindUser($mitraId));
@@ -36,7 +40,8 @@ roleTestAssert(mikhmonRefreshStaffSession(), 'active staff session remains valid
 roleTestAssert(count(mikhmonVisibleCustomers('router-a')) === 1, 'mitra only sees assigned customers');
 roleTestAssert(isset(mikhmonMitraUsernames('router-a')['cust-a']), 'report scope uses assigned usernames');
 roleTestAssert(isset(mikhmonMitraUsernamesByService('router-a', 'hotspot')['cust-a']), 'hotspot customer scope is separated');
-roleTestAssert(count(mikhmonMitraUsernamesByService('router-a', 'pppoe')) === 0, 'unassigned PPPoE customers stay hidden');
+roleTestAssert(isset(mikhmonMitraUsernamesByService('router-a', 'pppoe')['cust-a-home']), 'all assigned customer services are visible');
+roleTestAssert(!isset(mikhmonMitraUsernamesByService('router-a', 'pppoe')['cust-b']), 'unassigned PPPoE customers stay hidden');
 roleTestAssert(mikhmonCanOpenMainRoute('report-selling'), 'mitra can open scoped reports');
 roleTestAssert(mikhmonCanOpenMainRoute('customer-add'), 'mitra can add customers');
 roleTestAssert(mikhmonCanOpenMainRoute('hotspot-generate'), 'mitra can generate vouchers');

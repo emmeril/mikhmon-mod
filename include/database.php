@@ -25,11 +25,11 @@ function mikhmonDefaultSyncSettings() {
 function mikhmonReadDatabase() {
   $path = mikhmonBackupPath();
   if (!is_file($path)) {
-    return array('version' => 4, 'routers' => array(), 'customers' => array(), 'invoices' => array(), 'users' => array());
+    return array('version' => 5, 'routers' => array(), 'customers' => array(), 'invoices' => array(), 'users' => array());
   }
   $data = json_decode((string) @file_get_contents($path), true);
   if (!is_array($data)) {
-    return array('version' => 4, 'routers' => array(), 'customers' => array(), 'invoices' => array(), 'users' => array());
+    return array('version' => 5, 'routers' => array(), 'customers' => array(), 'invoices' => array(), 'users' => array());
   }
   if (!isset($data['routers']) || !is_array($data['routers'])) {
     $data['routers'] = array();
@@ -43,7 +43,111 @@ function mikhmonReadDatabase() {
   if (!isset($data['users']) || !is_array($data['users'])) {
     $data['users'] = array();
   }
+  $changed = false;
+  foreach ($data['customers'] as $session => $customers) {
+    if (!is_array($customers)) continue;
+    foreach ($customers as $index => $customer) {
+      $normalized = mikhmonNormalizeCustomer($customer);
+      if ($normalized !== $customer) {
+        $data['customers'][$session][$index] = $normalized;
+        $changed = true;
+      }
+    }
+    $mergedCustomers = mikhmonMergeCustomersByName($data['customers'][$session], $data['invoices'][$session] ?? array());
+    if ($mergedCustomers['customers'] !== array_values($data['customers'][$session])) {
+      $data['customers'][$session] = $mergedCustomers['customers'];
+      $data['invoices'][$session] = $mergedCustomers['invoices'];
+      $changed = true;
+    }
+  }
+  if ($changed) {
+    $data['version'] = 5;
+    mikhmonWriteDatabase($data);
+  }
   return $data;
+}
+
+function mikhmonCustomerNameKey($name) {
+  $name = trim(preg_replace('/\s+/', ' ', (string) $name));
+  return function_exists('mb_strtoupper') ? mb_strtoupper($name, 'UTF-8') : strtoupper($name);
+}
+
+function mikhmonCustomerValueIsEmpty($value) {
+  $value = trim((string) $value);
+  return $value === '' || $value === '-';
+}
+
+function mikhmonMergeCustomersByName($customers, $invoices = array()) {
+  $merged = array();
+  $indexesByName = array();
+  $replacedIds = array();
+  foreach ((array) $customers as $customer) {
+    $customer = mikhmonNormalizeCustomer($customer);
+    $nameKey = mikhmonCustomerNameKey($customer['name'] ?? '');
+    if ($nameKey === '' || !isset($indexesByName[$nameKey])) {
+      $indexesByName[$nameKey] = count($merged);
+      $merged[] = $customer;
+      continue;
+    }
+    $targetIndex = $indexesByName[$nameKey];
+    $target = $merged[$targetIndex];
+    if (!empty($customer['id']) && !empty($target['id'])) $replacedIds[(string) $customer['id']] = (string) $target['id'];
+    $serviceKeys = array();
+    foreach (mikhmonCustomerServices($target) as $service) $serviceKeys[$service['service'] . '|' . strtolower($service['username'])] = true;
+    foreach (mikhmonCustomerServices($customer) as $service) {
+      $serviceKey = $service['service'] . '|' . strtolower($service['username']);
+      if (!isset($serviceKeys[$serviceKey])) { $target['services'][] = $service; $serviceKeys[$serviceKey] = true; }
+    }
+    foreach (array('phone', 'address', 'mitra_id') as $field) {
+      if (mikhmonCustomerValueIsEmpty($target[$field] ?? '') && !mikhmonCustomerValueIsEmpty($customer[$field] ?? '')) $target[$field] = $customer[$field];
+    }
+    $target['updated_at'] = max((int) ($target['updated_at'] ?? 0), (int) ($customer['updated_at'] ?? 0));
+    $merged[$targetIndex] = mikhmonNormalizeCustomer($target);
+  }
+  $updatedInvoices = array_values((array) $invoices);
+  foreach ($updatedInvoices as $index => $invoice) {
+    $customerId = isset($invoice['customer_id']) ? (string) $invoice['customer_id'] : '';
+    if (isset($replacedIds[$customerId])) $updatedInvoices[$index]['customer_id'] = $replacedIds[$customerId];
+  }
+  return array('customers' => array_values($merged), 'invoices' => $updatedInvoices);
+}
+
+function mikhmonNormalizeCustomer($customer) {
+  if (!is_array($customer)) return array();
+  $services = isset($customer['services']) && is_array($customer['services']) ? $customer['services'] : array();
+  if (!$services && !empty($customer['username'])) {
+    $services[] = array(
+      'id' => 'service-' . (isset($customer['id']) ? $customer['id'] : uniqid()),
+      'service' => isset($customer['service']) && $customer['service'] === 'pppoe' ? 'pppoe' : 'hotspot',
+      'username' => (string) $customer['username'],
+      'profile' => isset($customer['profile']) ? (string) $customer['profile'] : '',
+      'server' => isset($customer['server']) ? (string) $customer['server'] : 'all',
+    );
+  }
+  $normalizedServices = array();
+  foreach ($services as $service) {
+    if (!is_array($service)) continue;
+    $normalizedServices[] = array(
+      'id' => !empty($service['id']) ? (string) $service['id'] : 'service-' . md5((string) ($service['service'] ?? 'hotspot') . '|' . (string) ($service['username'] ?? '')),
+      'service' => isset($service['service']) && $service['service'] === 'pppoe' ? 'pppoe' : 'hotspot',
+      'username' => isset($service['username']) ? trim(strip_tags((string) $service['username'])) : '',
+      'profile' => isset($service['profile']) ? trim(strip_tags((string) $service['profile'])) : '',
+      'server' => isset($service['server']) ? trim(strip_tags((string) $service['server'])) : 'all',
+    );
+  }
+  $customer['services'] = array_values($normalizedServices);
+  $first = isset($customer['services'][0]) ? $customer['services'][0] : array('service' => 'hotspot', 'username' => '', 'profile' => '', 'server' => 'all');
+  // Keep legacy fields populated for older integrations and reports.
+  $customer['service'] = $first['service'];
+  $customer['username'] = $first['username'];
+  $customer['profile'] = $first['profile'];
+  $customer['server'] = $first['server'];
+  return $customer;
+}
+
+function mikhmonCustomerServices($customer) {
+  $normalized = mikhmonNormalizeCustomer($customer);
+  return isset($normalized['services']) ? $normalized['services'] : array();
 }
 
 function mikhmonGetUsers($role = '', $session = '') {
@@ -131,7 +235,7 @@ function mikhmonAssignedCustomerCount($userId) {
 function mikhmonGetCustomers($session) {
   $database = mikhmonReadDatabase();
   $customers = isset($database['customers'][$session]) && is_array($database['customers'][$session]) ? $database['customers'][$session] : array();
-  return array_values($customers);
+  return array_values(array_map('mikhmonNormalizeCustomer', $customers));
 }
 
 function mikhmonFindCustomer($session, $id) {
@@ -187,29 +291,78 @@ function mikhmonSaveInvoice($session, $invoice) {
 }
 
 function mikhmonSaveCustomer($session, $id, $name, $phone, $address, $service, $username = '', $profile = '', $mitraId = null) {
+  $serviceId = '';
+  if ($id !== '') {
+    $existing = mikhmonFindCustomer($session, $id);
+    $existingServices = $existing ? mikhmonCustomerServices($existing) : array();
+    if (isset($existingServices[0])) {
+      $serviceId = $existingServices[0]['id'];
+      if ($username === '') $username = $existingServices[0]['username'];
+      if ($profile === '') $profile = $existingServices[0]['profile'];
+    }
+  }
+  return mikhmonSaveCustomerWithServices($session, $id, $name, $phone, $address, array(array(
+    'id' => $serviceId,
+    'service' => $service,
+    'username' => $username,
+    'profile' => $profile,
+  )), $mitraId);
+}
+
+function mikhmonSaveCustomerWithServices($session, $id, $name, $phone, $address, $services, $mitraId = null) {
   $database = mikhmonReadDatabase();
   if (!isset($database['customers'][$session]) || !is_array($database['customers'][$session])) {
     $database['customers'][$session] = array();
   }
-  $service = strtolower($service) === 'pppoe' ? 'pppoe' : 'hotspot';
   $existingCustomer = array();
+  $matchedByName = false;
+  if ($id === '') {
+    $nameKey = mikhmonCustomerNameKey($name);
+    foreach ($database['customers'][$session] as $existing) {
+      if ($nameKey !== '' && mikhmonCustomerNameKey($existing['name'] ?? '') === $nameKey) {
+        $id = (string) $existing['id'];
+        $existingCustomer = mikhmonNormalizeCustomer($existing);
+        $matchedByName = true;
+        break;
+      }
+    }
+  }
   foreach ($database['customers'][$session] as $existing) {
     if ($id !== '' && isset($existing['id']) && (string) $existing['id'] === (string) $id) {
       $existingCustomer = $existing;
       break;
     }
   }
+  $normalizedServices = array();
+  $servicesToSave = $matchedByName ? array_merge(mikhmonCustomerServices($existingCustomer), (array) $services) : (array) $services;
+  $serviceKeys = array();
+  foreach ($servicesToSave as $serviceRow) {
+    if (!is_array($serviceRow)) continue;
+    $serviceType = strtolower(isset($serviceRow['service']) ? $serviceRow['service'] : '') === 'pppoe' ? 'pppoe' : 'hotspot';
+    $serviceUsername = trim(strip_tags(isset($serviceRow['username']) ? (string) $serviceRow['username'] : ''));
+    if ($serviceUsername === '') continue;
+    $serviceKey = $serviceType . '|' . strtolower($serviceUsername);
+    if (isset($serviceKeys[$serviceKey])) continue;
+    $serviceKeys[$serviceKey] = true;
+    $normalizedServices[] = array(
+      'id' => !empty($serviceRow['id']) ? (string) $serviceRow['id'] : 'service-' . uniqid(),
+      'service' => $serviceType,
+      'username' => $serviceUsername,
+      'profile' => trim(strip_tags(isset($serviceRow['profile']) ? (string) $serviceRow['profile'] : '')),
+      'server' => trim(strip_tags(isset($serviceRow['server']) ? (string) $serviceRow['server'] : 'all')),
+    );
+  }
+  if (!$normalizedServices) return false;
   $customer = array(
     'id' => $id !== '' ? (string) $id : 'customer-' . uniqid(),
     'name' => trim(strip_tags($name)),
-    'phone' => trim(strip_tags($phone)),
-    'address' => trim(strip_tags($address)),
-    'service' => $service,
-    'username' => $username !== '' ? trim(strip_tags($username)) : (isset($existingCustomer['username']) ? $existingCustomer['username'] : ''),
-    'profile' => $profile !== '' ? trim(strip_tags($profile)) : (isset($existingCustomer['profile']) ? $existingCustomer['profile'] : ''),
-    'mitra_id' => $mitraId !== null ? trim(strip_tags($mitraId)) : (isset($existingCustomer['mitra_id']) ? $existingCustomer['mitra_id'] : ''),
+    'phone' => $matchedByName && mikhmonCustomerValueIsEmpty($phone) ? ($existingCustomer['phone'] ?? '') : trim(strip_tags($phone)),
+    'address' => $matchedByName && mikhmonCustomerValueIsEmpty($address) ? ($existingCustomer['address'] ?? '') : trim(strip_tags($address)),
+    'services' => $normalizedServices,
+    'mitra_id' => $matchedByName && mikhmonCustomerValueIsEmpty($mitraId) ? ($existingCustomer['mitra_id'] ?? '') : ($mitraId !== null ? trim(strip_tags($mitraId)) : (isset($existingCustomer['mitra_id']) ? $existingCustomer['mitra_id'] : '')),
     'updated_at' => time(),
   );
+  $customer = mikhmonNormalizeCustomer($customer);
   if ($customer['name'] === '') {
     return false;
   }
@@ -249,7 +402,7 @@ function mikhmonDeleteCustomer($session, $id) {
 function mikhmonWriteDatabase($data) {
   $path = mikhmonBackupPath();
   $tmp = $path . '.tmp.' . getmypid();
-  $data['version'] = 4;
+  $data['version'] = 5;
   $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
   if ($json === false || @file_put_contents($tmp, $json, LOCK_EX) === false) {
     return false;

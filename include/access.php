@@ -101,7 +101,9 @@ function mikhmonCanManageCustomer($customer) {
 function mikhmonMitraUsernames($session) {
   $usernames = array();
   foreach (mikhmonVisibleCustomers($session) as $customer) {
-    if (!empty($customer['username'])) $usernames[(string) $customer['username']] = true;
+    foreach (mikhmonCustomerServices($customer) as $service) {
+      if (!empty($service['username'])) $usernames[(string) $service['username']] = true;
+    }
   }
   return $usernames;
 }
@@ -109,8 +111,9 @@ function mikhmonMitraUsernames($session) {
 function mikhmonMitraUsernamesByService($session, $service) {
   $usernames = array();
   foreach (mikhmonVisibleCustomers($session) as $customer) {
-    $customerService = isset($customer['service']) && $customer['service'] === 'pppoe' ? 'pppoe' : 'hotspot';
-    if ($customerService === $service && !empty($customer['username'])) $usernames[(string) $customer['username']] = true;
+    foreach (mikhmonCustomerServices($customer) as $customerService) {
+      if ($customerService['service'] === $service && !empty($customerService['username'])) $usernames[(string) $customerService['username']] = true;
+    }
   }
   return $usernames;
 }

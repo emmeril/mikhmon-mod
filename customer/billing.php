@@ -20,17 +20,21 @@ function billingApiError($response) {
   return '';
 }
 
-function billingFindCustomer($customers, $id) {
-  foreach ($customers as $customer) {
-    if (isset($customer['id']) && (string) $customer['id'] === (string) $id) return $customer;
+function billingFindService($customers, $customerId, $serviceId = '') {
+  foreach ($customers as $customer) if (isset($customer['id']) && (string)$customer['id'] === (string)$customerId) {
+    foreach (mikhmonCustomerServices($customer) as $service) if ($serviceId === '' || (string)$service['id'] === (string)$serviceId) {
+      $customer['service_id'] = $service['id']; $customer['service'] = $service['service']; $customer['username'] = $service['username']; $customer['profile'] = $service['profile']; $customer['server'] = $service['server'] ?? 'all'; return $customer;
+    }
   }
   return array();
 }
 
-function billingLatestInvoice($invoices, $customerId) {
+function billingLatestInvoice($invoices, $customerId, $serviceId = '', $allowLegacy = false) {
   $latest = array();
   foreach ($invoices as $invoice) {
     if (!isset($invoice['customer_id']) || (string) $invoice['customer_id'] !== (string) $customerId) continue;
+    if ($serviceId !== '' && !isset($invoice['service_id']) && !$allowLegacy) continue;
+    if ($serviceId !== '' && isset($invoice['service_id']) && (string) $invoice['service_id'] !== (string) $serviceId) continue;
     if (!$latest || (int) $invoice['created_at'] > (int) $latest['created_at']) $latest = $invoice;
   }
   return $latest;
@@ -75,6 +79,7 @@ function billingMessageAmount($amount, $currency) {
 }
 
 $customers = mikhmonGetCustomers($session);
+$serviceCount = 0; foreach ($customers as $customerRow) $serviceCount += count(mikhmonCustomerServices($customerRow));
 $invoices = mikhmonGetInvoices($session);
 $hotspotProfiles = array();
 $pppoeProfiles = array();
@@ -106,9 +111,10 @@ $pppoeProfiles = is_array($pppoeProfiles) ? $pppoeProfiles : array();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $action = isset($_POST['billing_action']) ? $_POST['billing_action'] : '';
-  $customer = billingFindCustomer($customers, isset($_POST['customer_id']) ? $_POST['customer_id'] : '');
+  $customer = billingFindService($customers, isset($_POST['customer_id']) ? $_POST['customer_id'] : '', isset($_POST['service_id']) ? $_POST['service_id'] : '');
   if ($action === 'create_invoice') {
-    $existingInvoice = $customer ? billingLatestInvoice($invoices, $customer['id']) : array();
+    $allowLegacyInvoice = $customer && isset($customer['services'][0]['id']) && (string)$customer['services'][0]['id'] === (string)$customer['service_id'];
+    $existingInvoice = $customer ? billingLatestInvoice($invoices, $customer['id'], $customer['service_id'], $allowLegacyInvoice) : array();
     if (!$customer) {
       $customerError = 'Pelanggan tidak ditemukan.';
     } elseif (isset($existingInvoice['status']) && $existingInvoice['status'] === 'unpaid') {
@@ -126,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $invoice = array(
           'id' => 'invoice-' . uniqid(),
           'number' => 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5)),
-          'customer_id' => $customer['id'],
+          'customer_id' => $customer['id'], 'service_id' => $customer['service_id'],
           'customer_name' => isset($customer['name']) ? $customer['name'] : '',
           'username' => isset($customer['username']) ? $customer['username'] : '',
           'service' => $service,
@@ -147,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($invoices as $index => $invoiceRow) {
       if (isset($invoiceRow['id']) && (string) $invoiceRow['id'] === $invoiceId) { $invoiceIndex = $index; break; }
     }
-    if ($invoiceIndex < 0 || !$customer || !isset($invoices[$invoiceIndex]['customer_id']) || (string) $invoices[$invoiceIndex]['customer_id'] !== (string) $customer['id']) {
+    if ($invoiceIndex < 0 || !$customer || !isset($invoices[$invoiceIndex]['customer_id']) || (string) $invoices[$invoiceIndex]['customer_id'] !== (string) $customer['id'] || ((string)($invoices[$invoiceIndex]['service_id'] ?? '') !== '' && (string)($invoices[$invoiceIndex]['service_id'] ?? '') !== (string)$customer['service_id'])) {
       $customerError = 'Invoice atau pelanggan tidak ditemukan.';
     } elseif (isset($invoices[$invoiceIndex]['status']) && $invoices[$invoiceIndex]['status'] === 'paid') {
       $customerError = 'Invoice ini sudah dibayar.';
@@ -201,13 +207,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $latestInvoices = array();
 foreach ($invoices as $invoice) {
   if (!isset($invoice['customer_id'])) continue;
-  if (!isset($latestInvoices[$invoice['customer_id']]) || (int) $invoice['created_at'] > (int) $latestInvoices[$invoice['customer_id']]['created_at']) {
-    $latestInvoices[$invoice['customer_id']] = $invoice;
+  $invoiceKey = (string)$invoice['customer_id'] . '|' . (string)($invoice['service_id'] ?? '');
+  if (!isset($latestInvoices[$invoiceKey]) || (int) $invoice['created_at'] > (int) $latestInvoices[$invoiceKey]['created_at']) {
+    $latestInvoices[$invoiceKey] = $invoice;
   }
 }
 ?>
 <div class="row"><div class="col-12"><div class="card">
-  <div class="card-header"><h3><i class="fa fa-money"></i> Billing <span style="font-size:14px"> &nbsp;|&nbsp; <span id="billingVisibleCount"><?= count($customers); ?></span> pelanggan</span></h3></div>
+  <div class="card-header"><h3><i class="fa fa-money"></i> Billing <span style="font-size:14px"> &nbsp;|&nbsp; <span id="billingVisibleCount"><?= $serviceCount; ?></span> layanan</span></h3></div>
   <div class="card-body">
     <?php if ($customerMessage !== ''): ?><div class="box bg-success"><?= htmlspecialchars($customerMessage, ENT_QUOTES); ?></div><?php endif; ?>
     <?php if ($customerError !== ''): ?><div class="box bg-danger"><?= htmlspecialchars($customerError, ENT_QUOTES); ?></div><?php endif; ?>
@@ -218,7 +225,7 @@ foreach ($invoices as $invoice) {
     </div></div></div>
     <div class="overflow box-bordered" style="max-height:75vh"><table id="billingTable" class="table table-bordered table-hover text-nowrap">
       <thead><tr><th>No</th><th>Nama</th><th>HP</th><th>Layanan</th><th>Username</th><th>Profile</th><th>Status User</th><th>Jatuh Tempo</th><th>Invoice</th><th>Status Invoice</th><th>Jumlah</th><th>Diproses Oleh</th><th>Aksi</th></tr></thead><tbody>
-      <?php foreach ($customers as $index => $customer): ?>
+      <?php $billingIndex = 0; foreach ($customers as $baseCustomer): foreach (mikhmonCustomerServices($baseCustomer) as $serviceRow): $billingIndex++; $customer = $baseCustomer; $customer['service_id'] = $serviceRow['id']; $customer['service'] = $serviceRow['service']; $customer['username'] = $serviceRow['username']; $customer['profile'] = $serviceRow['profile']; ?>
         <?php
           $service = isset($customer['service']) && $customer['service'] === 'pppoe' ? 'pppoe' : 'hotspot';
           $username = isset($customer['username']) ? (string) $customer['username'] : '';
@@ -229,7 +236,8 @@ foreach ($invoices as $invoice) {
           $userStatus = $missing ? 'Tidak ditemukan' : ($expired ? 'Expired' : 'Aktif');
           $statusFilter = $missing ? 'missing' : ($expired ? 'expired' : 'active');
           $dueDate = billingDueDate($service, $username, $user, $customerSchedulers);
-          $invoice = isset($latestInvoices[$customer['id']]) ? $latestInvoices[$customer['id']] : array();
+          $invoice = isset($latestInvoices[$customer['id'] . '|' . $customer['service_id']]) ? $latestInvoices[$customer['id'] . '|' . $customer['service_id']] : array();
+          if (!$invoice && !empty($baseCustomer['services'][0]['id']) && (string)$baseCustomer['services'][0]['id'] === (string)$customer['service_id'] && isset($latestInvoices[$customer['id'] . '|'])) $invoice = $latestInvoices[$customer['id'] . '|'];
           $invoiceStatus = isset($invoice['status']) ? $invoice['status'] : 'none';
           if ($dueDate === '' && $invoiceStatus !== 'paid' && !empty($invoice['due_date'])) $dueDate = $invoice['due_date'];
           $dueDateDisplay = $dueDate !== '' ? $dueDate : ($invoiceStatus === 'paid' && !$missing ? 'Menunggu login' : '-');
@@ -258,10 +266,10 @@ foreach ($invoices as $invoice) {
             . $messageBrand;
           $waUrl = $phone !== '' ? 'https://wa.me/' . $phone . '?text=' . rawurlencode($invoiceText) : '';
         ?>
-        <tr class="billing-row" data-status="<?= $invoiceStatus === 'paid' ? 'paid' : 'unpaid'; ?>"><td><?= $index + 1; ?></td><td><?= htmlspecialchars(isset($customer['name']) ? $customer['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customer['phone']) ? $customer['phone'] : '', ENT_QUOTES); ?></td><td><?= strtoupper($service); ?></td><td><?= htmlspecialchars($username, ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customer['profile']) ? $customer['profile'] : '', ENT_QUOTES); ?></td><td class="<?= $expired || $missing ? 'text-danger' : 'text-success'; ?>"><strong><?= $userStatus; ?></strong></td><td><?= htmlspecialchars($dueDateDisplay, ENT_QUOTES); ?></td><td><?= isset($invoice['number']) ? htmlspecialchars($invoice['number'], ENT_QUOTES) : '-'; ?></td><td class="<?= $invoiceStatusClass; ?>"><strong><?= $invoiceStatusText; ?></strong></td><td><?= $amount > 0 ? htmlspecialchars($currency . ' ' . number_format($amount, 0, ',', '.'), ENT_QUOTES) : '-'; ?></td><td><?= $invoiceStatus === 'paid' ? htmlspecialchars(isset($invoice['paid_by_name']) ? $invoice['paid_by_name'] : 'Data lama', ENT_QUOTES) : '-'; ?></td>
-          <td><?php if ($invoiceStatus === 'paid'): ?><span class="text-success"><i class="fa fa-check"></i> Sudah Bayar</span> <form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Invoice Baru</button></form><?php else: ?><?php if ($invoiceStatus === 'none'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Buat Invoice</button></form><?php endif; ?><?php if ($invoiceStatus !== 'none' && $waUrl !== ''): ?><a class="btn bg-green" target="_blank" href="<?= htmlspecialchars($waUrl, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Kirim</a><?php endif; ?><?php if ($invoiceStatus !== 'none'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="mark_paid"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-success" type="submit" onclick="return confirm('Tandai invoice sudah dibayar dan aktifkan user?');"><i class="fa fa-check"></i> Sudah Bayar</button></form><?php endif; ?><?php endif; ?></td>
+        <tr class="billing-row" data-status="<?= $invoiceStatus === 'paid' ? 'paid' : 'unpaid'; ?>"><td><?= $billingIndex; ?></td><td><?= htmlspecialchars(isset($customer['name']) ? $customer['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customer['phone']) ? $customer['phone'] : '', ENT_QUOTES); ?></td><td><?= strtoupper($service); ?></td><td><?= htmlspecialchars($username, ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customer['profile']) ? $customer['profile'] : '', ENT_QUOTES); ?></td><td class="<?= $expired || $missing ? 'text-danger' : 'text-success'; ?>"><strong><?= $userStatus; ?></strong></td><td><?= htmlspecialchars($dueDateDisplay, ENT_QUOTES); ?></td><td><?= isset($invoice['number']) ? htmlspecialchars($invoice['number'], ENT_QUOTES) : '-'; ?></td><td class="<?= $invoiceStatusClass; ?>"><strong><?= $invoiceStatusText; ?></strong></td><td><?= $amount > 0 ? htmlspecialchars($currency . ' ' . number_format($amount, 0, ',', '.'), ENT_QUOTES) : '-'; ?></td><td><?= $invoiceStatus === 'paid' ? htmlspecialchars(isset($invoice['paid_by_name']) ? $invoice['paid_by_name'] : 'Data lama', ENT_QUOTES) : '-'; ?></td>
+          <td><?php if ($invoiceStatus === 'paid'): ?><span class="text-success"><i class="fa fa-check"></i> Sudah Bayar</span> <form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="service_id" value="<?= htmlspecialchars($customer['service_id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Invoice Baru</button></form><?php else: ?><?php if ($invoiceStatus === 'none'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="service_id" value="<?= htmlspecialchars($customer['service_id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Buat Invoice</button></form><?php endif; ?><?php if ($invoiceStatus !== 'none' && $waUrl !== ''): ?><a class="btn bg-green" target="_blank" href="<?= htmlspecialchars($waUrl, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Kirim</a><?php endif; ?><?php if ($invoiceStatus !== 'none'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="mark_paid"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="service_id" value="<?= htmlspecialchars($customer['service_id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-success" type="submit" onclick="return confirm('Tandai invoice sudah dibayar dan aktifkan user?');"><i class="fa fa-check"></i> Sudah Bayar</button></form><?php endif; ?><?php endif; ?></td>
         </tr>
-      <?php endforeach; ?>
+      <?php endforeach; endforeach; ?>
       <?php if (!$customers): ?><tr class="billing-info-row"><td colspan="13" class="text-center">Belum ada data pelanggan.</td></tr><?php endif; ?><tr id="billingNoResults" style="display:none"><td colspan="13" class="text-center">Data billing tidak ditemukan.</td></tr>
       </tbody></table></div>
   </div>

@@ -1,221 +1,68 @@
 <?php
 error_reporting(0);
-if (!isset($_SESSION["mikhmon"])) {
-  header("Location:../admin.php?id=login");
-  exit;
-}
-
+if (!isset($_SESSION['mikhmon'])) { header('Location:../admin.php?id=login'); exit; }
 include_once('./include/database.php');
-
 $isEdit = isset($customer) && ($customer === 'edit' || ($customer === 'list' && $customerid !== ''));
 $customerError = '';
-$editCustomer = array();
-$linkedUser = array();
-$hotspotProfiles = array();
-$hotspotServers = array();
-$pppoeProfiles = array();
-
-function customerApiError($response) {
-  if (!is_array($response)) {
-    return '';
-  }
-  foreach (array('!trap', '!fatal') as $errorType) {
-    if (isset($response[$errorType][0]['message'])) {
-      return $response[$errorType][0]['message'];
-    }
-  }
-  return '';
-}
-
-function customerFormValue($field, $default = '') {
-  return isset($_POST[$field]) ? (string) $_POST[$field] : (string) $default;
-}
-
-function customerSelected($field, $value, $default = '') {
-  return customerFormValue($field, $default) === (string) $value ? ' selected' : '';
-}
-
-if ($isEdit) {
-  foreach (mikhmonGetCustomers($session) as $customerRow) {
-    if (isset($customerRow['id']) && (string) $customerRow['id'] === (string) $customerid) {
-      $editCustomer = $customerRow;
-      break;
-    }
-  }
-  if (!$editCustomer) {
-    $customerError = 'Data pelanggan tidak ditemukan.';
-  } elseif (!mikhmonCanManageCustomer($editCustomer)) {
-    $customerError = 'Anda tidak berhak mengelola pelanggan ini.';
-    $editCustomer = array();
-  }
-}
-
+$editCustomer = $isEdit ? mikhmonFindCustomer($session, $customerid) : array();
+if ($isEdit && !$editCustomer) $customerError = 'Data pelanggan tidak ditemukan.';
+if ($isEdit && $editCustomer && !mikhmonCanManageCustomer($editCustomer)) { $customerError = 'Anda tidak berhak mengelola pelanggan ini.'; $editCustomer = array(); }
 $mitras = mikhmonIsAdmin() ? mikhmonGetUsers('mitra', $session) : array();
-
+$hotspotProfiles = $hotspotServers = $pppoeProfiles = array();
+function customerApiError($response) { if (!is_array($response)) return ''; foreach (array('!trap','!fatal') as $type) if (isset($response[$type][0]['message'])) return $response[$type][0]['message']; return ''; }
+function customerFormValue($field, $default = '') { return isset($_POST[$field]) ? (string) $_POST[$field] : (string) $default; }
+function customerSelected($field, $value, $default = '') { return customerFormValue($field, $default) === (string) $value ? ' selected' : ''; }
 if (!empty($routerConnected)) {
-  $hotspotProfiles = $API->comm('/ip/hotspot/user/profile/print');
-  $hotspotServers = $API->comm('/ip/hotspot/print');
-  $pppoeProfiles = $API->comm('/ppp/profile/print');
-  $hotspotProfiles = is_array($hotspotProfiles) && customerApiError($hotspotProfiles) === '' ? $hotspotProfiles : array();
-  $hotspotServers = is_array($hotspotServers) && customerApiError($hotspotServers) === '' ? $hotspotServers : array();
-  $pppoeProfiles = is_array($pppoeProfiles) && customerApiError($pppoeProfiles) === '' ? $pppoeProfiles : array();
-
-  if ($isEdit && $editCustomer && !empty($editCustomer['username'])) {
-    $editCommand = isset($editCustomer['service']) && $editCustomer['service'] === 'pppoe' ? '/ppp/secret' : '/ip/hotspot/user';
-    $linkedRows = $API->comm($editCommand . '/print', array('?name' => $editCustomer['username']));
-    if (is_array($linkedRows) && customerApiError($linkedRows) === '' && isset($linkedRows[0])) {
-      $linkedUser = $linkedRows[0];
-    }
-  }
+  $hotspotProfiles = $API->comm('/ip/hotspot/user/profile/print'); $hotspotServers = $API->comm('/ip/hotspot/print'); $pppoeProfiles = $API->comm('/ppp/profile/print');
+  if (!is_array($hotspotProfiles) || customerApiError($hotspotProfiles) !== '') $hotspotProfiles = array();
+  if (!is_array($hotspotServers) || customerApiError($hotspotServers) !== '') $hotspotServers = array();
+  if (!is_array($pppoeProfiles) || customerApiError($pppoeProfiles) !== '') $pppoeProfiles = array();
 }
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['customer_action'])) {
-  $action = $_POST['customer_action'];
-  $updating = $action === 'update' && $isEdit && $editCustomer;
-  $creating = $action === 'create' && !$isEdit && (mikhmonIsAdmin() || mikhmonIsMitra());
-
-  if ($creating || $updating) {
-    $customerName = trim(customerFormValue('customer_name'));
-    $customerPhone = trim(customerFormValue('customer_phone'));
-    $customerAddress = trim(customerFormValue('customer_address'));
-    $service = $updating && isset($editCustomer['service']) ? $editCustomer['service'] : (customerFormValue('customer_service') === 'pppoe' ? 'pppoe' : 'hotspot');
-    $username = trim(customerFormValue('username'));
-    $password = customerFormValue('password');
-    $profile = $service === 'pppoe' ? customerFormValue('pppoe_profile') : customerFormValue('hotspot_profile');
-    $mitraId = mikhmonIsAdmin() ? trim(customerFormValue('mitra_id', isset($editCustomer['mitra_id']) ? $editCustomer['mitra_id'] : '')) : (mikhmonIsMitra() ? mikhmonUserId() : (isset($editCustomer['mitra_id']) ? $editCustomer['mitra_id'] : ''));
-    $selectedMitra = $mitraId !== '' ? mikhmonFindUser($mitraId) : false;
-    $command = $service === 'pppoe' ? '/ppp/secret' : '/ip/hotspot/user';
-    $oldUsername = $updating && isset($editCustomer['username']) ? $editCustomer['username'] : '';
-
-    if ($mitraId !== '' && (!$selectedMitra || $selectedMitra['role'] !== 'mitra' || $selectedMitra['session'] !== $session)) {
-      $customerError = 'Mitra yang dipilih tidak valid untuk router ini.';
-    } elseif (empty($routerConnected)) {
-      $customerError = 'Router MikroTik tidak terhubung.';
-    } elseif ($customerName === '' || $username === '' || $profile === '' || ($creating && $password === '')) {
-      $customerError = $creating
-        ? 'Nama pelanggan, username, password, dan profile wajib diisi.'
-        : 'Nama pelanggan, username, dan profile wajib diisi.';
-    } else {
-      $existing = $API->comm($command . '/print', array('?name' => $username));
-      $existingError = customerApiError($existing);
-      if ($existingError !== '') {
-        $customerError = 'Gagal memeriksa username di MikroTik: ' . $existingError;
-      } elseif ($creating && is_array($existing) && count($existing) > 0) {
-        $customerError = 'Username sudah ada di MikroTik.';
-      } elseif ($updating && $username !== $oldUsername && is_array($existing) && count($existing) > 0) {
-        $customerError = 'Username baru sudah digunakan di MikroTik.';
-      } else {
-        $targetRows = $updating ? $API->comm($command . '/print', array('?name' => $oldUsername)) : array();
-        $targetError = customerApiError($targetRows);
-        if ($updating && $targetError !== '') {
-          $customerError = 'Gagal membaca user MikroTik: ' . $targetError;
-        } elseif ($updating && (!isset($targetRows[0]) || empty($targetRows[0]['.id']))) {
-          $customerError = 'User MikroTik yang terhubung tidak ditemukan. Username lama: ' . $oldUsername;
-        } else {
-          if ($service === 'pppoe') {
-            $args = array(
-              'name' => $username,
-              'service' => 'pppoe',
-              'profile' => $profile,
-              'comment' => $customerName,
-            );
-          } else {
-            $commentPrefix = $creating && $username === $password ? 'vc-' : 'up-';
-            if ($updating && isset($targetRows[0]['comment']) && substr($targetRows[0]['comment'], 0, 3) === 'vc-') {
-              $commentPrefix = 'vc-';
-            }
-            $args = array(
-              'server' => customerFormValue('hotspot_server', 'all'),
-              'name' => $username,
-              'profile' => $profile,
-              'comment' => $commentPrefix . $customerName,
-            );
-          }
-          if (mikhmonIsMitra()) {
-            $args['comment'] .= ' ' . mikhmonOwnerTag();
-          }
-          if ($password !== '') {
-            $args['password'] = $password;
-          }
-          if ($creating) {
-            $args['disabled'] = 'no';
-          } else {
-            $args['.id'] = $targetRows[0]['.id'];
-          }
-
-          $response = $API->comm($command . ($creating ? '/add' : '/set'), $args);
-          $responseError = customerApiError($response);
-          if ($responseError !== '') {
-            $customerError = 'MikroTik menolak penyimpanan user: ' . $responseError;
-          } else {
-            $customerId = $updating ? $editCustomer['id'] : '';
-            $saved = mikhmonSaveCustomer($session, $customerId, $customerName, $customerPhone, $customerAddress, $service, $username, $profile, $mitraId);
-            if ($saved === false) {
-              if ($creating) {
-                $created = $API->comm($command . '/print', array('?name' => $username));
-                if (isset($created[0]['.id'])) {
-                  $API->comm($command . '/remove', array('.id' => $created[0]['.id']));
-                }
-                $customerError = 'User dibatalkan karena data pelanggan gagal disimpan.';
-              } else {
-                $customerError = 'User MikroTik sudah diperbarui, tetapi data pelanggan lokal gagal disimpan.';
-              }
-            } else {
-              $result = $creating ? 'created=1' : 'updated=1';
-              echo "<script>window.location='./?customer=list&session=" . rawurlencode($session) . "&" . $result . "'</script>";
-              exit;
-            }
-          }
-        }
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['customer_action']) && ($isEdit || $_POST['customer_action'] === 'create')) {
+  $creating = $_POST['customer_action'] === 'create' && !$isEdit; $name = trim(customerFormValue('customer_name')); $phone = trim(customerFormValue('customer_phone')); $address = trim(customerFormValue('customer_address'));
+  $mitraId = mikhmonIsAdmin() ? trim(customerFormValue('mitra_id', $editCustomer['mitra_id'] ?? '')) : (mikhmonIsMitra() ? mikhmonUserId() : ($editCustomer['mitra_id'] ?? ''));
+  $postedServices = array(); $types = (array)($_POST['service_type'] ?? array()); $ids = (array)($_POST['service_id'] ?? array()); $users = (array)($_POST['service_username'] ?? array()); $passwords = (array)($_POST['service_password'] ?? array()); $profiles = (array)($_POST['service_profile'] ?? array()); $servers = (array)($_POST['service_server'] ?? array());
+  foreach ($users as $i => $value) $postedServices[] = array('id'=>trim((string)($ids[$i] ?? '')), 'service'=>($types[$i] ?? '') === 'pppoe' ? 'pppoe' : 'hotspot', 'username'=>trim((string)$value), 'password'=>(string)($passwords[$i] ?? ''), 'profile'=>trim((string)($profiles[$i] ?? '')), 'server'=>trim((string)($servers[$i] ?? 'all')));
+  $selectedMitra = $mitraId !== '' ? mikhmonFindUser($mitraId) : false;
+  if ($name === '' || !$postedServices) $customerError = 'Nama pelanggan dan minimal satu layanan wajib diisi.';
+  elseif ($mitraId !== '' && (!$selectedMitra || $selectedMitra['role'] !== 'mitra' || $selectedMitra['session'] !== $session)) $customerError = 'Mitra yang dipilih tidak valid untuk router ini.';
+  elseif (empty($routerConnected)) $customerError = 'Router MikroTik tidak terhubung.';
+  else {
+    $oldServices = mikhmonCustomerServices($editCustomer); $processed = array(); $failed = '';
+    foreach ($postedServices as $row) {
+      if ($row['username'] === '' || $row['profile'] === '' || (($creating || $row['id'] === '') && $row['password'] === '')) { $failed = 'Username dan profile wajib diisi; password wajib untuk layanan baru.'; break; }
+      $command = $row['service'] === 'pppoe' ? '/ppp/secret' : '/ip/hotspot/user'; $old = array(); foreach ($oldServices as $candidate) if ($row['id'] !== '' && $candidate['id'] === $row['id']) { $old = $candidate; break; }
+      $oldUsername = $old['username'] ?? ''; $oldCommand = ($old['service'] ?? '') === 'pppoe' ? '/ppp/secret' : '/ip/hotspot/user'; $changingType = $old && $oldCommand !== $command; $target = $oldUsername !== '' ? $API->comm($oldCommand . '/print', array('?name'=>$oldUsername)) : array();
+      if (customerApiError($target) !== '' || ($old && !isset($target[0]['.id']))) { $failed = 'User MikroTik untuk layanan ' . $oldUsername . ' tidak ditemukan.'; break; }
+      $existing = $API->comm($command . '/print', array('?name'=>$row['username'])); $sameName = $oldUsername !== '' && $oldUsername === $row['username'];
+      if (customerApiError($existing) !== '' || ((!$old || $changingType) && count($existing) > 0) || ($old && !$changingType && !$sameName && count($existing) > 0)) { $failed = 'Username ' . $row['username'] . ' sudah digunakan di MikroTik.'; break; }
+      $args = $row['service'] === 'pppoe' ? array('name'=>$row['username'],'service'=>'pppoe','profile'=>$row['profile'],'comment'=>$name) : array('server'=>$row['server'] ?: 'all','name'=>$row['username'],'profile'=>$row['profile'],'comment'=>'up-'.$name); if (mikhmonIsMitra()) $args['comment'] .= ' ' . mikhmonOwnerTag(); if ($row['password'] !== '') $args['password'] = $row['password']; if ($old && !$changingType) $args['.id'] = $target[0]['.id']; else $args['disabled'] = 'no';
+      $response = $API->comm($command . ($old && !$changingType ? '/set' : '/add'), $args); if (customerApiError($response) !== '') { $failed = 'MikroTik menolak layanan ' . $row['username'] . ': ' . customerApiError($response); break; }
+      if ($changingType) $API->comm($oldCommand . '/remove', array('.id'=>$target[0]['.id']));
+      $processed[] = array('id'=>$row['id'], 'service'=>$row['service'], 'username'=>$row['username'], 'profile'=>$row['profile'], 'server'=>$row['server']);
+    }
+    if ($failed === '' && !$creating) {
+      $keptIds = array(); foreach ($processed as $row) if ($row['id'] !== '') $keptIds[$row['id']] = true;
+      foreach ($oldServices as $old) if (!isset($keptIds[$old['id']])) {
+        $oldCommand = $old['service'] === 'pppoe' ? '/ppp/secret' : '/ip/hotspot/user';
+        $oldRows = $API->comm($oldCommand . '/print', array('?name'=>$old['username']));
+        if (isset($oldRows[0]['.id'])) $API->comm($oldCommand . '/remove', array('.id'=>$oldRows[0]['.id']));
       }
     }
+    if ($failed !== '') $customerError = $failed;
+    elseif (mikhmonSaveCustomerWithServices($session, $isEdit ? $editCustomer['id'] : '', $name, $phone, $address, $processed, $mitraId) === false) $customerError = 'Data pelanggan lokal gagal disimpan.';
+    else { $result = $creating ? 'created=1' : 'updated=1'; echo "<script>window.location='./?customer=list&session=" . rawurlencode($session) . '&' . $result . "'</script>"; exit; }
   }
 }
-
-$defaultName = $isEdit && isset($editCustomer['name']) ? $editCustomer['name'] : '';
-$defaultPhone = $isEdit && isset($editCustomer['phone']) ? $editCustomer['phone'] : '';
-$defaultAddress = $isEdit && isset($editCustomer['address']) ? $editCustomer['address'] : '';
-$defaultService = $isEdit && isset($editCustomer['service']) ? $editCustomer['service'] : (isset($_GET['service']) && $_GET['service'] === 'pppoe' ? 'pppoe' : 'hotspot');
-$defaultUsername = $isEdit && isset($editCustomer['username']) ? $editCustomer['username'] : '';
-$defaultProfile = $isEdit && isset($editCustomer['profile']) ? $editCustomer['profile'] : '';
-$defaultUserName = $isEdit && isset($linkedUser['name']) ? $linkedUser['name'] : $defaultUsername;
-$defaultUserProfile = $isEdit && isset($linkedUser['profile']) ? $linkedUser['profile'] : $defaultProfile;
-$defaultServer = $isEdit && isset($linkedUser['server']) ? $linkedUser['server'] : 'all';
+$defaultServices = !$isEdit ? array(array('service'=>isset($_GET['service']) && $_GET['service']==='pppoe' ? 'pppoe' : 'hotspot','username'=>'','profile'=>'','server'=>'all','id'=>'')) : mikhmonCustomerServices($editCustomer);
+$defaultName = $editCustomer['name'] ?? ''; $defaultPhone = $editCustomer['phone'] ?? ''; $defaultAddress = $editCustomer['address'] ?? '';
 ?>
-<div class="row"><div class="col-12"><div class="card box-bordered">
-  <div class="card-header"><h3><i class="fa <?= $isEdit ? 'fa-edit' : 'fa-user-plus'; ?>"></i> <?= $isEdit ? 'Edit Pelanggan' : 'Tambah Pelanggan'; ?></h3></div>
-  <div class="card-body">
-    <?php if ($customerError !== ''): ?><div class="box bg-danger"><?= htmlspecialchars($customerError, ENT_QUOTES); ?></div><?php endif; ?>
-    <?php if ($isEdit && $editCustomer && empty($linkedUser) && !empty($routerConnected)): ?><div class="box bg-warning">User MikroTik yang terhubung belum ditemukan. Simpan hanya dapat dilakukan setelah user tersebut tersedia.</div><?php endif; ?>
-    <?php if (!$isEdit || $editCustomer): ?>
-    <form method="post" autocomplete="off">
-      <input type="hidden" name="customer_action" value="<?= $isEdit ? 'update' : 'create'; ?>">
-      <table class="table">
-        <tr><td>Nama Pelanggan</td><td><input class="form-control" name="customer_name" maxlength="100" required value="<?= htmlspecialchars(customerFormValue('customer_name', $defaultName), ENT_QUOTES); ?>"></td></tr>
-        <tr><td>Nomor HP</td><td><input class="form-control" name="customer_phone" maxlength="30" value="<?= htmlspecialchars(customerFormValue('customer_phone', $defaultPhone), ENT_QUOTES); ?>"></td></tr>
-        <tr><td>Alamat</td><td><textarea class="form-control" name="customer_address" maxlength="255"><?= htmlspecialchars(customerFormValue('customer_address', $defaultAddress), ENT_QUOTES); ?></textarea></td></tr>
-        <?php if (mikhmonIsAdmin()): ?><tr><td>Mitra</td><td><select class="form-control" name="mitra_id"><option value="">Belum ditetapkan</option><?php foreach ($mitras as $mitra): ?><option value="<?= htmlspecialchars($mitra['id'], ENT_QUOTES); ?>"<?= customerSelected('mitra_id', $mitra['id'], isset($editCustomer['mitra_id']) ? $editCustomer['mitra_id'] : ''); ?>><?= htmlspecialchars($mitra['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select></td></tr><?php endif; ?>
-        <tr><td>Jenis Layanan</td><td>
-          <?php if ($isEdit): ?><input type="hidden" id="customerService" name="customer_service" value="<?= htmlspecialchars($defaultService, ENT_QUOTES); ?>"><input class="form-control" value="<?= strtoupper(htmlspecialchars($defaultService, ENT_QUOTES)); ?>" disabled>
-          <?php else: ?><select class="form-control" id="customerService" name="customer_service" onchange="toggleCustomerService()"><option value="hotspot"<?= customerSelected('customer_service', 'hotspot', 'hotspot'); ?>>Hotspot</option><option value="pppoe"<?= customerSelected('customer_service', 'pppoe'); ?>>PPPoE</option></select><?php endif; ?>
-        </td></tr>
-        <tr><td>Username</td><td><input class="form-control" name="username" required value="<?= htmlspecialchars(customerFormValue('username', $defaultUserName), ENT_QUOTES); ?>"></td></tr>
-        <tr><td><?= $isEdit ? 'Password Baru' : 'Password'; ?></td><td><input class="form-control" type="password" name="password"<?= $isEdit ? ' placeholder="Kosongkan jika tidak diubah"' : ' required'; ?>></td></tr>
-        <tr class="hotspot-field"><td>Server Hotspot</td><td><select class="form-control" name="hotspot_server"><option value="all"<?= customerSelected('hotspot_server', 'all', $defaultServer); ?>>all</option><?php foreach ((array) $hotspotServers as $serverRow): ?><?php if (!isset($serverRow['name'])) continue; ?><option value="<?= htmlspecialchars($serverRow['name'], ENT_QUOTES); ?>"<?= customerSelected('hotspot_server', $serverRow['name'], $defaultServer); ?>><?= htmlspecialchars($serverRow['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select></td></tr>
-        <tr class="hotspot-field"><td>Profile Hotspot</td><td><select class="form-control" name="hotspot_profile"><option value="">Pilih profile</option><?php foreach ((array) $hotspotProfiles as $profileRow): ?><?php if (!isset($profileRow['name'])) continue; ?><option value="<?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?>"<?= customerSelected('hotspot_profile', $profileRow['name'], $defaultUserProfile); ?>><?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select></td></tr>
-        <tr class="pppoe-field"><td>Profile PPPoE</td><td><select class="form-control" name="pppoe_profile"><option value="">Pilih profile</option><?php foreach ((array) $pppoeProfiles as $profileRow): ?><?php if (!isset($profileRow['name'])) continue; ?><option value="<?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?>"<?= customerSelected('pppoe_profile', $profileRow['name'], $defaultUserProfile); ?>><?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select></td></tr>
-      </table>
-      <a class="btn bg-warning" href="./?customer=list&session=<?= rawurlencode($session); ?>"><i class="fa fa-close"></i> Batal</a>
-      <button class="btn bg-primary" type="submit" onclick="loader()"><i class="fa fa-save"></i> <?= $isEdit ? 'Simpan Perubahan' : 'Simpan & Buat User'; ?></button>
-    </form>
-    <?php endif; ?>
-  </div>
-</div></div></div>
+<div class="row"><div class="col-12"><div class="card box-bordered"><div class="card-header"><h3><i class="fa <?= $isEdit ? 'fa-edit' : 'fa-user-plus'; ?>"></i> <?= $isEdit ? 'Edit Pelanggan' : 'Tambah Pelanggan'; ?></h3></div><div class="card-body">
+<?php if ($customerError !== ''): ?><div class="box bg-danger"><?= htmlspecialchars($customerError, ENT_QUOTES); ?></div><?php endif; ?>
+<?php if (!$isEdit || $editCustomer): ?><form method="post" autocomplete="off"><input type="hidden" name="customer_action" value="<?= $isEdit ? 'update' : 'create'; ?>"><table class="table"><tr><td>Nama Pelanggan</td><td><input class="form-control" name="customer_name" maxlength="100" required value="<?= htmlspecialchars(customerFormValue('customer_name',$defaultName),ENT_QUOTES); ?>"></td></tr><tr><td>Nomor HP</td><td><input class="form-control" name="customer_phone" maxlength="30" value="<?= htmlspecialchars(customerFormValue('customer_phone',$defaultPhone),ENT_QUOTES); ?>"></td></tr><tr><td>Alamat</td><td><textarea class="form-control" name="customer_address" maxlength="255"><?= htmlspecialchars(customerFormValue('customer_address',$defaultAddress),ENT_QUOTES); ?></textarea></td></tr><?php if (mikhmonIsAdmin()): ?><tr><td>Mitra</td><td><select class="form-control" name="mitra_id"><option value="">Belum ditetapkan</option><?php foreach ($mitras as $mitra): ?><option value="<?= htmlspecialchars($mitra['id'],ENT_QUOTES); ?>"<?= customerSelected('mitra_id',$mitra['id'],$editCustomer['mitra_id'] ?? ''); ?>><?= htmlspecialchars($mitra['name'],ENT_QUOTES); ?></option><?php endforeach; ?></select></td></tr><?php endif; ?></table>
+<h4>Layanan <button type="button" class="btn bg-secondary" onclick="addServiceRow()"><i class="fa fa-plus"></i> Tambah Layanan</button></h4><div id="serviceRows"><?php foreach ($defaultServices as $service): ?><div class="service-row box-bordered" style="padding:10px;margin-bottom:8px"><input type="hidden" name="service_id[]" value="<?= htmlspecialchars($service['id'] ?? '',ENT_QUOTES); ?>"><div class="row"><div class="col-2"><select class="form-control service-type" name="service_type[]" onchange="toggleServiceRow(this)"><option value="hotspot"<?= ($service['service'] ?? '')==='hotspot'?' selected':''; ?>>Hotspot</option><option value="pppoe"<?= ($service['service'] ?? '')==='pppoe'?' selected':''; ?>>PPPoE</option></select></div><div class="col-3"><input class="form-control" name="service_username[]" placeholder="Username" required value="<?= htmlspecialchars($service['username'] ?? '',ENT_QUOTES); ?>"></div><div class="col-3"><input class="form-control" name="service_password[]" type="password" placeholder="<?= $isEdit?'Password baru (opsional)':'Password'; ?>"<?= $isEdit?'':' required'; ?>></div><div class="col-3"><select class="form-control service-profile" name="service_profile[]" required><option value="">Pilih profile</option><?php foreach (($service['service'] ?? 'hotspot')==='pppoe'?$pppoeProfiles:$hotspotProfiles as $profile): ?><?php if(isset($profile['name'])): ?><option value="<?= htmlspecialchars($profile['name'],ENT_QUOTES); ?>"<?= ($service['profile'] ?? '')===$profile['name']?' selected':''; ?>><?= htmlspecialchars($profile['name'],ENT_QUOTES); ?></option><?php endif; ?><?php endforeach; ?></select></div><div class="col-1"><button type="button" class="btn bg-danger" onclick="this.closest('.service-row').remove()"><i class="fa fa-trash"></i></button></div></div><div class="service-server" style="margin-top:8px;<?= ($service['service'] ?? 'hotspot')==='pppoe'?'display:none':''; ?>"><select class="form-control" name="service_server[]"><option value="all">all</option><?php foreach($hotspotServers as $server): ?><?php if(isset($server['name'])): ?><option value="<?= htmlspecialchars($server['name'],ENT_QUOTES); ?>"<?= ($service['server'] ?? 'all')===$server['name']?' selected':''; ?>><?= htmlspecialchars($server['name'],ENT_QUOTES); ?></option><?php endif; ?><?php endforeach; ?></select></div></div><?php endforeach; ?></div><a class="btn bg-warning" href="./?customer=list&session=<?= rawurlencode($session); ?>"><i class="fa fa-close"></i> Batal</a> <button class="btn bg-primary" type="submit" onclick="loader()"><i class="fa fa-save"></i> Simpan</button></form><?php endif; ?></div></div></div></div>
 <script>
-function toggleCustomerService() {
-  var isPppoe = document.getElementById('customerService').value === 'pppoe';
-  $('.hotspot-field').toggle(!isPppoe);
-  $('.pppoe-field').toggle(isPppoe);
-}
-toggleCustomerService();
+var customerProfiles={hotspot:[<?php foreach($hotspotProfiles as $p) if(isset($p['name'])) echo "'" . addslashes($p['name']) . "',"; ?>],pppoe:[<?php foreach($pppoeProfiles as $p) if(isset($p['name'])) echo "'" . addslashes($p['name']) . "',"; ?>]};
+function toggleServiceRow(select){var row=select.closest('.service-row'), type=select.value, profile=$(row).find('.service-profile'), current=profile.val(); profile.empty().append('<option value="">Pilih profile</option>'); $.each(customerProfiles[type],function(_,name){profile.append($('<option>').val(name).text(name));}); if($.inArray(current,customerProfiles[type])>=0) profile.val(current); $(row).find('.service-server').toggle(type!=='pppoe');}
+function addServiceRow(){var first=$('.service-row:first').clone();first.find('input').val('');first.find('select').each(function(){this.selectedIndex=0;});$('#serviceRows').append(first);toggleServiceRow(first.find('.service-type')[0]);}
 </script>
