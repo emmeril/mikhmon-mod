@@ -56,7 +56,6 @@ ksort($comments);
           </div>
         </div>
         <div class="box bg-secondary" style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
-          <label style="margin:0 8px 0 0;"><input type="checkbox" id="printCenterSelectAll"> Pilih semua yang tampil</label>
           <span><i class="fa fa-check-square-o"></i> <span id="printCenterCount">0</span> dipilih</span>
           <button type="button" class="btn bg-primary" onclick="printCenterSubmit('default')"><i class="fa fa-print"></i> <?= $_print_default; ?></button>
           <button type="button" class="btn bg-primary" onclick="printCenterSubmit('qr')"><i class="fa fa-qrcode"></i> <?= $_print_qr; ?></button>
@@ -123,7 +122,6 @@ ksort($comments);
     updateCount();
   }
   document.getElementById('printCenterHeader').addEventListener('change', toggleVisibleRows);
-  document.getElementById('printCenterSelectAll').addEventListener('change', toggleVisibleRows);
   document.querySelectorAll('.print-center-user').forEach(function (input) { input.addEventListener('change', updateCount); });
 })();
 </script>
