@@ -5,6 +5,7 @@ if (!mikhmonIsAdmin() && !mikhmonIsBiller()) { header('Location:../admin.php?id=
 
 include_once('./include/database.php');
 include_once('./ppp/profilemeta.php');
+include_once('./lib/fonnte.php');
 
 function billingApiError($response) {
   if (!is_array($response)) return '';
@@ -60,6 +61,16 @@ function billingPhone($phone) {
 function billingMessageAmount($amount, $currency) {
   $indoCurrency = isset($GLOBALS['cekindo']['indo']) && in_array($currency, $GLOBALS['cekindo']['indo']);
   return $currency . ' ' . number_format((float) $amount, $indoCurrency ? 0 : 2, $indoCurrency ? ',' : '.', $indoCurrency ? '.' : ',');
+}
+
+function billingInvoiceMessage($customer, $invoice, $dueDate, $currency, $brand) {
+  $customerName = trim((string) ($customer['name'] ?? ''));
+  $services = array();
+  foreach (billingInvoiceServices($invoice, $customer) as $row) {
+    $services[] = '- ' . strtoupper($row['service'] ?? '') . ' / ' . ($row['username'] ?? '') . ' / ' . ($row['profile'] ?? '') . ' / ' . billingMessageAmount($row['amount'] ?? 0, $currency);
+  }
+  $amount = isset($invoice['amount']) ? (float) $invoice['amount'] : 0;
+  return "Yth. Bapak/Ibu " . $customerName . ",\n\nDETAIL TAGIHAN " . $brand . "\nNo. Invoice: " . ($invoice['number'] ?? 'baru') . "\nNama Pelanggan: " . $customerName . "\nLayanan:\n" . implode("\n", $services) . "\n\nTotal Tagihan: " . billingMessageAmount($amount, $currency) . "\nJatuh Tempo: " . ($invoice['due_date'] ?? $dueDate ?: '-') . "\n\nMohon melakukan pembayaran sebelum jatuh tempo. Terima kasih.";
 }
 
 function billingDueTimestamp($value) {
@@ -280,6 +291,7 @@ $invoices = mikhmonGetInvoices($session);
 $hotspotProfiles = array(); $pppoeProfiles = array();
 $customerUsers = array('hotspot' => array(), 'pppoe' => array());
 $customerSchedulers = array(); $customerError = ''; $customerMessage = '';
+$fonnteConfig = mikhmonFonnteReadConfig();
 
 if (!empty($routerConnected)) {
   $hotspotProfiles = $API->comm('/ip/hotspot/user/profile/print');
@@ -411,6 +423,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
       }
     }
+  } elseif ($action === 'send_fonnte') {
+    $invoiceId = isset($_POST['invoice_id']) ? (string) $_POST['invoice_id'] : '';
+    $invoiceToSend = array();
+    foreach ($invoices as $invoiceRow) if (isset($invoiceRow['id']) && (string) $invoiceRow['id'] === $invoiceId) { $invoiceToSend = $invoiceRow; break; }
+    if (!mikhmonFonnteValidCsrf($_POST['fonnte_csrf'] ?? '')) $customerError = 'Sesi pengiriman WhatsApp tidak valid. Muat ulang halaman lalu coba lagi.';
+    elseif (!$customer || !$invoiceToSend || (string) ($invoiceToSend['customer_id'] ?? '') !== (string) ($customer['id'] ?? '')) $customerError = 'Invoice atau pelanggan tidak ditemukan.';
+    else {
+      $brand = isset($brandname) && trim((string) $brandname) !== '' ? trim((string) $brandname) : 'MIKHMON';
+      $message = billingInvoiceMessage($customer, $invoiceToSend, $invoiceToSend['due_date'] ?? '', $currency, $brand);
+      $result = mikhmonFonnteSend($customer['phone'] ?? '', $message, $fonnteConfig);
+      if (!empty($result['status'])) $customerMessage = 'Pesan invoice ' . ($invoiceToSend['number'] ?? '') . ' berhasil dimasukkan ke antrean Fonnte.';
+      else $customerError = (string) ($result['reason'] ?? 'Pesan invoice gagal dikirim melalui Fonnte.');
+    }
   }
 }
 
@@ -442,11 +467,11 @@ foreach ($invoices as $invoice) if (isset($invoice['customer_id'])) {
       $serviceSearch = implode(' ', array_map(function($row){return $row['service'].' '.$row['username'].' '.$row['profile'];}, $serviceDetails));
       $phone = billingPhone($customer['phone'] ?? ''); $customerName = trim((string) ($customer['name'] ?? ''));
       $messageBrand = isset($brandname) && trim((string) $brandname) !== '' ? trim((string) $brandname) : 'MIKHMON';
-      $messageServices = array(); foreach (billingInvoiceServices($invoice, $customer) as $row) $messageServices[] = '- ' . strtoupper($row['service'] ?? '') . ' / ' . ($row['username'] ?? '') . ' / ' . ($row['profile'] ?? '') . ' / ' . billingMessageAmount($row['amount'] ?? 0, $currency);
-      $invoiceText = "Yth. Bapak/Ibu " . $customerName . ",\n\nDETAIL TAGIHAN " . $messageBrand . "\nNo. Invoice: " . ($invoice['number'] ?? 'baru') . "\nNama Pelanggan: " . $customerName . "\nLayanan:\n" . implode("\n", $messageServices) . "\n\nTotal Tagihan: " . billingMessageAmount($amount, $currency) . "\nJatuh Tempo: " . ($invoice['due_date'] ?? $customerDueDate ?: '-') . "\n\nMohon melakukan pembayaran sebelum jatuh tempo. Terima kasih.";
+      $invoiceText = billingInvoiceMessage($customer, $invoice, $customerDueDate, $currency, $messageBrand);
       $waUrl = $phone !== '' && $invoiceStatus !== 'none' ? 'https://wa.me/' . $phone . '?text=' . rawurlencode($invoiceText) : '';
+      $canSendFonnte = !empty($fonnteConfig['enabled']) && $fonnteConfig['token'] !== '' && $phone !== '' && $invoiceStatus !== 'none';
     ?>
-      <tr class="billing-row" data-search="<?= htmlspecialchars(strtolower($serviceSearch), ENT_QUOTES); ?>" data-status="<?= $invoiceStatus === 'paid' ? 'paid' : 'unpaid'; ?>"><td><?= $index + 1; ?></td><td><?= htmlspecialchars($customerName, ENT_QUOTES); ?></td><td><?= htmlspecialchars($customer['phone'] ?? '', ENT_QUOTES); ?></td><td class="billing-service-count"><?= count($serviceDetails); ?></td><td><select class="form-control billing-service-select"><?php foreach ($serviceDetails as $serviceIndex => $detail): ?><option value="<?= $serviceIndex; ?>" data-username="<?= htmlspecialchars($detail['username'], ENT_QUOTES); ?>" data-profile="<?= htmlspecialchars($detail['profile'], ENT_QUOTES); ?>" data-user-status="<?= htmlspecialchars($detail['status_text'], ENT_QUOTES); ?>" data-status-class="<?= $detail['status'] === 'active' ? 'text-success' : 'text-danger'; ?>"><?= strtoupper(htmlspecialchars($detail['service'], ENT_QUOTES)); ?></option><?php endforeach; ?></select></td><td class="billing-username"><?= htmlspecialchars($firstService['username'], ENT_QUOTES); ?></td><td class="billing-profile"><?= htmlspecialchars($firstService['profile'], ENT_QUOTES); ?></td><td class="billing-user-status <?= $firstService['status'] === 'active' ? 'text-success' : 'text-danger'; ?>"><strong><?= htmlspecialchars($firstService['status_text'], ENT_QUOTES); ?></strong></td><td class="billing-due-date"><?= htmlspecialchars($customerDueDate !== '' ? $customerDueDate : '-', ENT_QUOTES); ?></td><td><?= htmlspecialchars($invoice['number'] ?? '-', ENT_QUOTES); ?></td><td class="<?= $invoiceStatusClass; ?>"><strong><?= $invoiceStatusText; ?></strong></td><td><?= $amount > 0 ? htmlspecialchars($currency . ' ' . number_format($amount, 0, ',', '.'), ENT_QUOTES) : '-'; ?></td><td><?= $invoiceStatus === 'paid' ? htmlspecialchars($invoice['paid_by_name'] ?? 'Data lama', ENT_QUOTES) : '-'; ?></td><td><?php if ($invoiceStatus === 'paid'): ?><span class="text-success"><i class="fa fa-check"></i> Sudah Bayar</span> <form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Invoice Baru</button></form><?php else: ?><?php if ($invoiceStatus === 'none'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Buat Invoice</button></form><?php endif; ?><?php if ($waUrl !== ''): ?><a class="btn bg-green" target="_blank" href="<?= htmlspecialchars($waUrl, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Kirim</a><?php endif; ?><?php if ($invoiceStatus === 'unpaid'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="mark_paid"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-success" type="submit" onclick="return confirm('Tandai invoice lunas dan aktifkan semua layanan pelanggan?');"><i class="fa fa-check"></i> Sudah Bayar</button></form><?php endif; ?><?php endif; ?></td></tr>
+      <tr class="billing-row" data-search="<?= htmlspecialchars(strtolower($serviceSearch), ENT_QUOTES); ?>" data-status="<?= $invoiceStatus === 'paid' ? 'paid' : 'unpaid'; ?>"><td><?= $index + 1; ?></td><td><?= htmlspecialchars($customerName, ENT_QUOTES); ?></td><td><?= htmlspecialchars($customer['phone'] ?? '', ENT_QUOTES); ?></td><td class="billing-service-count"><?= count($serviceDetails); ?></td><td><select class="form-control billing-service-select"><?php foreach ($serviceDetails as $serviceIndex => $detail): ?><option value="<?= $serviceIndex; ?>" data-username="<?= htmlspecialchars($detail['username'], ENT_QUOTES); ?>" data-profile="<?= htmlspecialchars($detail['profile'], ENT_QUOTES); ?>" data-user-status="<?= htmlspecialchars($detail['status_text'], ENT_QUOTES); ?>" data-status-class="<?= $detail['status'] === 'active' ? 'text-success' : 'text-danger'; ?>"><?= strtoupper(htmlspecialchars($detail['service'], ENT_QUOTES)); ?></option><?php endforeach; ?></select></td><td class="billing-username"><?= htmlspecialchars($firstService['username'], ENT_QUOTES); ?></td><td class="billing-profile"><?= htmlspecialchars($firstService['profile'], ENT_QUOTES); ?></td><td class="billing-user-status <?= $firstService['status'] === 'active' ? 'text-success' : 'text-danger'; ?>"><strong><?= htmlspecialchars($firstService['status_text'], ENT_QUOTES); ?></strong></td><td class="billing-due-date"><?= htmlspecialchars($customerDueDate !== '' ? $customerDueDate : '-', ENT_QUOTES); ?></td><td><?= htmlspecialchars($invoice['number'] ?? '-', ENT_QUOTES); ?></td><td class="<?= $invoiceStatusClass; ?>"><strong><?= $invoiceStatusText; ?></strong></td><td><?= $amount > 0 ? htmlspecialchars($currency . ' ' . number_format($amount, 0, ',', '.'), ENT_QUOTES) : '-'; ?></td><td><?= $invoiceStatus === 'paid' ? htmlspecialchars($invoice['paid_by_name'] ?? 'Data lama', ENT_QUOTES) : '-'; ?></td><td><?php if ($invoiceStatus === 'paid'): ?><span class="text-success"><i class="fa fa-check"></i> Sudah Bayar</span> <form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Invoice Baru</button></form><?php else: ?><?php if ($invoiceStatus === 'none'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Buat Invoice</button></form><?php endif; ?><?php if ($waUrl !== ''): ?><a class="btn bg-green" target="_blank" href="<?= htmlspecialchars($waUrl, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Kirim</a><?php endif; ?><?php if ($canSendFonnte): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="send_fonnte"><input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-green" type="submit" title="Kirim melalui Fonnte"><i class="fa fa-send"></i> Fonnte</button></form><?php endif; ?><?php if ($invoiceStatus === 'unpaid'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="mark_paid"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-success" type="submit" onclick="return confirm('Tandai invoice lunas dan aktifkan semua layanan pelanggan?');"><i class="fa fa-check"></i> Sudah Bayar</button></form><?php endif; ?><?php endif; ?></td></tr>
     <?php endforeach; ?>
     <?php if (!$customers): ?><tr><td colspan="14" class="text-center">Belum ada data pelanggan.</td></tr><?php endif; ?><tr id="billingNoResults" style="display:none"><td colspan="14" class="text-center">Data billing tidak ditemukan.</td></tr></tbody></table></div>
   </div>

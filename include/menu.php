@@ -165,6 +165,9 @@ if (!isset($_SESSION["mikhmon"])) {
     $mpage = $_admin_settings;
     $settmenu = "menu-open";
     $ssett = "active";
+  } elseif ($id == "fonnte") {
+    $sfonnte = "active";
+    $mpage = "WhatsApp Gateway Fonnte";
   } elseif ($admin == "routers") {
     $srouterlist = "active";
     $ssett = "active";
@@ -277,6 +280,7 @@ if($idleto != "disable"){
   <a href="./admin.php?id=sessions" class="menu <?= $ssesslist; ?>"><i class="fa fa-server"></i> Router</a>
   <a href="./admin.php?id=admin-settings" class="menu"><i class="fa fa-user-circle"></i> <?= $_admin_settings ?></a>
   <a href="./admin.php?id=users" class="menu <?= $susersadmin; ?>"><i class="fa fa-users"></i> Mitra &amp; Biller</a>
+  <a href="./admin.php?id=fonnte" class="menu <?= $sfonnte; ?>"><i class="fa fa-whatsapp"></i> WhatsApp Gateway</a>
   <a href="./admin.php?id=settings&router=new-<?= rand(1111,9999) ?>" class="menu <?= $snsettings ?>"><i class="fa fa-plus"></i> <?= $_add_router ?></a>
 
 </div>
@@ -465,6 +469,7 @@ include('./info.php');
   </div>
   <div class="dropdown-container <?= $settmenu; ?>">
   <a href="./?admin=settings&session=<?= rawurlencode($session); ?>" class="menu <?= $sadminsettings; ?>"> <i class="fa fa-user-circle"></i> <?= $_admin_settings ?> </a>
+  <a href="./admin.php?id=fonnte" class="menu <?= $sfonnte; ?>"> <i class="fa fa-whatsapp"></i> WhatsApp Gateway </a>
   <a href="./?admin=routers&session=<?= rawurlencode($session); ?>" class="menu <?= $srouterlist; ?>"> <i class="fa fa-server"></i> <?= $_router_list ?> </a>
   <a href="./admin.php?id=settings&router=new-<?= rand(1111, 9999); ?>&return=routers" class="menu"> <i class="fa fa-plus"></i> <?= $_add_router ?> </a>
   <a href="./?admin=users&session=<?= rawurlencode($session); ?>" class="menu <?= $sroleusers; ?>"> <i class="fa fa-users"></i> Manajemen User </a>

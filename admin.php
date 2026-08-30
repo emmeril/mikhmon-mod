@@ -37,6 +37,7 @@ $ids = array(
   "database",
   "settings",
   "admin-settings",
+  "fonnte",
 );
 
 // lang
@@ -109,6 +110,9 @@ if ($id == "login" || substr($url, -1) == "p") {
 } elseif ($id == "admin-settings") {
   include_once('./include/menu.php');
   include_once('./settings/adminsettings.php');
+} elseif ($id == "fonnte") {
+  include_once('./include/menu.php');
+  include_once('./settings/fonnte.php');
 } elseif ($id == "sessions") {
   $_SESSION["connect"] = "";
   include_once('./include/menu.php');
