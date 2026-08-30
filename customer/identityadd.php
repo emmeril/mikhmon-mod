@@ -43,7 +43,7 @@ $identityAddress = $identityCustomer['address'] ?? '';
   .identity-fields textarea{height:90px;resize:vertical}
   .identity-actions{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
   .identity-actions .btn,.identity-actions a{box-sizing:border-box;margin:0}
-  @media(max-width:767px){.identity-fields{grid-template-columns:1fr}.identity-fields .wide{grid-column:auto}.identity-actions{flex-direction:column-reverse}.identity-actions .btn,.identity-actions a{width:100%;text-align:center}}
+  @media(max-width:767px){.identity-fields{grid-template-columns:1fr}.identity-fields .wide{grid-column:auto}.identity-actions{flex-direction:column}.identity-actions .btn,.identity-actions a{width:100%;text-align:center}}
 </style>
 <div class="row"><div class="col-12"><div class="card box-bordered identity-card">
   <div class="card-header"><h3><i class="fa <?= $identityEdit ? 'fa-edit' : 'fa-user-plus'; ?>"></i> <?= $identityEdit ? 'Edit Identitas Pelanggan' : 'Tambah Identitas Pelanggan'; ?></h3></div>
@@ -56,7 +56,7 @@ $identityAddress = $identityCustomer['address'] ?? '';
         <div class="wide"><label>Alamat</label><textarea class="form-control" name="identity_address" maxlength="255" placeholder="Alamat pemasangan atau keterangan lokasi"><?= htmlspecialchars(isset($_POST['identity_address']) ? $_POST['identity_address'] : $identityAddress, ENT_QUOTES); ?></textarea></div>
         <?php if (mikhmonIsAdmin()): ?><div><label>Mitra</label><select class="form-control" name="mitra_id"><option value="">Belum ditetapkan</option><?php foreach ($identityMitras as $mitra): ?><option value="<?= htmlspecialchars($mitra['id'], ENT_QUOTES); ?>"<?= ((string) ($_POST['mitra_id'] ?? ($identityCustomer['mitra_id'] ?? '')) === (string) $mitra['id']) ? ' selected' : ''; ?>><?= htmlspecialchars($mitra['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select></div><?php endif; ?>
       </div>
-      <div class="identity-actions"><a class="btn bg-warning" href="./?customer=identity-list&session=<?= rawurlencode($session); ?>"><i class="fa fa-close"></i> Batal</a><button class="btn bg-primary" type="submit" onclick="loader()"><i class="fa fa-save"></i> <?= $identityEdit ? 'Simpan Perubahan' : 'Simpan Identitas'; ?></button></div>
+      <div class="identity-actions"><button class="btn bg-primary" type="submit" onclick="loader()"><i class="fa fa-save"></i> <?= $identityEdit ? 'Simpan Perubahan' : 'Simpan Identitas'; ?></button><a class="btn bg-warning" href="./?customer=identity-list&session=<?= rawurlencode($session); ?>"><i class="fa fa-close"></i> Batal</a></div>
     </form>
   </div>
 </div></div></div>

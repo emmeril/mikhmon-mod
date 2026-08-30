@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['service_action'] ?? '') ==
   .service-add-fields label{display:block;margin-bottom:6px;font-size:12px;font-weight:bold;color:#d7dbe0}
   .service-add-actions{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
   .service-add-actions .btn,.service-add-actions a{box-sizing:border-box;margin:0}
-  @media(max-width:767px){.service-add-fields{grid-template-columns:1fr}.service-add-fields .wide{grid-column:auto}.service-add-actions{flex-direction:column-reverse}.service-add-actions .btn,.service-add-actions a{width:100%;text-align:center}}
+  @media(max-width:767px){.service-add-fields{grid-template-columns:1fr}.service-add-fields .wide{grid-column:auto}.service-add-actions{flex-direction:column}.service-add-actions .btn,.service-add-actions a{width:100%;text-align:center}}
 </style>
 <div class="row"><div class="col-12"><div class="card box-bordered service-add-card">
   <div class="card-header"><h3><i class="fa fa-link"></i> Tambah Layanan</h3></div>
@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['service_action'] ?? '') ==
         <div><label>Profile *</label><select class="form-control service-profile" name="service_profile" required><option value="">Pilih profile</option><?php foreach ($hotspotProfiles as $profileRow): if(isset($profileRow['name'])): ?><option data-service="hotspot" value="<?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?>"<?= (string) ($_POST['service_profile'] ?? '') === (string) $profileRow['name'] ? ' selected' : ''; ?>><?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?></option><?php endif; endforeach; ?><?php foreach ($pppoeProfiles as $profileRow): if(isset($profileRow['name'])): ?><option data-service="pppoe" value="<?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?>" style="display:none"<?= (string) ($_POST['service_profile'] ?? '') === (string) $profileRow['name'] ? ' selected' : ''; ?>><?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?></option><?php endif; endforeach; ?></select></div>
         <div class="service-server-field"><label>Server Hotspot</label><select class="form-control" name="service_server"><option value="all">all</option><?php foreach ($hotspotServers as $serverRow): if(isset($serverRow['name'])): ?><option value="<?= htmlspecialchars($serverRow['name'], ENT_QUOTES); ?>"><?= htmlspecialchars($serverRow['name'], ENT_QUOTES); ?></option><?php endif; endforeach; ?></select></div>
       </div>
-      <div class="service-add-actions"><a class="btn bg-warning" href="./?customer=list&session=<?= rawurlencode($session); ?>"><i class="fa fa-close"></i> Batal</a><button class="btn bg-primary" type="submit" onclick="loader()"><i class="fa fa-link"></i> Simpan Layanan</button></div>
+      <div class="service-add-actions"><button class="btn bg-primary" type="submit" onclick="loader()"><i class="fa fa-link"></i> Simpan Layanan</button><a class="btn bg-warning" href="./?customer=list&session=<?= rawurlencode($session); ?>"><i class="fa fa-close"></i> Batal</a></div>
     </form>
   </div>
 </div></div></div>
