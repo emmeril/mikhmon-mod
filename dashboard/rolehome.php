@@ -13,6 +13,7 @@ $mitraVoucherUsers = array();
 $mitraHotspotActive = array();
 $mitraPppSecrets = array();
 $mitraPppActive = array();
+$mitraHotspotLogs = array();
 $monthKey = strtolower(date('M')) . date('Y');
 $todayKey = strtolower(date('M/d/Y'));
 $monthReports = array();
@@ -41,6 +42,33 @@ if (!empty($routerConnected)) {
   }
   $mitraHotspotNames = array();
   foreach ($mitraHotspotUsers as $hotspotUser) if (isset($hotspotUser['name'])) $mitraHotspotNames[(string) $hotspotUser['name']] = true;
+
+  // Keep the dashboard log limited to hotspot users managed by this mitra.
+  $mitraLogUsernames = array_merge(array_keys($hotspotCustomerNames), array_keys($mitraHotspotNames));
+  $hotspotLogs = array_reverse((array) $API->comm('/log/print', array('?topics' => 'hotspot,info,debug')));
+  foreach ($hotspotLogs as $hotspotLog) {
+    $message = isset($hotspotLog['message']) ? (string) $hotspotLog['message'] : '';
+    if (substr($message, 0, 2) !== '->') continue;
+    $parts = explode(':', $message);
+    $userCell = isset($parts[1]) ? $parts[1] : '';
+    $belongsToMitra = false;
+    foreach ($mitraLogUsernames as $username) {
+      if ($username !== '' && stripos($userCell, (string) $username) !== false) {
+        $belongsToMitra = true;
+        break;
+      }
+    }
+    if (!$belongsToMitra) continue;
+    $messageCell = count($parts) > 6
+      ? implode(' ', array_slice($parts, 7, 4))
+      : implode(' ', array_slice($parts, 2, 4));
+    $mitraHotspotLogs[] = array(
+      'time' => isset($hotspotLog['time']) ? (string) $hotspotLog['time'] : '',
+      'user' => count($parts) > 6 ? implode(':', array_slice($parts, 1, 6)) : $userCell,
+      'message' => str_replace('trying to', '', $messageCell),
+    );
+    if (count($mitraHotspotLogs) >= 20) break;
+  }
   foreach ((array) $API->comm('/ip/hotspot/active/print') as $activeUser) {
     if (isset($activeUser['user']) && isset($mitraHotspotNames[(string) $activeUser['user']])) $mitraHotspotActive[] = $activeUser;
   }
@@ -87,16 +115,6 @@ foreach ($monthReports as $reportRow) {
   }
 }
 
-$paidInvoices = 0;
-$unpaidInvoices = 0;
-$customerIds = array();
-foreach ($mitraCustomers as $customer) if (isset($customer['id'])) $customerIds[(string) $customer['id']] = true;
-foreach (mikhmonGetInvoices($session) as $invoice) {
-  if (!isset($invoice['customer_id']) || !isset($customerIds[(string) $invoice['customer_id']])) continue;
-  if (isset($invoice['status']) && $invoice['status'] === 'paid') $paidInvoices++;
-  elseif (isset($invoice['status']) && $invoice['status'] === 'unpaid') $unpaidInvoices++;
-}
-
 function mitraDashboardMoney($value, $currency) {
   return $currency . ' ' . number_format((float) $value, 0, ',', '.');
 }
@@ -138,12 +156,18 @@ $pppoeCustomers = count($pppoeCustomerNames);
     <div class="col-4">
       <div id="r_4" class="row"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-money"></i></div><div class="box-group-area"><span><b><?= $_income ?></b><br><?= $_today ?> <?= $reportTotals['today']['count']; ?> trx : <?= htmlspecialchars(mitraDashboardMoney($reportTotals['today']['income'], $currency), ENT_QUOTES); ?><br><?= $_this_month ?> <?= $reportTotals['all']['count']; ?> trx : <?= htmlspecialchars(mitraDashboardMoney($reportTotals['all']['income'], $currency), ENT_QUOTES); ?><hr style="margin:5px 0;border:0;border-top:1px solid currentColor;opacity:.35"><b>Net Profit Mitra</b><br><?= $_today ?>: <?= htmlspecialchars(mitraDashboardMoney($reportTotals['today']['profit'], $currency), ENT_QUOTES); ?><br><?= $_this_month ?>: <?= htmlspecialchars(mitraDashboardMoney($reportTotals['all']['profit'], $currency), ENT_QUOTES); ?></span></div></div></div></div>
 
-      <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-area-chart"></i> <?= $_report ?></h3></div><div class="card-body">
-        <a href="./?report=selling&idbl=<?= $monthKey; ?>&service=hotspot&session=<?= $session; ?>"><div class="box bg-blue"><strong>Hotspot</strong><br><?= $reportTotals['hotspot']['count']; ?> transaksi<br>Net Profit: <?= htmlspecialchars(mitraDashboardMoney($reportTotals['hotspot']['profit'], $currency), ENT_QUOTES); ?></div></a>
-        <a href="./?report=selling&idbl=<?= $monthKey; ?>&service=pppoe&session=<?= $session; ?>"><div class="box bg-green"><strong>PPPoE</strong><br><?= $reportTotals['pppoe']['count']; ?> transaksi<br>Net Profit: <?= htmlspecialchars(mitraDashboardMoney($reportTotals['pppoe']['profit'], $currency), ENT_QUOTES); ?></div></a>
-      </div></div></div>
-
-      <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-file-text"></i> Billing</h3></div><div class="card-body"><div class="row"><div class="col-6"><div class="box bg-green text-center"><h2><?= $paidInvoices; ?></h2>Paid</div></div><div class="col-6"><div class="box bg-red text-center"><h2><?= $unpaidInvoices; ?></h2>Unpaid</div></div></div></div></div></div>
+      <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></h3></div><div class="card-body"><div style="padding: 5px; max-height: 430px;" class="mr-t-10 overflow">
+        <table class="table table-sm table-bordered table-hover" style="font-size: 12px;">
+          <thead><tr><th><?= $_time ?></th><th><?= $_users ?> (IP)</th><th><?= $_messages ?></th></tr></thead>
+          <tbody>
+          <?php if (empty($mitraHotspotLogs)): ?>
+            <tr><td colspan="3" class="text-center">Belum ada log hotspot.</td></tr>
+          <?php else: foreach ($mitraHotspotLogs as $hotspotLog): ?>
+            <tr><td><?= htmlspecialchars($hotspotLog['time'], ENT_QUOTES); ?></td><td><?= htmlspecialchars($hotspotLog['user'], ENT_QUOTES); ?></td><td><?= htmlspecialchars($hotspotLog['message'], ENT_QUOTES); ?></td></tr>
+          <?php endforeach; endif; ?>
+          </tbody>
+        </table>
+      </div></div></div></div>
     </div>
   </div>
 </div>
