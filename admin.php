@@ -36,6 +36,7 @@ $ids = array(
   "uplogo",
   "database",
   "settings",
+  "admin-settings",
 );
 
 // lang
@@ -77,7 +78,7 @@ if ($id == "login" || substr($url, -1) == "p") {
     $pass = (string) $_POST['pass'];
     if ($user == $useradm && $pass == decrypt($passadm)) {
       mikhmonSetLoginSession(array('username' => $user, 'name' => 'Administrator'), 'admin');
-      echo "<script>window.location='./admin.php?id=sessions'</script>";
+      echo "<script>window.location=" . json_encode(mikhmonAdminLandingUrl($data)) . "</script>";
     } else {
       $staff = mikhmonLoginStaff($user, $pass);
       if ($staff) {
@@ -103,8 +104,11 @@ if ($id == "login" || substr($url, -1) == "p") {
   $target = mikhmonIsBiller() ? './?billing=1&session=' . $staffSession : './?session=' . $staffSession;
   echo "<script>window.location=" . json_encode($target) . "</script>";
 } elseif (substr($url, -1) == "/" || substr($url, -4) == ".php") {
-  echo "<script>window.location='./admin.php?id=sessions'</script>";
+  echo "<script>window.location=" . json_encode(mikhmonAdminLandingUrl($data)) . "</script>";
 
+} elseif ($id == "admin-settings") {
+  include_once('./include/menu.php');
+  include_once('./settings/adminsettings.php');
 } elseif ($id == "sessions") {
   $_SESSION["connect"] = "";
   include_once('./include/menu.php');
@@ -195,7 +199,7 @@ if ($id == "login" || substr($url, -1) == "p") {
   include_once('./include/menu.php');
   include_once('./settings/vouchereditor.php');
 } elseif (empty($id)) {
-  echo "<script>window.location='./admin.php?id=sessions'</script>";
+  echo "<script>window.location=" . json_encode(mikhmonAdminLandingUrl($data)) . "</script>";
 } elseif(in_array($id, $ids) && empty($session)){
 	echo "<script>window.location='./admin.php?id=sessions'</script>";
 }

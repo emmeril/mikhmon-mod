@@ -152,6 +152,16 @@ if (!isset($_SESSION["mikhmon"])) {
   } elseif ($userbyname != "") {
     $mpage = $_users;
     $susers = "active";
+  } elseif ($admin == "settings") {
+    $sadminsettings = "active";
+    $mpage = $_admin_settings;
+    $settmenu = "menu-open";
+    $ssett = "active";
+  } elseif ($admin == "routers") {
+    $srouterlist = "active";
+    $mrouter = "active";
+    $routermenu = "menu-open";
+    $mpage = $_router_list;
   } elseif ($id == "sessions" || $id == "remove" || $router == "new") {
     $ssesslist = "active";
     $mpage = $_admin_settings;
@@ -223,7 +233,11 @@ if($idleto != "disable"){
 </div>
 
 <div id="sidenav" class="sidenav">
-<?php if (($id == "settings" && $session == "new") || $id == "settings" && $router == "new") {
+<?php if ($id == "admin-settings") { ?>
+  <a href="./admin.php?id=sessions" class="menu"><i class="fa fa-server"></i> Router</a>
+  <a href="./admin.php?id=admin-settings" class="menu active"><i class="fa fa-user-circle"></i> <?= $_admin_settings ?></a>
+  <a href="./admin.php?id=users" class="menu"><i class="fa fa-users"></i> Mitra &amp; Biller</a>
+<?php } elseif (($id == "settings" && $session == "new") || $id == "settings" && $router == "new") {
 }else if ($id == "settings" || $id == "editor"|| $id == "uplogo" || $id == "database" || $id == "connect"){
 ?>  
   <div class="menu text-center align-middle card-header" style="border-radius:0;"><h3 id="MikhmonSession"><?= $session; ?></h3></div>
@@ -235,7 +249,8 @@ if($idleto != "disable"){
   <div class="menu spa"></div>
 <?php 
 } ?>  
-  <a href="./admin.php?id=sessions" class="menu <?= $ssesslist; ?>"><i class="fa fa-gear"></i> <?= $_admin_settings ?></a>
+  <a href="./admin.php?id=sessions" class="menu <?= $ssesslist; ?>"><i class="fa fa-server"></i> Router</a>
+  <a href="./admin.php?id=admin-settings" class="menu"><i class="fa fa-user-circle"></i> <?= $_admin_settings ?></a>
   <a href="./admin.php?id=users" class="menu <?= $susersadmin; ?>"><i class="fa fa-users"></i> Mitra &amp; Biller</a>
   <a href="./admin.php?id=settings&router=new-<?= rand(1111,9999) ?>" class="menu <?= $snsettings ?>"><i class="fa fa-plus"></i> <?= $_add_router ?></a>
 
@@ -335,6 +350,12 @@ include('./info.php');
   </div>
 <?php else: ?>
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
+  <div class="dropdown-btn <?= $mrouter; ?>"><i class="fa fa-server"></i> Router <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-container <?= $routermenu; ?>">
+    <a href="./?admin=routers&session=<?= rawurlencode($session); ?>" class="<?= $srouterlist; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> <?= $_router_list ?></a>
+    <a href="./admin.php?id=settings&router=new-<?= rand(1111, 9999); ?>&return=routers" class="">&nbsp;&nbsp;&nbsp;<i class="fa fa-plus"></i> <?= $_add_router ?></a>
+    <a href="./admin.php?id=settings&session=<?= rawurlencode($session); ?>" class="">&nbsp;&nbsp;&nbsp;<i class="fa fa-gear"></i> <?= $_session_settings ?></a>
+  </div>
   <!--hotspot-->
   <div class="dropdown-btn <?= $susers . $suserprof . $sactive . $shosts . $sipbind . $scookies; ?>"><i class="fa fa-wifi"></i> Hotspot
     <i class="fa fa-caret-down"></i>
@@ -418,8 +439,7 @@ include('./info.php');
     <i class="fa fa-caret-down"></i> &nbsp;
   </div>
   <div class="dropdown-container <?= $settmenu; ?>">
-  <a href="./admin.php?id=settings&session=<?= $session; ?>" class="menu "> <i class="fa fa-gear "></i> <?= $_session_settings ?> </a>
-  <a href="./admin.php?id=sessions" class="menu "> <i class="fa fa-gear "></i> <?= $_admin_settings ?> </a>
+  <a href="./?admin=settings&session=<?= rawurlencode($session); ?>" class="menu <?= $sadminsettings; ?>"> <i class="fa fa-user-circle"></i> <?= $_admin_settings ?> </a>
   <a href="./?hotspot=uplogo&session=<?= $session; ?>" class="menu <?= $uplogo; ?>"> <i class="fa fa-upload "></i> <?= $_upload_logo ?> </a>
   <a href="./admin.php?id=database&session=<?= $session; ?>" class="menu <?= $sdatabase; ?>"><i class="fa fa-database"></i> Database Backup</a>
   <a href="./?hotspot=template-editor&template=default&session=<?= $session; ?>" class="menu <?= $teditor; ?>"> <i class="fa fa-edit "></i> <?= $_template_editor ?> </a>          

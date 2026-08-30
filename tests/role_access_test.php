@@ -12,6 +12,9 @@ function roleTestAssert($condition, $message) {
 }
 
 roleTestAssert(getenv('MIKHMON_DATABASE_PATH') !== false, 'isolated database path is required');
+roleTestAssert(mikhmonDefaultRouterSession(array('mikhmon' => array(), 'router-a' => array('configured'))) === 'router-a', 'admin landing selects the first configured router');
+roleTestAssert(mikhmonAdminLandingUrl(array('mikhmon' => array(), 'router-a' => array('configured'))) === './?session=router-a', 'admin landing opens the router dashboard');
+roleTestAssert(mikhmonAdminLandingUrl(array('mikhmon' => array())) === './admin.php?id=sessions', 'admin landing falls back to settings when no router exists');
 
 $mitraId = mikhmonSaveUser('', 'Mitra Satu', 'mitra1', 'mitra', 'router-a', 'secret', true);
 $billerId = mikhmonSaveUser('', 'Biller Satu', 'biller1', 'biller', 'router-a', 'secret', true);
@@ -39,6 +42,8 @@ roleTestAssert(mikhmonCanOpenMainRoute('hotspot-vouchers'), 'mitra can view own 
 roleTestAssert(mikhmonCanOpenMainRoute('pppoe-users'), 'mitra can view assigned PPPoE users');
 roleTestAssert(mikhmonCanOpenMainRoute('pppoe-active'), 'mitra can view assigned PPPoE active sessions');
 roleTestAssert(!mikhmonCanOpenMainRoute('billing'), 'mitra cannot open billing');
+roleTestAssert(!mikhmonCanOpenMainRoute('admin-settings'), 'mitra cannot open admin settings');
+roleTestAssert(!mikhmonCanOpenMainRoute('admin-routers'), 'mitra cannot open router management');
 roleTestAssert(strpos(mikhmonOwnerTag(), $mitraId) !== false, 'mitra voucher owner tag is generated');
 roleTestAssert(mikhmonRowBelongsToCurrentMitra(array('comment' => mikhmonOwnerTag() . ' promo')), 'owned voucher rows are recognized');
 

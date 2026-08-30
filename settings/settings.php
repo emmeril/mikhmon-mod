@@ -34,7 +34,10 @@ if (!isset($_SESSION["mikhmon"])) {
     $content = file_get_contents("./include/config.php");
     $newcontent = str_replace((string)$search, (string)$replace, "$content");
     file_put_contents("./include/config.php", "$newcontent");
-    echo "<script>window.location='./admin.php?id=settings&session=" . $router . "'</script>";
+    $newRouterTarget = isset($_GET['return']) && $_GET['return'] === 'routers'
+      ? './admin.php?id=settings&session=' . rawurlencode($router) . '&return=routers'
+      : './admin.php?id=settings&session=' . rawurlencode($router);
+    echo "<script>window.location=" . json_encode($newRouterTarget) . "</script>";
   }
 
   if (isset($_POST['save'])) {
@@ -71,7 +74,10 @@ if (!isset($_SESSION["mikhmon"])) {
       file_put_contents("./include/config.php", "$newcontent");
     }
     $_SESSION["connect"] = "";
-    echo "<script>window.location='./admin.php?id=settings&session=" . $sesname . "'</script>";
+    $settingsTarget = isset($_GET['return']) && $_GET['return'] === 'routers'
+      ? './?admin=routers&session=' . rawurlencode($sesname)
+      : './admin.php?id=settings&session=' . rawurlencode($sesname);
+    echo "<script>window.location=" . json_encode($settingsTarget) . "</script>";
   }
   if ($currency == "") {
     echo "<script>window.location='./admin.php?id=settings&session=" . $session . "'</script>";
@@ -279,6 +285,4 @@ if (pingButton && sessionName) {
   };
 }
 </script>
-
-
 

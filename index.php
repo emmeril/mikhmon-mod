@@ -32,7 +32,20 @@ $session = $_GET['session'];
 if (!isset($_SESSION["mikhmon"])) {
   header("Location:./admin.php?id=login");
 } elseif (empty($session)) {
-  echo "<script>window.location='./admin.php?id=sessions'</script>";
+  include_once('./include/config.php');
+  include_once('./include/access.php');
+  if (!mikhmonRefreshStaffSession()) {
+    session_destroy();
+    header('Location:./admin.php?id=login');
+    exit;
+  }
+  if (mikhmonIsAdmin()) {
+    $landingTarget = mikhmonAdminLandingUrl($data);
+  } else {
+    $assignedSession = rawurlencode(mikhmonAssignedSession());
+    $landingTarget = mikhmonIsBiller() ? './?billing=1&session=' . $assignedSession : './?session=' . $assignedSession;
+  }
+  echo "<script>window.location=" . json_encode($landingTarget) . "</script>";
 } else {
   $_SESSION["$session"] = $session;
   $setsession = $_SESSION["$session"];
@@ -133,6 +146,7 @@ if (!isset($_SESSION["mikhmon"])) {
   $customer = $_GET['customer'];
   $customerid = $_GET['customer-id'];
   $billing = $_GET['billing'];
+  $admin = $_GET['admin'];
 
   $requestedRoute = 'other';
   if ($hotspot == 'logout') $requestedRoute = 'logout';
@@ -142,6 +156,8 @@ if (!isset($_SESSION["mikhmon"])) {
   elseif ($customer == 'add') $requestedRoute = 'customer-add';
   elseif ($report == 'selling') $requestedRoute = 'report-selling';
   elseif ($report == 'resume-report') $requestedRoute = 'report-resume';
+  elseif ($admin == 'settings') $requestedRoute = 'admin-settings';
+  elseif ($admin == 'routers') $requestedRoute = 'admin-routers';
   elseif ($hotspotuser == 'generate') $requestedRoute = 'hotspot-generate';
   elseif ($hotspot == 'active') $requestedRoute = 'hotspot-active';
   elseif ($hotspot == 'users-by-profile') $requestedRoute = 'hotspot-vouchers';
@@ -202,6 +218,16 @@ if (!isset($_SESSION["mikhmon"])) {
 // hotspot log
   elseif ($hotspot == "log") {
     include_once('./hotspot/log.php');
+  }
+
+// admin settings inside the router dashboard
+  elseif ($admin == "settings" && mikhmonIsAdmin()) {
+    include_once('./settings/adminsettings.php');
+  }
+
+// router management inside the router dashboard
+  elseif ($admin == "routers" && mikhmonIsAdmin()) {
+    include_once('./settings/sessions.php');
   }
 
 // customer database

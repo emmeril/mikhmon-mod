@@ -30,6 +30,23 @@ function mikhmonAssignedSession() {
   return isset($_SESSION['mikhmon_router_session']) ? (string) $_SESSION['mikhmon_router_session'] : '';
 }
 
+function mikhmonDefaultRouterSession($config = null) {
+  if ($config === null) {
+    global $data;
+    $config = isset($data) ? $data : array();
+  }
+
+  foreach ((array) $config as $session => $settings) {
+    if ($session !== 'mikhmon' && $session !== '' && is_array($settings)) return (string) $session;
+  }
+  return '';
+}
+
+function mikhmonAdminLandingUrl($config = null) {
+  $session = mikhmonDefaultRouterSession($config);
+  return $session !== '' ? './?session=' . rawurlencode($session) : './admin.php?id=sessions';
+}
+
 function mikhmonLoginStaff($username, $password) {
   $user = false;
   foreach (mikhmonGetUsers() as $candidate) {
