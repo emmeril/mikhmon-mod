@@ -258,6 +258,19 @@ function mikhmonAssignCustomer($session, $customerId, $mitraId) {
   return false;
 }
 
+function mikhmonSetCustomerDueDate($session, $customerId, $dueDate) {
+  $database = mikhmonReadDatabase();
+  if (!isset($database['customers'][$session]) || !is_array($database['customers'][$session])) return false;
+  foreach ($database['customers'][$session] as $index => $customer) {
+    if (isset($customer['id']) && (string) $customer['id'] === (string) $customerId) {
+      $database['customers'][$session][$index]['due_date'] = trim(strip_tags((string) $dueDate));
+      $database['customers'][$session][$index]['updated_at'] = time();
+      return mikhmonWriteDatabase($database);
+    }
+  }
+  return false;
+}
+
 function mikhmonGetInvoices($session) {
   $database = mikhmonReadDatabase();
   $invoices = isset($database['invoices'][$session]) && is_array($database['invoices'][$session]) ? $database['invoices'][$session] : array();

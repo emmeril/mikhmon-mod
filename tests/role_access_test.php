@@ -33,6 +33,8 @@ $sameNameCustomer = mikhmonSaveCustomer('router-a', '', '  pelanggan   a ', '', 
 roleTestAssert($sameNameCustomer === $customerOne, 'same normalized customer name reuses the existing customer');
 roleTestAssert(count(mikhmonCustomerServices(mikhmonFindCustomer('router-a', $customerOne))) === 2, 'one customer can own multiple services');
 roleTestAssert(count(mikhmonGetCustomers('router-a')) === 2, 'same-name records do not create duplicate customers');
+roleTestAssert(mikhmonSetCustomerDueDate('router-a', $customerOne, '2026-09-10') === true, 'customer due date can be stored once for all services');
+roleTestAssert((mikhmonFindCustomer('router-a', $customerOne)['due_date'] ?? '') === '2026-09-10', 'customer due date is shared');
 roleTestAssert(mikhmonAssignedCustomerCount($mitraId) === 1, 'assigned customer count is tracked');
 
 mikhmonSetLoginSession(mikhmonFindUser($mitraId));

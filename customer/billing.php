@@ -32,12 +32,12 @@ function billingProfilePrice($service, $profileName, $hotspotProfiles, $pppoePro
     if (!isset($profile['name']) || (string) $profile['name'] !== (string) $profileName) continue;
     if ($service === 'pppoe') {
       $meta = pppProfileMetaDecode($profile['comment'] ?? '');
-      return array('price' => $meta['price'], 'selling_price' => $meta['selling-price']);
+      return array('price' => $meta['price'], 'selling_price' => $meta['selling-price'], 'validity' => $meta['validity']);
     }
     $login = isset($profile['on-login']) ? (string) $profile['on-login'] : '';
-    if (preg_match('/,([^,]*),([^,]*),([^,]*),([^,]*),/', $login, $matches)) return array('price' => $matches[2], 'selling_price' => $matches[4]);
+    if (preg_match('/,([^,]*),([^,]*),([^,]*),([^,]*),/', $login, $matches)) return array('price' => $matches[2], 'selling_price' => $matches[4], 'validity' => $matches[3]);
   }
-  return array('price' => '', 'selling_price' => '');
+  return array('price' => '', 'selling_price' => '', 'validity' => '');
 }
 
 function billingDueDate($service, $username, $user, $schedulers) {
@@ -62,6 +62,132 @@ function billingMessageAmount($amount, $currency) {
   return $currency . ' ' . number_format((float) $amount, $indoCurrency ? 0 : 2, $indoCurrency ? ',' : '.', $indoCurrency ? '.' : ',');
 }
 
+function billingDueTimestamp($value) {
+  $value = strtolower(trim((string) $value));
+  if ($value === '') return 0;
+  $months = array('jan'=>1,'feb'=>2,'mar'=>3,'apr'=>4,'may'=>5,'jun'=>6,'jul'=>7,'aug'=>8,'sep'=>9,'oct'=>10,'nov'=>11,'dec'=>12);
+  if (preg_match('/^([a-z]{3})\/(\d{1,2})(?:\/(\d{4}))?(?:\s+(\d{1,2}:\d{2}:\d{2}))?$/', $value, $matches) && isset($months[$matches[1]])) {
+    $year = !empty($matches[3]) ? (int) $matches[3] : (int) date('Y');
+    $time = !empty($matches[4]) ? $matches[4] : '00:00:00';
+    $timestamp = strtotime(sprintf('%04d-%02d-%02d %s', $year, $months[$matches[1]], (int) $matches[2], $time));
+    if (empty($matches[3]) && $timestamp < time() - 86400) $timestamp = strtotime('+1 year', $timestamp);
+    return $timestamp ?: 0;
+  }
+  $timestamp = strtotime($value);
+  return $timestamp ?: 0;
+}
+
+function billingValiditySeconds($value) {
+  $seconds = 0;
+  if (preg_match_all('/(\d+)([wdhms])/i', (string) $value, $matches, PREG_SET_ORDER)) foreach ($matches as $match) {
+    $multipliers = array('w'=>604800,'d'=>86400,'h'=>3600,'m'=>60,'s'=>1);
+    $seconds += (int) $match[1] * $multipliers[strtolower($match[2])];
+  }
+  return $seconds;
+}
+
+function billingCustomerInterval($serviceDetails) {
+  foreach ((array) $serviceDetails as $service) {
+    $seconds = billingValiditySeconds($service['validity'] ?? '');
+    if ($seconds > 0) return $seconds;
+  }
+  return 30 * 86400;
+}
+
+function billingExistingDueTimestamp($customer, $serviceDetails) {
+  $timestamp = billingDueTimestamp($customer['due_date'] ?? '');
+  if ($timestamp > 0) return $timestamp;
+  foreach ((array) $serviceDetails as $service) {
+    $timestamp = billingDueTimestamp($service['due_date'] ?? '');
+    if ($timestamp > 0) return $timestamp;
+  }
+  return 0;
+}
+
+function billingCustomerDueTimestamp($customer, $serviceDetails) {
+  $timestamp = billingExistingDueTimestamp($customer, $serviceDetails);
+  if ($timestamp > 0) return $timestamp;
+  return time() + billingCustomerInterval($serviceDetails);
+}
+
+function billingCustomerDueDate($customer, $serviceDetails) {
+  $timestamp = billingCustomerDueTimestamp($customer, $serviceDetails);
+  return $timestamp > 0 ? date('Y-m-d H:i:s', $timestamp) : '';
+}
+
+function billingCustomerSchedulerName($customerId) {
+  return 'mikhmon-customer-' . substr(md5((string) $customerId), 0, 12);
+}
+
+function billingRouterString($value) {
+  return str_replace(array('\\', '"', '$', "\r", "\n"), array('\\\\', '\\"', '\\$', ' ', ' '), (string) $value);
+}
+
+function billingCustomerDisableScript($customer) {
+  $script = '';
+  foreach (mikhmonCustomerServices($customer) as $service) {
+    $username = billingRouterString($service['username']);
+    if ($service['service'] === 'pppoe') $script .= '/ppp active remove [find where name="' . $username . '"]; /ppp secret set [find where name="' . $username . '"] disabled=yes; ';
+    else $script .= '/ip hotspot active remove [find where user="' . $username . '"]; /ip hotspot user set [find where name="' . $username . '"] disabled=yes; ';
+  }
+  $schedulerName = billingRouterString(billingCustomerSchedulerName($customer['id'] ?? ''));
+  return $script . '/system scheduler remove [find where name="' . $schedulerName . '"];';
+}
+
+function billingRemoveScheduler($API, $name) {
+  $rows = $API->comm('/system/scheduler/print', array('?name' => $name));
+  if (billingApiError($rows) !== '') return false;
+  foreach ((array) $rows as $row) if (isset($row['.id'])) $API->comm('/system/scheduler/remove', array('.id' => $row['.id']));
+  return true;
+}
+
+function billingRemoveLegacySchedulers($API, $customer) {
+  foreach (mikhmonCustomerServices($customer) as $service) {
+    if ($service['service'] === 'pppoe') billingRemoveScheduler($API, 'mikhmon-pppoe-' . $service['username']);
+    else billingRemoveScheduler($API, $service['username']);
+  }
+}
+
+function billingDisableCustomerNow($API, $customer) {
+  $disabledRows = array();
+  foreach (mikhmonCustomerServices($customer) as $service) {
+    $command = $service['service'] === 'pppoe' ? '/ppp/secret' : '/ip/hotspot/user';
+    $rows = $API->comm($command . '/print', array('?name' => $service['username']));
+    if (!isset($rows[0]['.id'])) {
+      foreach ($disabledRows as $rollback) $API->comm($rollback['command'] . '/set', array('.id' => $rollback['id'], 'disabled' => 'no'));
+      return false;
+    }
+    if ($service['service'] === 'pppoe') $API->comm('/ppp/active/remove', array('?name' => $service['username']));
+    else $API->comm('/ip/hotspot/active/remove', array('?user' => $service['username']));
+    $response = $API->comm($command . '/set', array('.id' => $rows[0]['.id'], 'disabled' => 'yes'));
+    if (billingApiError($response) !== '') {
+      foreach ($disabledRows as $rollback) $API->comm($rollback['command'] . '/set', array('.id' => $rollback['id'], 'disabled' => 'no'));
+      return false;
+    }
+    $disabledRows[] = array('command' => $command, 'id' => $rows[0]['.id']);
+  }
+  return true;
+}
+
+function billingInstallCustomerScheduler($API, $customer, $dueAt) {
+  $schedulerName = billingCustomerSchedulerName($customer['id'] ?? '');
+  billingRemoveScheduler($API, $schedulerName);
+  if ($dueAt <= time() + 5) {
+    $disabled = billingDisableCustomerNow($API, $customer);
+    if ($disabled) billingRemoveLegacySchedulers($API, $customer);
+    return $disabled;
+  }
+  $response = $API->comm('/system/scheduler/add', array(
+    'name' => $schedulerName, 'start-date' => strtolower(date('M/d/Y', $dueAt)),
+    'start-time' => date('H:i:s', $dueAt), 'interval' => '0s',
+    'on-event' => billingCustomerDisableScript($customer), 'disabled' => 'no',
+    'comment' => 'Mikhmon customer due: ' . ($customer['name'] ?? ''),
+  ));
+  if (billingApiError($response) !== '') return false;
+  billingRemoveLegacySchedulers($API, $customer);
+  return true;
+}
+
 function billingServiceDetails($customer, $customerUsers, $customerSchedulers, $hotspotProfiles, $pppoeProfiles) {
   $details = array();
   foreach (mikhmonCustomerServices($customer) as $serviceRow) {
@@ -75,7 +201,7 @@ function billingServiceDetails($customer, $customerUsers, $customerSchedulers, $
     $amount = (float) ($prices['selling_price'] !== '' ? $prices['selling_price'] : $prices['price']);
     $details[] = array(
       'id' => $serviceRow['id'], 'service' => $service, 'username' => $username,
-      'profile' => $serviceRow['profile'], 'amount' => $amount,
+      'profile' => $serviceRow['profile'], 'amount' => $amount, 'validity' => $prices['validity'] ?? '',
       'due_date' => billingDueDate($service, $username, $user, $customerSchedulers),
       'status' => $missing ? 'missing' : ($expired ? 'expired' : 'active'),
       'status_text' => $missing ? 'Tidak ditemukan' : ($expired ? 'Expired' : 'Aktif'),
@@ -113,6 +239,21 @@ if (!empty($routerConnected)) {
 $hotspotProfiles = is_array($hotspotProfiles) ? $hotspotProfiles : array();
 $pppoeProfiles = is_array($pppoeProfiles) ? $pppoeProfiles : array();
 
+if (!empty($routerConnected)) {
+  foreach ($customers as $customerIndex => $customer) {
+    if (count(mikhmonCustomerServices($customer)) < 2) continue;
+    $schedulerName = billingCustomerSchedulerName($customer['id']);
+    if (isset($customerSchedulers[$schedulerName])) continue;
+    $serviceDetails = billingServiceDetails($customer, $customerUsers, $customerSchedulers, $hotspotProfiles, $pppoeProfiles);
+    $dueTimestamp = billingExistingDueTimestamp($customer, $serviceDetails);
+    if ($dueTimestamp <= time() + 5 || !billingInstallCustomerScheduler($API, $customer, $dueTimestamp)) continue;
+    $dueDate = date('Y-m-d H:i:s', $dueTimestamp);
+    mikhmonSetCustomerDueDate($session, $customer['id'], $dueDate);
+    $customers[$customerIndex]['due_date'] = $dueDate;
+    $customerSchedulers[$schedulerName] = array('name' => $schedulerName, 'next-run' => date('M/d/Y H:i:s', $dueTimestamp));
+  }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $action = isset($_POST['billing_action']) ? $_POST['billing_action'] : '';
   $customer = billingFindCustomer($customers, $_POST['customer_id'] ?? '');
@@ -123,12 +264,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif (empty($routerConnected)) $customerError = 'Router MikroTik tidak terhubung.';
     else {
       $invoiceServices = billingServiceDetails($customer, $customerUsers, $customerSchedulers, $hotspotProfiles, $pppoeProfiles);
-      $amount = 0; $missingPrice = array(); $dueDates = array();
+      $amount = 0; $missingPrice = array();
       foreach ($invoiceServices as $serviceDetail) {
         $amount += (float) $serviceDetail['amount'];
         if ((float) $serviceDetail['amount'] <= 0) $missingPrice[] = strtoupper($serviceDetail['service']) . ' ' . $serviceDetail['profile'];
-        if ($serviceDetail['due_date'] !== '') $dueDates[] = $serviceDetail['due_date'];
       }
+      $customerDueTimestamp = billingCustomerDueTimestamp($customer, $invoiceServices);
+      $customerDueDate = date('Y-m-d H:i:s', $customerDueTimestamp);
       if ($missingPrice) $customerError = 'Harga profile belum diatur: ' . implode(', ', $missingPrice) . '.';
       elseif (!$invoiceServices) $customerError = 'Pelanggan belum memiliki layanan.';
       else {
@@ -136,11 +278,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           'id' => 'invoice-' . uniqid(), 'number' => 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5)),
           'customer_id' => $customer['id'], 'customer_name' => $customer['name'] ?? '',
           'services' => $invoiceServices, 'service_count' => count($invoiceServices),
-          'amount' => $amount, 'due_date' => $dueDates ? implode(' / ', array_unique($dueDates)) : '',
+          'amount' => $amount, 'due_date' => $customerDueDate,
           'status' => 'unpaid', 'created_at' => time(),
         );
         if (mikhmonSaveInvoice($session, $invoice) === false) $customerError = 'Invoice gagal disimpan.';
-        else $customerMessage = 'Invoice ' . $invoice['number'] . ' untuk ' . count($invoiceServices) . ' layanan berhasil dibuat.';
+        else {
+          if ($customerDueDate !== '') {
+            mikhmonSetCustomerDueDate($session, $customer['id'], $customerDueDate);
+            if (!billingInstallCustomerScheduler($API, $customer, $customerDueTimestamp)) $customerMessage .= ' Scheduler jatuh tempo gagal dipasang.';
+          }
+          $customerMessage = 'Invoice ' . $invoice['number'] . ' untuk ' . count($invoiceServices) . ' layanan berhasil dibuat.';
+        }
         $invoices = mikhmonGetInvoices($session);
       }
     }
@@ -163,20 +311,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
       if ($customerError === '') {
         $activated = 0;
-        foreach ($activationRows as $activation) {
+        foreach ($activationRows as $activationIndex => $activation) {
           $row = $activation['row']; $service = $activation['service'];
           $wasDisabled = isset($row['disabled']) && ($row['disabled'] === 'true' || $row['disabled'] === 'yes');
           $wasExpired = $service === 'hotspot' && isset($row['limit-uptime']) && $row['limit-uptime'] === '1s';
           $args = array('.id' => $row['.id'], 'disabled' => 'no');
           if ($service === 'hotspot' && ($wasDisabled || $wasExpired)) { $args['limit-uptime'] = '0'; $args['comment'] = 'up-' . ($customer['name'] ?? ''); }
           $response = $API->comm($activation['command'] . '/set', $args);
-          if (billingApiError($response) !== '') { $customerError = 'Gagal mengaktifkan user ' . $activation['username'] . '. Invoice belum ditandai lunas.'; break; }
+          if (billingApiError($response) !== '') {
+            foreach ($activationRows as $rollback) if (isset($rollback['activated_id'])) $API->comm($rollback['command'] . '/set', array('.id' => $rollback['activated_id'], 'disabled' => 'yes'));
+            $customerError = 'Gagal mengaktifkan user ' . $activation['username'] . '. Semua layanan dikembalikan nonaktif dan invoice belum ditandai lunas.';
+            break;
+          }
           if ($service === 'hotspot' && ($wasDisabled || $wasExpired)) $API->comm($activation['command'] . '/reset-counters', array('.id' => $row['.id']));
           $customerUsers[$service][$activation['username']]['disabled'] = 'false';
           if ($service === 'hotspot' && ($wasDisabled || $wasExpired)) {
             $customerUsers[$service][$activation['username']]['limit-uptime'] = '0';
             $customerUsers[$service][$activation['username']]['comment'] = 'up-' . ($customer['name'] ?? '');
           }
+          $activationRows[$activationIndex]['activated_id'] = $row['.id'];
           $activated++;
         }
         if ($customerError === '') {
@@ -185,7 +338,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           $invoices[$invoiceIndex]['paid_by_name'] = mikhmonIsBiller() ? mikhmonUserName() : 'Administrator';
           $invoices[$invoiceIndex]['biller_commission'] = mikhmonIsBiller() ? mikhmonBillerCommissionAmount() : 0;
           if (mikhmonSaveInvoice($session, $invoices[$invoiceIndex]) === false) $customerError = 'User aktif, tetapi status invoice gagal disimpan.';
-          else $customerMessage = 'Pembayaran diterima dan ' . $activated . ' layanan pelanggan berhasil diaktifkan.';
+          else {
+            $nextDueTimestamp = time() + billingCustomerInterval(billingInvoiceServices($invoices[$invoiceIndex], $customer));
+            $nextDueDate = date('Y-m-d H:i:s', $nextDueTimestamp);
+            mikhmonSetCustomerDueDate($session, $customer['id'], $nextDueDate);
+            $schedulerWarning = billingInstallCustomerScheduler($API, $customer, $nextDueTimestamp) ? '' : ' Scheduler jatuh tempo gagal dipasang.';
+            $customerMessage = 'Pembayaran diterima dan ' . $activated . ' layanan pelanggan berhasil diaktifkan. Jatuh tempo berikutnya: ' . $nextDueDate . '.' . $schedulerWarning;
+          }
         }
       }
     }
@@ -209,8 +368,9 @@ foreach ($invoices as $invoice) if (isset($invoice['customer_id'])) {
     <div class="overflow box-bordered" style="max-height:75vh"><table id="billingTable" class="table table-bordered table-hover text-nowrap"><thead><tr><th>No</th><th>Nama</th><th>HP</th><th>Jumlah Layanan</th><th>Layanan</th><th>Username</th><th>Profile</th><th>Status User</th><th>Jatuh Tempo</th><th>Invoice</th><th>Status Invoice</th><th>Total Tagihan</th><th>Diproses Oleh</th><th>Aksi</th></tr></thead><tbody>
     <?php foreach ($customers as $index => $customer):
       $serviceDetails = billingServiceDetails($customer, $customerUsers, $customerSchedulers, $hotspotProfiles, $pppoeProfiles);
-      $firstService = $serviceDetails[0] ?? array('username'=>'','profile'=>'','status_text'=>'-','status'=>'missing','due_date'=>'');
+      $firstService = $serviceDetails[0] ?? array('username'=>'','profile'=>'','status_text'=>'-','status'=>'missing');
       $invoice = $latestInvoices[(string) $customer['id']] ?? array();
+      $customerDueDate = !empty($invoice['due_date']) ? (string) $invoice['due_date'] : billingCustomerDueDate($customer, $serviceDetails);
       $invoiceStatus = $invoice['status'] ?? 'none';
       $invoiceStatusText = $invoiceStatus === 'paid' ? 'Sudah Bayar' : ($invoiceStatus === 'unpaid' ? 'Belum Bayar' : 'Belum Dibuat');
       $invoiceStatusClass = $invoiceStatus === 'paid' ? 'text-success' : ($invoiceStatus === 'unpaid' ? 'text-danger' : 'text-secondary');
@@ -220,17 +380,17 @@ foreach ($invoices as $invoice) if (isset($invoice['customer_id'])) {
       $phone = billingPhone($customer['phone'] ?? ''); $customerName = trim((string) ($customer['name'] ?? ''));
       $messageBrand = isset($brandname) && trim((string) $brandname) !== '' ? trim((string) $brandname) : 'MIKHMON';
       $messageServices = array(); foreach (billingInvoiceServices($invoice, $customer) as $row) $messageServices[] = '- ' . strtoupper($row['service'] ?? '') . ' / ' . ($row['username'] ?? '') . ' / ' . ($row['profile'] ?? '') . ' / ' . billingMessageAmount($row['amount'] ?? 0, $currency);
-      $invoiceText = "Yth. Bapak/Ibu " . $customerName . ",\n\nDETAIL TAGIHAN " . $messageBrand . "\nNo. Invoice: " . ($invoice['number'] ?? 'baru') . "\nNama Pelanggan: " . $customerName . "\nLayanan:\n" . implode("\n", $messageServices) . "\n\nTotal Tagihan: " . billingMessageAmount($amount, $currency) . "\nJatuh Tempo: " . ($invoice['due_date'] ?? '-') . "\n\nMohon melakukan pembayaran sebelum jatuh tempo. Terima kasih.";
+      $invoiceText = "Yth. Bapak/Ibu " . $customerName . ",\n\nDETAIL TAGIHAN " . $messageBrand . "\nNo. Invoice: " . ($invoice['number'] ?? 'baru') . "\nNama Pelanggan: " . $customerName . "\nLayanan:\n" . implode("\n", $messageServices) . "\n\nTotal Tagihan: " . billingMessageAmount($amount, $currency) . "\nJatuh Tempo: " . ($invoice['due_date'] ?? $customerDueDate ?: '-') . "\n\nMohon melakukan pembayaran sebelum jatuh tempo. Terima kasih.";
       $waUrl = $phone !== '' && $invoiceStatus !== 'none' ? 'https://wa.me/' . $phone . '?text=' . rawurlencode($invoiceText) : '';
     ?>
-      <tr class="billing-row" data-search="<?= htmlspecialchars(strtolower($serviceSearch), ENT_QUOTES); ?>" data-status="<?= $invoiceStatus === 'paid' ? 'paid' : 'unpaid'; ?>"><td><?= $index + 1; ?></td><td><?= htmlspecialchars($customerName, ENT_QUOTES); ?></td><td><?= htmlspecialchars($customer['phone'] ?? '', ENT_QUOTES); ?></td><td class="billing-service-count"><?= count($serviceDetails); ?></td><td><select class="form-control billing-service-select"><?php foreach ($serviceDetails as $serviceIndex => $detail): ?><option value="<?= $serviceIndex; ?>" data-username="<?= htmlspecialchars($detail['username'], ENT_QUOTES); ?>" data-profile="<?= htmlspecialchars($detail['profile'], ENT_QUOTES); ?>" data-user-status="<?= htmlspecialchars($detail['status_text'], ENT_QUOTES); ?>" data-status-class="<?= $detail['status'] === 'active' ? 'text-success' : 'text-danger'; ?>" data-due-date="<?= htmlspecialchars($detail['due_date'], ENT_QUOTES); ?>"><?= strtoupper(htmlspecialchars($detail['service'], ENT_QUOTES)); ?></option><?php endforeach; ?></select></td><td class="billing-username"><?= htmlspecialchars($firstService['username'], ENT_QUOTES); ?></td><td class="billing-profile"><?= htmlspecialchars($firstService['profile'], ENT_QUOTES); ?></td><td class="billing-user-status <?= $firstService['status'] === 'active' ? 'text-success' : 'text-danger'; ?>"><strong><?= htmlspecialchars($firstService['status_text'], ENT_QUOTES); ?></strong></td><td class="billing-due-date"><?= htmlspecialchars($firstService['due_date'] !== '' ? $firstService['due_date'] : '-', ENT_QUOTES); ?></td><td><?= htmlspecialchars($invoice['number'] ?? '-', ENT_QUOTES); ?></td><td class="<?= $invoiceStatusClass; ?>"><strong><?= $invoiceStatusText; ?></strong></td><td><?= $amount > 0 ? htmlspecialchars($currency . ' ' . number_format($amount, 0, ',', '.'), ENT_QUOTES) : '-'; ?></td><td><?= $invoiceStatus === 'paid' ? htmlspecialchars($invoice['paid_by_name'] ?? 'Data lama', ENT_QUOTES) : '-'; ?></td><td><?php if ($invoiceStatus === 'paid'): ?><span class="text-success"><i class="fa fa-check"></i> Sudah Bayar</span> <form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Invoice Baru</button></form><?php else: ?><?php if ($invoiceStatus === 'none'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Buat Invoice</button></form><?php endif; ?><?php if ($waUrl !== ''): ?><a class="btn bg-green" target="_blank" href="<?= htmlspecialchars($waUrl, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Kirim</a><?php endif; ?><?php if ($invoiceStatus === 'unpaid'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="mark_paid"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-success" type="submit" onclick="return confirm('Tandai invoice lunas dan aktifkan semua layanan pelanggan?');"><i class="fa fa-check"></i> Sudah Bayar</button></form><?php endif; ?><?php endif; ?></td></tr>
+      <tr class="billing-row" data-search="<?= htmlspecialchars(strtolower($serviceSearch), ENT_QUOTES); ?>" data-status="<?= $invoiceStatus === 'paid' ? 'paid' : 'unpaid'; ?>"><td><?= $index + 1; ?></td><td><?= htmlspecialchars($customerName, ENT_QUOTES); ?></td><td><?= htmlspecialchars($customer['phone'] ?? '', ENT_QUOTES); ?></td><td class="billing-service-count"><?= count($serviceDetails); ?></td><td><select class="form-control billing-service-select"><?php foreach ($serviceDetails as $serviceIndex => $detail): ?><option value="<?= $serviceIndex; ?>" data-username="<?= htmlspecialchars($detail['username'], ENT_QUOTES); ?>" data-profile="<?= htmlspecialchars($detail['profile'], ENT_QUOTES); ?>" data-user-status="<?= htmlspecialchars($detail['status_text'], ENT_QUOTES); ?>" data-status-class="<?= $detail['status'] === 'active' ? 'text-success' : 'text-danger'; ?>"><?= strtoupper(htmlspecialchars($detail['service'], ENT_QUOTES)); ?></option><?php endforeach; ?></select></td><td class="billing-username"><?= htmlspecialchars($firstService['username'], ENT_QUOTES); ?></td><td class="billing-profile"><?= htmlspecialchars($firstService['profile'], ENT_QUOTES); ?></td><td class="billing-user-status <?= $firstService['status'] === 'active' ? 'text-success' : 'text-danger'; ?>"><strong><?= htmlspecialchars($firstService['status_text'], ENT_QUOTES); ?></strong></td><td class="billing-due-date"><?= htmlspecialchars($customerDueDate !== '' ? $customerDueDate : '-', ENT_QUOTES); ?></td><td><?= htmlspecialchars($invoice['number'] ?? '-', ENT_QUOTES); ?></td><td class="<?= $invoiceStatusClass; ?>"><strong><?= $invoiceStatusText; ?></strong></td><td><?= $amount > 0 ? htmlspecialchars($currency . ' ' . number_format($amount, 0, ',', '.'), ENT_QUOTES) : '-'; ?></td><td><?= $invoiceStatus === 'paid' ? htmlspecialchars($invoice['paid_by_name'] ?? 'Data lama', ENT_QUOTES) : '-'; ?></td><td><?php if ($invoiceStatus === 'paid'): ?><span class="text-success"><i class="fa fa-check"></i> Sudah Bayar</span> <form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Invoice Baru</button></form><?php else: ?><?php if ($invoiceStatus === 'none'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Buat Invoice</button></form><?php endif; ?><?php if ($waUrl !== ''): ?><a class="btn bg-green" target="_blank" href="<?= htmlspecialchars($waUrl, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Kirim</a><?php endif; ?><?php if ($invoiceStatus === 'unpaid'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="mark_paid"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-success" type="submit" onclick="return confirm('Tandai invoice lunas dan aktifkan semua layanan pelanggan?');"><i class="fa fa-check"></i> Sudah Bayar</button></form><?php endif; ?><?php endif; ?></td></tr>
     <?php endforeach; ?>
     <?php if (!$customers): ?><tr><td colspan="14" class="text-center">Belum ada data pelanggan.</td></tr><?php endif; ?><tr id="billingNoResults" style="display:none"><td colspan="14" class="text-center">Data billing tidak ditemukan.</td></tr></tbody></table></div>
   </div>
 </div></div></div>
 <script>
 $(function(){
-  function showBillingService(select){var option=$(select).find('option:selected'),row=$(select).closest('tr'),status=row.find('.billing-user-status');row.find('.billing-username').text(option.data('username')||'-');row.find('.billing-profile').text(option.data('profile')||'-');status.removeClass('text-success text-danger').addClass(option.data('status-class')).find('strong').text(option.data('user-status')||'-');row.find('.billing-due-date').text(option.data('due-date')||'-');}
+  function showBillingService(select){var option=$(select).find('option:selected'),row=$(select).closest('tr'),status=row.find('.billing-user-status');row.find('.billing-username').text(option.data('username')||'-');row.find('.billing-profile').text(option.data('profile')||'-');status.removeClass('text-success text-danger').addClass(option.data('status-class')).find('strong').text(option.data('user-status')||'-');}
   $('.billing-service-select').on('change',function(){showBillingService(this);});
   function filterBilling(){var search=$('#billingSearch').val().toLowerCase(),status=$('#billingStatus').val(),visible=0;$('.billing-row').each(function(){var row=$(this),text=row.text().toLowerCase()+' '+String(row.data('search')||''),show=text.indexOf(search)>-1&&(status==='all'||row.data('status')===status);row.toggle(show);if(show)visible++;});$('#billingVisibleCount').text(visible);$('#billingNoResults').toggle(visible===0&&$('.billing-row').length>0);}
   $('#billingSearch').on('input',filterBilling);$('#billingStatus').on('change',filterBilling);filterBilling();
