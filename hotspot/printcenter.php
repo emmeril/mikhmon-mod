@@ -16,10 +16,16 @@ if (function_exists('mikhmonIsMitra') && mikhmonIsMitra()) {
   }));
 }
 $profiles = array();
+$comments = array();
 foreach ($getuser as $user) {
   if (!empty($user['profile'])) $profiles[(string) $user['profile']] = true;
+  if (!empty($user['comment'])) {
+    $comment = (string) $user['comment'];
+    $comments[$comment] = isset($comments[$comment]) ? $comments[$comment] + 1 : 1;
+  }
 }
 ksort($profiles);
+ksort($comments);
 ?>
 <div class="row">
   <div class="col-12">
@@ -29,14 +35,22 @@ ksort($profiles);
       </div>
       <div class="card-body">
         <div class="row">
-          <div class="col-6 pd-t-5 pd-b-5">
+          <div class="col-4 pd-t-5 pd-b-5">
             <input id="printCenterSearch" type="text" class="form-control" placeholder="Cari username, profile, atau komentar">
           </div>
-          <div class="col-6 pd-t-5 pd-b-5">
+          <div class="col-4 pd-t-5 pd-b-5">
             <select id="printCenterProfile" class="form-control">
               <option value="">Semua profile</option>
               <?php foreach (array_keys($profiles) as $profile): ?>
                 <option value="<?= htmlspecialchars($profile, ENT_QUOTES); ?>"><?= htmlspecialchars($profile, ENT_QUOTES); ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="col-4 pd-t-5 pd-b-5">
+            <select id="printCenterComment" class="form-control">
+              <option value="">Semua comment</option>
+              <?php foreach ($comments as $comment => $commentCount): ?>
+                <option value="<?= htmlspecialchars($comment, ENT_QUOTES); ?>"><?= htmlspecialchars($comment, ENT_QUOTES); ?> [<?= $commentCount; ?>]</option>
               <?php endforeach; ?>
             </select>
           </div>
@@ -59,7 +73,7 @@ ksort($profiles);
               $comment = isset($user['comment']) ? (string) $user['comment'] : '';
               $disabled = isset($user['disabled']) && $user['disabled'] === 'true';
             ?>
-              <tr data-profile="<?= htmlspecialchars($profile, ENT_QUOTES); ?>">
+              <tr data-profile="<?= htmlspecialchars($profile, ENT_QUOTES); ?>" data-comment="<?= htmlspecialchars($comment, ENT_QUOTES); ?>">
                 <td class="text-center"><input type="checkbox" class="print-center-user" value="<?= htmlspecialchars($name, ENT_QUOTES); ?>" aria-label="Pilih voucher <?= htmlspecialchars($name, ENT_QUOTES); ?>"></td>
                 <td><?= htmlspecialchars($name, ENT_QUOTES); ?></td>
                 <td><?= htmlspecialchars($profile, ENT_QUOTES); ?></td>
@@ -83,10 +97,12 @@ ksort($profiles);
   function filterRows() {
     var search = document.getElementById('printCenterSearch').value.toLowerCase();
     var profile = document.getElementById('printCenterProfile').value;
+    var comment = document.getElementById('printCenterComment').value;
     rows().forEach(function (row) {
       var matchSearch = row.textContent.toLowerCase().indexOf(search) !== -1;
       var matchProfile = !profile || row.getAttribute('data-profile') === profile;
-      row.style.display = matchSearch && matchProfile ? '' : 'none';
+      var matchComment = !comment || row.getAttribute('data-comment') === comment;
+      row.style.display = matchSearch && matchProfile && matchComment ? '' : 'none';
     });
   }
   window.printCenterSubmit = function (format) {
@@ -101,10 +117,13 @@ ksort($profiles);
   };
   document.getElementById('printCenterSearch').addEventListener('input', filterRows);
   document.getElementById('printCenterProfile').addEventListener('change', filterRows);
-  document.getElementById('printCenterHeader').addEventListener('change', function () {
+  document.getElementById('printCenterComment').addEventListener('change', filterRows);
+  function toggleVisibleRows() {
     visibleRows().forEach(function (row) { var input = row.querySelector('.print-center-user'); if (input) input.checked = this.checked; }, this);
     updateCount();
-  });
+  }
+  document.getElementById('printCenterHeader').addEventListener('change', toggleVisibleRows);
+  document.getElementById('printCenterSelectAll').addEventListener('change', toggleVisibleRows);
   document.querySelectorAll('.print-center-user').forEach(function (input) { input.addEventListener('change', updateCount); });
 })();
 </script>
