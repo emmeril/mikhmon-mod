@@ -206,12 +206,6 @@ foreach ($invoices as $invoice) {
   }
 }
 $commissionStats = mikhmonBillerCommissionStats($session, mikhmonIsBiller() ? mikhmonUserId() : '');
-$billerSummaries = array();
-if (mikhmonIsAdmin()) {
-  foreach (mikhmonGetUsers('biller', $session) as $billerUser) {
-    $billerSummaries[] = array('user' => $billerUser, 'stats' => mikhmonBillerCommissionStats($session, $billerUser['id']));
-  }
-}
 ?>
 <div class="row"><div class="col-12"><div class="card">
   <div class="card-header"><h3><i class="fa fa-money"></i> Billing <span style="font-size:14px"> &nbsp;|&nbsp; <span id="billingVisibleCount"><?= count($customers); ?></span> pelanggan</span></h3></div>
@@ -272,13 +266,7 @@ if (mikhmonIsAdmin()) {
       <?php if (!$customers): ?><tr class="billing-info-row"><td colspan="13" class="text-center">Belum ada data pelanggan.</td></tr><?php endif; ?><tr id="billingNoResults" style="display:none"><td colspan="13" class="text-center">Data billing tidak ditemukan.</td></tr>
       </tbody></table></div>
     <?php if (mikhmonIsBiller()): ?>
-      <div class="box bg-info mr-t-10"><strong>Komisi Anda</strong><br><span>Bulan ini: <?= (int) $commissionStats['month_count']; ?> pembayaran / <?= htmlspecialchars($currency . ' ' . number_format($commissionStats['month_amount'], 0, ',', '.'), ENT_QUOTES); ?> &middot; Total: <?= (int) $commissionStats['count']; ?> pembayaran / <?= htmlspecialchars($currency . ' ' . number_format($commissionStats['amount'], 0, ',', '.'), ENT_QUOTES); ?> &middot; Komisi per pelunasan: <?= htmlspecialchars($currency . ' ' . number_format(mikhmonBillerCommissionAmount(), 0, ',', '.'), ENT_QUOTES); ?></span></div>
-    <?php elseif (mikhmonIsAdmin() && $billerSummaries): ?>
-      <div class="box bg-info mr-t-10"><strong>Komisi Biller Bulan Ini</strong><div class="row">
-        <?php foreach ($billerSummaries as $summary): ?>
-          <div class="col-4 pd-t-5"><div class="box-bordered pd-5"><?= htmlspecialchars($summary['user']['name'], ENT_QUOTES); ?><br><strong><?= (int) $summary['stats']['month_count']; ?> trx / <?= htmlspecialchars($currency . ' ' . number_format($summary['stats']['month_amount'], 0, ',', '.'), ENT_QUOTES); ?></strong></div></div>
-        <?php endforeach; ?>
-      </div></div>
+      <p class="text-secondary" style="font-size:12px; margin:8px 0 0;"><strong>Komisi Anda:</strong> bulan ini <?= (int) $commissionStats['month_count']; ?> pembayaran / <?= htmlspecialchars($currency . ' ' . number_format($commissionStats['month_amount'], 0, ',', '.'), ENT_QUOTES); ?> &middot; total <?= (int) $commissionStats['count']; ?> pembayaran / <?= htmlspecialchars($currency . ' ' . number_format($commissionStats['amount'], 0, ',', '.'), ENT_QUOTES); ?>.</p>
     <?php endif; ?>
   </div>
 </div></div></div>

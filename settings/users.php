@@ -51,6 +51,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if (!empty($_GET['user-id'])) $editUser = mikhmonFindUser($_GET['user-id']);
 $users = mikhmonGetUsers();
+$commissionCurrency = isset($currency) && trim((string) $currency) !== '' ? (string) $currency : 'Rp';
+$monthlySummaries = array();
+$currentMonth = date('Ym');
+foreach ($users as $staff) {
+  if ($staff['role'] === 'biller') {
+    $stats = mikhmonBillerCommissionStats($staff['session'], $staff['id']);
+    $monthlySummaries[$staff['id']] = array('label' => 'Komisi', 'count' => (int) $stats['month_count'], 'amount' => (float) $stats['month_amount']);
+    continue;
+  }
+  $customerIds = array();
+  foreach (mikhmonGetCustomers($staff['session']) as $customer) {
+    if (isset($customer['mitra_id']) && (string) $customer['mitra_id'] === (string) $staff['id'] && isset($customer['id'])) {
+      $customerIds[(string) $customer['id']] = true;
+    }
+  }
+  $count = 0;
+  $amount = 0;
+  foreach (mikhmonGetInvoices($staff['session']) as $invoice) {
+    if (!isset($invoice['customer_id'], $customerIds[(string) $invoice['customer_id']]) || ($invoice['status'] ?? '') !== 'paid') continue;
+    if (empty($invoice['paid_at']) || date('Ym', (int) $invoice['paid_at']) !== $currentMonth) continue;
+    $count++;
+    $amount += isset($invoice['amount']) ? (float) $invoice['amount'] : 0;
+  }
+  $monthlySummaries[$staff['id']] = array('label' => 'Penjualan', 'count' => $count, 'amount' => $amount);
+}
 $routerSessions = array();
 foreach ((array) $data as $routerName => $routerConfig) {
   if ($routerName !== 'mikhmon') $routerSessions[] = $routerName;
@@ -86,11 +111,12 @@ foreach ((array) $data as $routerName => $routerConfig) {
       <div class="card-body">
         <p><small>Mitra hanya melihat pelanggan yang ditetapkan admin. Biller hanya mengelola Billing pada router yang dipilih.</small></p>
         <div class="overflow box-bordered"><table class="table table-bordered table-hover text-nowrap">
-          <thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Router</th><th>Status</th><th>Aksi</th></tr></thead>
+          <thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Router</th><th>Status</th><th>Ringkasan Bulan Ini</th><th>Aksi</th></tr></thead>
           <tbody><?php foreach ($users as $staff): ?><tr>
-            <td><?= htmlspecialchars($staff['name'], ENT_QUOTES); ?></td><td><?= htmlspecialchars($staff['username'], ENT_QUOTES); ?></td><td><?= strtoupper(htmlspecialchars($staff['role'], ENT_QUOTES)); ?></td><td><?= htmlspecialchars($staff['session'], ENT_QUOTES); ?></td><td class="<?= !empty($staff['active']) ? 'text-success' : 'text-danger'; ?>"><?= !empty($staff['active']) ? 'Aktif' : 'Nonaktif'; ?></td>
+            <?php $staffSummary = isset($monthlySummaries[$staff['id']]) ? $monthlySummaries[$staff['id']] : array('label' => 'Aktivitas', 'count' => 0, 'amount' => 0); ?>
+            <td><?= htmlspecialchars($staff['name'], ENT_QUOTES); ?></td><td><?= htmlspecialchars($staff['username'], ENT_QUOTES); ?></td><td><?= strtoupper(htmlspecialchars($staff['role'], ENT_QUOTES)); ?></td><td><?= htmlspecialchars($staff['session'], ENT_QUOTES); ?></td><td class="<?= !empty($staff['active']) ? 'text-success' : 'text-danger'; ?>"><?= !empty($staff['active']) ? 'Aktif' : 'Nonaktif'; ?></td><td><small><?= $staffSummary['label']; ?>:</small><br><?= (int) $staffSummary['count']; ?> trx / <?= htmlspecialchars($commissionCurrency . ' ' . number_format($staffSummary['amount'], 0, ',', '.'), ENT_QUOTES); ?></td>
             <td><a class="btn bg-primary" href="<?= htmlspecialchars($userManagementBaseUrl, ENT_QUOTES); ?>&amp;user-id=<?= rawurlencode($staff['id']); ?>"><i class="fa fa-edit"></i> Edit</a> <form method="post" style="display:inline"><input type="hidden" name="user_action" value="delete"><input type="hidden" name="user_id" value="<?= htmlspecialchars($staff['id'], ENT_QUOTES); ?>"><button class="btn bg-danger" type="submit" onclick="return confirm('Hapus akun ini?');"><i class="fa fa-trash"></i> Hapus</button></form></td>
-          </tr><?php endforeach; ?><?php if (!$users): ?><tr><td colspan="6" class="text-center">Belum ada akun mitra atau biller.</td></tr><?php endif; ?></tbody>
+          </tr><?php endforeach; ?><?php if (!$users): ?><tr><td colspan="7" class="text-center">Belum ada akun mitra atau biller.</td></tr><?php endif; ?></tbody>
         </table></div>
       </div>
     </div>
