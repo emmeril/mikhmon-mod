@@ -58,6 +58,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $maskedToken = $fonnteConfig['token'] !== '' ? str_repeat('*', max(4, min(20, strlen($fonnteConfig['token'])))) : '';
 ?>
+<style>
+.fonnte-settings-table td:first-child {
+  width: 145px;
+  font-weight: 600;
+}
+.fonnte-automation-control {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+.fonnte-automation-check,
+.fonnte-day-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.fonnte-automation-check {
+  min-width: 190px;
+}
+.fonnte-day-control {
+  white-space: nowrap;
+}
+.fonnte-day-control .form-control {
+  width: 60px;
+  margin: 0;
+  text-align: center;
+}
+.fonnte-automation-check input {
+  margin: 0;
+}
+@media screen and (max-width: 750px) {
+  .fonnte-settings-table td:first-child {
+    width: 115px;
+  }
+  .fonnte-automation-check {
+    min-width: 0;
+    width: 100%;
+  }
+}
+</style>
 <div class="row">
   <div class="col-12">
     <div class="card">
@@ -71,13 +113,29 @@ $maskedToken = $fonnteConfig['token'] !== '' ? str_repeat('*', max(4, min(20, st
           <input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>">
           <div class="row">
             <div class="col-6">
-              <table class="table table-sm">
+              <table class="table table-sm fonnte-settings-table">
                 <tr><td class="align-middle">Status Gateway</td><td><label><input type="checkbox" name="enabled" value="1" <?= !empty($fonnteConfig['enabled']) ? 'checked' : ''; ?>> Aktif</label></td></tr>
                 <tr><td class="align-middle">Token Fonnte</td><td><input class="form-control" type="password" name="token" placeholder="<?= $maskedToken !== '' ? 'Token tersimpan, kosongkan untuk mempertahankan' : 'Masukkan token Fonnte'; ?>"></td></tr>
                 <tr><td class="align-middle">Kode Negara</td><td><input class="form-control" type="text" inputmode="numeric" maxlength="5" name="country_code" value="<?= htmlspecialchars($fonnteConfig['country_code'], ENT_QUOTES); ?>"></td></tr>
                 <tr><td class="align-middle">Otomasi Billing</td><td><label><input type="checkbox" name="automation_enabled" value="1" <?= !empty($fonnteConfig['automation_enabled']) ? 'checked' : ''; ?>> Aktif</label></td></tr>
-                <tr><td class="align-middle">Pengingat</td><td><label><input type="checkbox" name="reminder_enabled" value="1" <?= !empty($fonnteConfig['reminder_enabled']) ? 'checked' : ''; ?>> Kirim pengingat</label> <input class="form-control" style="display:inline-block;width:90px" type="number" min="1" max="30" name="reminder_days" value="<?= (int) ($fonnteConfig['reminder_days'] ?? 7); ?>"> hari sebelum jatuh tempo</td></tr>
-                <tr><td class="align-middle">Isolir Otomatis</td><td><label><input type="checkbox" name="isolation_enabled" value="1" <?= !empty($fonnteConfig['isolation_enabled']) ? 'checked' : ''; ?>> Isolir saat lewat jatuh tempo</label> <input class="form-control" style="display:inline-block;width:90px" type="number" min="0" max="30" name="grace_days" value="<?= (int) ($fonnteConfig['grace_days'] ?? 0); ?>"> hari toleransi</td></tr>
+                <tr>
+                  <td class="align-middle">Pengingat</td>
+                  <td>
+                    <div class="fonnte-automation-control">
+                      <label class="fonnte-automation-check"><input type="checkbox" name="reminder_enabled" value="1" <?= !empty($fonnteConfig['reminder_enabled']) ? 'checked' : ''; ?>> <span>Kirim pengingat</span></label>
+                      <div class="fonnte-day-control"><input class="form-control" type="number" min="1" max="30" name="reminder_days" value="<?= (int) ($fonnteConfig['reminder_days'] ?? 7); ?>"> <span>hari sebelum jatuh tempo</span></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="align-middle">Isolir Otomatis</td>
+                  <td>
+                    <div class="fonnte-automation-control">
+                      <label class="fonnte-automation-check"><input type="checkbox" name="isolation_enabled" value="1" <?= !empty($fonnteConfig['isolation_enabled']) ? 'checked' : ''; ?>> <span>Isolir saat lewat jatuh tempo</span></label>
+                      <div class="fonnte-day-control"><input class="form-control" type="number" min="0" max="30" name="grace_days" value="<?= (int) ($fonnteConfig['grace_days'] ?? 0); ?>"> <span>hari toleransi</span></div>
+                    </div>
+                  </td>
+                </tr>
                 <tr><td class="align-middle">Notifikasi Bayar</td><td><label><input type="checkbox" name="payment_enabled" value="1" <?= !empty($fonnteConfig['payment_enabled']) ? 'checked' : ''; ?>> Kirim setelah pembayaran</label></td></tr>
               </table>
             </div>
