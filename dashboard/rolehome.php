@@ -117,33 +117,33 @@ $pppoeCustomers = count($pppoeCustomerNames);
     <div class="col-8">
       <div id="r_2" class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-wifi"></i> Hotspot</h3></div><div class="card-body"><div class="row">
         <div class="col-3 col-box-6"><div class="box bg-blue bmh-75"><a href="./?hotspot=active&session=<?= $session; ?>"><h1><?= count($mitraHotspotActive); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-laptop"></i> <?= $_hotspot_active ?></div></a></div></div>
-        <div class="col-3 col-box-6"><div class="box bg-green bmh-75"><a href="./?hotspot=users&profile=all&session=<?= $session; ?>"><h1><?= count($mitraHotspotUsers); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-users"></i> User Hotspot Saya</div></a></div></div>
-        <div class="col-3 col-box-6"><div class="box bg-yellow bmh-75"><a href="./?hotspot=users-by-profile&session=<?= $session; ?>"><h1><?= count($mitraVoucherUsers); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-ticket"></i> Voucher Saya</div></a></div></div>
+        <div class="col-3 col-box-6"><div class="box bg-green bmh-75"><a href="./?hotspot=users&profile=all&session=<?= $session; ?>"><h1><?= count($mitraHotspotUsers); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-users"></i> <?= $_hotspot_users ?></div></a></div></div>
+        <div class="col-3 col-box-6"><div class="box bg-yellow bmh-75"><a href="./?hotspot=users-by-profile&session=<?= $session; ?>"><h1><?= count($mitraVoucherUsers); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-ticket"></i> <?= $_vouchers ?></div></a></div></div>
         <div class="col-3 col-box-6"><div class="box bg-red bmh-75"><a href="./?hotspot-user=generate&session=<?= $session; ?>"><h1><i class="fa fa-user-plus"></i> <span style="font-size:15px"><?= $_generate ?></span></h1><div><i class="fa fa-ticket"></i> Voucher</div></a></div></div>
       </div></div></div></div>
 
       <div id="r_ppp" class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-exchange"></i> PPPoE</h3></div><div class="card-body"><div class="row">
         <div class="col-4 col-box-6"><div class="box bg-blue bmh-75"><a href="./?ppp=active&session=<?= $session; ?>"><h1><?= count($mitraPppActive); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-wifi"></i> <?= $_ppp_active ?></div></a></div></div>
-        <div class="col-4 col-box-6"><div class="box bg-green bmh-75"><a href="./?ppp=secrets&session=<?= $session; ?>"><h1><?= count($mitraPppSecrets); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-users"></i> Pelanggan PPPoE</div></a></div></div>
-        <div class="col-4 col-box-6"><div class="box bg-yellow bmh-75"><a href="./?customer=add&service=pppoe&session=<?= $session; ?>"><h1><i class="fa fa-user-plus"></i> <span style="font-size:15px"><?= $_add ?></span></h1><div><i class="fa fa-user-plus"></i> Pelanggan PPPoE</div></a></div></div>
+        <div class="col-4 col-box-6"><div class="box bg-green bmh-75"><a href="./?ppp=secrets&session=<?= $session; ?>"><h1><?= count($mitraPppSecrets); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-users"></i> <?= $_ppp_secrets ?></div></a></div></div>
+        <div class="col-4 col-box-6"><div class="box bg-yellow bmh-75"><a href="./?customer=add&service=pppoe&session=<?= $session; ?>"><h1><i class="fa fa-user-plus"></i> <span style="font-size:15px"><?= $_add ?></span></h1><div><i class="fa fa-user-plus"></i> <?= $_ppp_secrets ?></div></a></div></div>
       </div></div></div></div>
 
       <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-address-card"></i> Pelanggan</h3></div><div class="card-body"><div class="row">
-        <div class="col-4"><div class="box bg-blue bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= count($mitraCustomers); ?></h1><div><i class="fa fa-users"></i> Semua Pelanggan</div></a></div></div>
-        <div class="col-4"><div class="box bg-green bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= $hotspotCustomers; ?></h1><div><i class="fa fa-wifi"></i> Pelanggan Hotspot</div></a></div></div>
-        <div class="col-4"><div class="box bg-yellow bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= $pppoeCustomers; ?></h1><div><i class="fa fa-exchange"></i> Pelanggan PPPoE</div></a></div></div>
+        <div class="col-4"><div class="box bg-blue bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= count($mitraCustomers); ?></h1><div><i class="fa fa-users"></i> Pelanggan</div></a></div></div>
+        <div class="col-4"><div class="box bg-green bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= $hotspotCustomers; ?></h1><div><i class="fa fa-wifi"></i> Hotspot</div></a></div></div>
+        <div class="col-4"><div class="box bg-yellow bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= $pppoeCustomers; ?></h1><div><i class="fa fa-exchange"></i> PPPoE</div></a></div></div>
       </div></div></div></div>
     </div>
 
     <div class="col-4">
       <div id="r_4" class="row"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-money"></i></div><div class="box-group-area"><span><b><?= $_income ?></b><br><?= $_today ?> <?= $reportTotals['today']['count']; ?> trx : <?= htmlspecialchars(mitraDashboardMoney($reportTotals['today']['income'], $currency), ENT_QUOTES); ?><br><?= $_this_month ?> <?= $reportTotals['all']['count']; ?> trx : <?= htmlspecialchars(mitraDashboardMoney($reportTotals['all']['income'], $currency), ENT_QUOTES); ?><hr style="margin:5px 0;border:0;border-top:1px solid currentColor;opacity:.35"><b>Net Profit Mitra</b><br><?= $_today ?>: <?= htmlspecialchars(mitraDashboardMoney($reportTotals['today']['profit'], $currency), ENT_QUOTES); ?><br><?= $_this_month ?>: <?= htmlspecialchars(mitraDashboardMoney($reportTotals['all']['profit'], $currency), ENT_QUOTES); ?></span></div></div></div></div>
 
-      <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-area-chart"></i> Report Layanan</h3></div><div class="card-body">
+      <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-area-chart"></i> <?= $_report ?></h3></div><div class="card-body">
         <a href="./?report=selling&idbl=<?= $monthKey; ?>&service=hotspot&session=<?= $session; ?>"><div class="box bg-blue"><strong>Hotspot</strong><br><?= $reportTotals['hotspot']['count']; ?> transaksi<br>Net Profit: <?= htmlspecialchars(mitraDashboardMoney($reportTotals['hotspot']['profit'], $currency), ENT_QUOTES); ?></div></a>
         <a href="./?report=selling&idbl=<?= $monthKey; ?>&service=pppoe&session=<?= $session; ?>"><div class="box bg-green"><strong>PPPoE</strong><br><?= $reportTotals['pppoe']['count']; ?> transaksi<br>Net Profit: <?= htmlspecialchars(mitraDashboardMoney($reportTotals['pppoe']['profit'], $currency), ENT_QUOTES); ?></div></a>
       </div></div></div>
 
-      <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-file-text"></i> Invoice Pelanggan</h3></div><div class="card-body"><div class="row"><div class="col-6"><div class="box bg-green text-center"><h2><?= $paidInvoices; ?></h2>Lunas</div></div><div class="col-6"><div class="box bg-red text-center"><h2><?= $unpaidInvoices; ?></h2>Belum Bayar</div></div></div></div></div></div>
+      <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-file-text"></i> Billing</h3></div><div class="card-body"><div class="row"><div class="col-6"><div class="box bg-green text-center"><h2><?= $paidInvoices; ?></h2>Paid</div></div><div class="col-6"><div class="box bg-red text-center"><h2><?= $unpaidInvoices; ?></h2>Unpaid</div></div></div></div></div></div>
     </div>
   </div>
 </div>
