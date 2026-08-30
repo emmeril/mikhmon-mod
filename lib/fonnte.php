@@ -13,7 +13,22 @@ function mikhmonFonnteConfigPath() {
 }
 
 function mikhmonFonnteDefaults() {
-  return array('enabled' => false, 'token' => '', 'country_code' => '62');
+  return array(
+    'enabled' => false,
+    'token' => '',
+    'country_code' => '62',
+    'automation_enabled' => false,
+    'reminder_enabled' => true,
+    'isolation_enabled' => true,
+    'payment_enabled' => true,
+    'reminder_days' => 7,
+    'grace_days' => 0,
+    'templates' => array(
+      'reminder' => "Yth. Bapak/Ibu {{nama_pelanggan}},\n\nTagihan {{nama_brand}} akan jatuh tempo pada {{jatuh_tempo}}.\nNo. Invoice: {{nomor_invoice}}\nTotal Tagihan: {{total_tagihan}}\n\nDetail layanan:\n{{detail_layanan}}\n\nMohon melakukan pembayaran sebelum jatuh tempo. Terima kasih.",
+      'isolation' => "Yth. Bapak/Ibu {{nama_pelanggan}},\n\nLayanan {{nama_brand}} saat ini diisolir karena invoice {{nomor_invoice}} belum dibayar.\nJatuh tempo: {{jatuh_tempo}}\nTotal Tagihan: {{total_tagihan}}\n\nSilakan melakukan pembayaran agar layanan dapat diaktifkan kembali.",
+      'payment' => "Pembayaran invoice {{nomor_invoice}} telah diterima.\n\nNama: {{nama_pelanggan}}\nTotal Dibayar: {{total_tagihan}}\nTanggal Bayar: {{tanggal_bayar}}\n\nLayanan Anda telah aktif kembali.\nJatuh tempo berikutnya: {{jatuh_tempo_berikutnya}}.",
+    ),
+  );
 }
 
 function mikhmonFonnteNormalizeToken($token) {
@@ -34,13 +49,28 @@ function mikhmonFonnteReadStoredConfig() {
   $path = mikhmonFonnteConfigPath();
   if (is_file($path)) {
     $saved = json_decode((string) @file_get_contents($path), true);
-    if (is_array($saved)) $config = array_merge($config, $saved);
+    if (is_array($saved)) {
+      $config = array_merge($config, $saved);
+      if (isset($saved['templates']) && is_array($saved['templates'])) $config['templates'] = array_merge(mikhmonFonnteDefaults()['templates'], $saved['templates']);
+    }
   }
   $config['enabled'] = !empty($config['enabled']);
+  $config['automation_enabled'] = !empty($config['automation_enabled']);
+  $config['reminder_enabled'] = !empty($config['reminder_enabled']);
+  $config['isolation_enabled'] = !empty($config['isolation_enabled']);
+  $config['payment_enabled'] = !empty($config['payment_enabled']);
+  $config['reminder_days'] = max(1, min(30, (int) ($config['reminder_days'] ?? 7)));
+  $config['grace_days'] = max(0, min(30, (int) ($config['grace_days'] ?? 0)));
   $config['token'] = mikhmonFonnteNormalizeToken($config['token'] ?? '');
   $config['country_code'] = preg_replace('/[^0-9]/', '', (string) ($config['country_code'] ?? '62'));
   if ($config['country_code'] === '') $config['country_code'] = '62';
   return $config;
+}
+
+function mikhmonFonnteRenderTemplate($template, $variables) {
+  $replacements = array();
+  foreach ((array) $variables as $key => $value) $replacements['{{' . $key . '}}'] = (string) $value;
+  return trim(strtr((string) $template, $replacements));
 }
 
 function mikhmonFonnteReadConfig() {
@@ -54,6 +84,18 @@ function mikhmonFonnteWriteConfig($config) {
   $defaults = mikhmonFonnteDefaults();
   $config = array_merge($defaults, is_array($config) ? $config : array());
   $config['enabled'] = !empty($config['enabled']);
+  $config['automation_enabled'] = !empty($config['automation_enabled']);
+  $config['reminder_enabled'] = !empty($config['reminder_enabled']);
+  $config['isolation_enabled'] = !empty($config['isolation_enabled']);
+  $config['payment_enabled'] = !empty($config['payment_enabled']);
+  $config['reminder_days'] = max(1, min(30, (int) ($config['reminder_days'] ?? 7)));
+  $config['grace_days'] = max(0, min(30, (int) ($config['grace_days'] ?? 0)));
+  $defaultTemplates = mikhmonFonnteDefaults()['templates'];
+  $config['templates'] = array_merge($defaultTemplates, isset($config['templates']) && is_array($config['templates']) ? $config['templates'] : array());
+  foreach ($defaultTemplates as $key => $defaultTemplate) {
+    $template = isset($config['templates'][$key]) ? trim((string) $config['templates'][$key]) : '';
+    $config['templates'][$key] = $template !== '' ? $template : $defaultTemplate;
+  }
   $config['token'] = mikhmonFonnteNormalizeToken($config['token']);
   $config['country_code'] = preg_replace('/[^0-9]/', '', (string) $config['country_code']);
   if ($config['country_code'] === '') $config['country_code'] = '62';

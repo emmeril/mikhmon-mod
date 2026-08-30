@@ -6,6 +6,7 @@ if (!mikhmonIsAdmin() && !mikhmonIsBiller()) { header('Location:../admin.php?id=
 include_once('./include/database.php');
 include_once('./ppp/profilemeta.php');
 include_once('./lib/fonnte.php');
+include_once('./lib/billing_automation.php');
 
 function billingApiError($response) {
   if (!is_array($response)) return '';
@@ -181,8 +182,15 @@ function billingDisableCustomerNow($API, $customer) {
 }
 
 function billingInstallCustomerScheduler($API, $customer, $dueAt) {
+  global $fonnteConfig;
+  if (!isset($fonnteConfig) || !is_array($fonnteConfig)) $fonnteConfig = mikhmonFonnteReadConfig();
   $schedulerName = billingCustomerSchedulerName($customer['id'] ?? '');
   billingRemoveScheduler($API, $schedulerName);
+  if (!empty($fonnteConfig['automation_enabled'])) {
+    // The CLI worker owns isolation while automation is enabled.
+    billingRemoveLegacySchedulers($API, $customer);
+    return true;
+  }
   if ($dueAt <= time() + 5) {
     $disabled = billingDisableCustomerNow($API, $customer);
     if ($disabled) billingRemoveLegacySchedulers($API, $customer);
@@ -416,9 +424,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           else {
             $nextDueTimestamp = time() + billingCustomerInterval(billingInvoiceServices($invoices[$invoiceIndex], $customer));
             $nextDueDate = date('Y-m-d H:i:s', $nextDueTimestamp);
+            $invoices[$invoiceIndex]['next_due_date'] = $nextDueDate;
             mikhmonSetCustomerDueDate($session, $customer['id'], $nextDueDate);
             $schedulerWarning = billingInstallCustomerScheduler($API, $customer, $nextDueTimestamp) ? '' : ' Scheduler jatuh tempo gagal dipasang.';
+            $nextInvoice = array(
+              'id' => 'invoice-' . uniqid(), 'number' => 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5)),
+              'customer_id' => $customer['id'], 'customer_name' => $customer['name'] ?? '',
+              'services' => billingInvoiceServices($invoices[$invoiceIndex], $customer),
+              'service_count' => count(billingInvoiceServices($invoices[$invoiceIndex], $customer)),
+              'amount' => (float) ($invoices[$invoiceIndex]['amount'] ?? 0), 'due_date' => $nextDueDate,
+              'status' => 'unpaid', 'created_at' => time(), 'generated_from' => $invoices[$invoiceIndex]['id'],
+            );
+            if (mikhmonSaveInvoice($session, $nextInvoice) !== false) {
+              $invoices[$invoiceIndex]['next_invoice_id'] = $nextInvoice['id'];
+              $invoices[] = $nextInvoice;
+            } else $schedulerWarning .= ' Invoice periode berikutnya gagal dibuat.';
+            $paymentNotificationEnabled = !empty($fonnteConfig['enabled']) && !empty($fonnteConfig['payment_enabled']) && $fonnteConfig['token'] !== '';
+            if ($paymentNotificationEnabled) $invoices[$invoiceIndex]['automation']['payment_notification_pending'] = true;
+            mikhmonSaveInvoice($session, $invoices[$invoiceIndex]);
             $customerMessage = 'Pembayaran diterima dan ' . $activated . ' layanan pelanggan berhasil diaktifkan. Jatuh tempo berikutnya: ' . $nextDueDate . '.' . $schedulerWarning;
+            if ($paymentNotificationEnabled) {
+              $brand = isset($brandname) && trim((string) $brandname) !== '' ? trim((string) $brandname) : 'MIKHMON';
+              $paymentMessage = mikhmonBillingAutomationMessage($fonnteConfig['templates']['payment'] ?? '', $customer, $invoices[$invoiceIndex], $currency, $brand, $invoices[$invoiceIndex]['due_date'] ?? '', $nextDueDate);
+              $paymentResult = mikhmonFonnteSend($customer['phone'] ?? '', $paymentMessage, $fonnteConfig);
+              if (!empty($paymentResult['status'])) {
+                $invoices[$invoiceIndex]['automation']['payment_notification_pending'] = false;
+                $invoices[$invoiceIndex]['automation']['payment_sent_at'] = time();
+              } else {
+                mikhmonBillingAutomationRecordFailure($invoices[$invoiceIndex], 'payment', $paymentResult['reason'] ?? 'Fonnte error', time());
+                $customerMessage .= ' Notifikasi pembayaran akan dicoba lagi oleh worker.';
+              }
+              mikhmonSaveInvoice($session, $invoices[$invoiceIndex]);
+            }
           }
         }
       }
@@ -442,7 +479,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $latestInvoices = array();
 foreach ($invoices as $invoice) if (isset($invoice['customer_id'])) {
   $key = (string) $invoice['customer_id'];
-  if (!isset($latestInvoices[$key]) || (int) ($invoice['created_at'] ?? 0) > (int) ($latestInvoices[$key]['created_at'] ?? 0)) $latestInvoices[$key] = $invoice;
+  if (!isset($latestInvoices[$key]) || (int) ($invoice['created_at'] ?? 0) >= (int) ($latestInvoices[$key]['created_at'] ?? 0)) $latestInvoices[$key] = $invoice;
 }
 ?>
 <div class="row"><div class="col-12"><div class="card">

@@ -24,6 +24,7 @@ $config = mikhmonFonnteReadConfig();
 fonnteTestAssert($config['enabled'] === true, 'enabled state is preserved');
 fonnteTestAssert($config['token'] === 'demo-token', 'token is normalized safely');
 fonnteTestAssert($config['country_code'] === '62', 'country code contains digits only');
+fonnteTestAssert($config['templates']['reminder'] !== '' && $config['reminder_days'] === 7, 'automation defaults are available');
 
 $csrfToken = mikhmonFonnteCsrfToken();
 fonnteTestAssert(mikhmonFonnteValidCsrf($csrfToken), 'generated CSRF token is accepted');

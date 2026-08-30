@@ -41,6 +41,22 @@ Backup is one-way (`MikroTik -> local database`). Restore is always manual
 from `Settings > Database Backup`; automatic recovery is intentionally disabled
 so expired or intentionally deleted users are not recreated.
 
+#### Automatic billing reminders and isolation
+
+After enabling Billing Automation in `Settings > WhatsApp Gateway`, run the
+worker every five minutes. The worker sends the configured reminder, isolates
+unpaid services after the due date and retries failed Fonnte requests:
+
+```cron
+*/5 * * * * /usr/bin/php /path/to/mikhmon/cron/billing.php >> /path/to/mikhmon/data/billing-cron.log 2>&1
+```
+
+The worker uses `MIKHMON_TIMEZONE` when set, otherwise `Asia/Jakarta`.
+For the included Docker Compose setup, use `docker exec php_7_4 php
+/var/www/cron/billing.php` as the cron command on the Docker host.
+The first invoice for a customer is still created from Billing; subsequent
+invoices are generated automatically after payment or from the last paid invoice.
+
 #### Download update.zip
 [update.zip](https://raw.githubusercontent.com/laksa19/laksa19.github.io/master/download/update.zip){:target="_blank"}
 

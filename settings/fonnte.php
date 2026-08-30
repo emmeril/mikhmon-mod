@@ -26,6 +26,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       'enabled' => isset($_POST['enabled']) && $_POST['enabled'] === '1',
       'token' => $token,
       'country_code' => preg_replace('/[^0-9]/', '', (string) ($_POST['country_code'] ?? '62')),
+      'automation_enabled' => isset($_POST['automation_enabled']) && $_POST['automation_enabled'] === '1',
+      'reminder_enabled' => isset($_POST['reminder_enabled']) && $_POST['reminder_enabled'] === '1',
+      'isolation_enabled' => isset($_POST['isolation_enabled']) && $_POST['isolation_enabled'] === '1',
+      'payment_enabled' => isset($_POST['payment_enabled']) && $_POST['payment_enabled'] === '1',
+      'reminder_days' => max(1, min(30, (int) ($_POST['reminder_days'] ?? 7))),
+      'grace_days' => max(0, min(30, (int) ($_POST['grace_days'] ?? 0))),
+      'templates' => array(
+        'reminder' => array_key_exists('template_reminder', $_POST) ? trim((string) $_POST['template_reminder']) : ($fonnteConfig['templates']['reminder'] ?? ''),
+        'isolation' => array_key_exists('template_isolation', $_POST) ? trim((string) $_POST['template_isolation']) : ($fonnteConfig['templates']['isolation'] ?? ''),
+        'payment' => array_key_exists('template_payment', $_POST) ? trim((string) $_POST['template_payment']) : ($fonnteConfig['templates']['payment'] ?? ''),
+      ),
     );
     if (mikhmonFonnteWriteConfig($newConfig)) {
       $fonnteConfig = mikhmonFonnteReadConfig();
@@ -61,13 +72,38 @@ $maskedToken = $fonnteConfig['token'] !== '' ? str_repeat('*', max(4, min(20, st
           <div class="row">
             <div class="col-6">
               <table class="table table-sm">
-                <tr><td class="align-middle">Status</td><td><label><input type="checkbox" name="enabled" value="1" <?= !empty($fonnteConfig['enabled']) ? 'checked' : ''; ?>> Aktif</label></td></tr>
+                <tr><td class="align-middle">Status Gateway</td><td><label><input type="checkbox" name="enabled" value="1" <?= !empty($fonnteConfig['enabled']) ? 'checked' : ''; ?>> Aktif</label></td></tr>
                 <tr><td class="align-middle">Token Fonnte</td><td><input class="form-control" type="password" name="token" placeholder="<?= $maskedToken !== '' ? 'Token tersimpan, kosongkan untuk mempertahankan' : 'Masukkan token Fonnte'; ?>"></td></tr>
                 <tr><td class="align-middle">Kode Negara</td><td><input class="form-control" type="text" inputmode="numeric" maxlength="5" name="country_code" value="<?= htmlspecialchars($fonnteConfig['country_code'], ENT_QUOTES); ?>"></td></tr>
+                <tr><td class="align-middle">Otomasi Billing</td><td><label><input type="checkbox" name="automation_enabled" value="1" <?= !empty($fonnteConfig['automation_enabled']) ? 'checked' : ''; ?>> Aktif</label></td></tr>
+                <tr><td class="align-middle">Pengingat</td><td><label><input type="checkbox" name="reminder_enabled" value="1" <?= !empty($fonnteConfig['reminder_enabled']) ? 'checked' : ''; ?>> Kirim pengingat</label> <input class="form-control" style="display:inline-block;width:90px" type="number" min="1" max="30" name="reminder_days" value="<?= (int) ($fonnteConfig['reminder_days'] ?? 7); ?>"> hari sebelum jatuh tempo</td></tr>
+                <tr><td class="align-middle">Isolir Otomatis</td><td><label><input type="checkbox" name="isolation_enabled" value="1" <?= !empty($fonnteConfig['isolation_enabled']) ? 'checked' : ''; ?>> Isolir saat lewat jatuh tempo</label> <input class="form-control" style="display:inline-block;width:90px" type="number" min="0" max="30" name="grace_days" value="<?= (int) ($fonnteConfig['grace_days'] ?? 0); ?>"> hari toleransi</td></tr>
+                <tr><td class="align-middle">Notifikasi Bayar</td><td><label><input type="checkbox" name="payment_enabled" value="1" <?= !empty($fonnteConfig['payment_enabled']) ? 'checked' : ''; ?>> Kirim setelah pembayaran</label></td></tr>
               </table>
             </div>
           </div>
           <button class="btn bg-primary" type="submit"><i class="fa fa-save"></i> Simpan Pengaturan</button>
+        </form>
+
+        <hr>
+        <h4><i class="fa fa-pencil"></i> Template Pesan Otomatis</h4>
+        <p>Variabel yang tersedia: <code>{{nama_pelanggan}}</code>, <code>{{nama_brand}}</code>, <code>{{nomor_invoice}}</code>, <code>{{total_tagihan}}</code>, <code>{{jatuh_tempo}}</code>, <code>{{detail_layanan}}</code>, <code>{{tanggal_bayar}}</code>, <code>{{jatuh_tempo_berikutnya}}</code>.</p>
+        <form autocomplete="off" method="post" action="">
+          <input type="hidden" name="fonnte_action" value="save">
+          <input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>">
+          <input type="hidden" name="enabled" value="<?= !empty($fonnteConfig['enabled']) ? '1' : '0'; ?>">
+          <input type="hidden" name="automation_enabled" value="<?= !empty($fonnteConfig['automation_enabled']) ? '1' : '0'; ?>">
+          <input type="hidden" name="reminder_enabled" value="<?= !empty($fonnteConfig['reminder_enabled']) ? '1' : '0'; ?>">
+          <input type="hidden" name="isolation_enabled" value="<?= !empty($fonnteConfig['isolation_enabled']) ? '1' : '0'; ?>">
+          <input type="hidden" name="payment_enabled" value="<?= !empty($fonnteConfig['payment_enabled']) ? '1' : '0'; ?>">
+          <input type="hidden" name="country_code" value="<?= htmlspecialchars($fonnteConfig['country_code'], ENT_QUOTES); ?>">
+          <input type="hidden" name="reminder_days" value="<?= (int) ($fonnteConfig['reminder_days'] ?? 7); ?>"><input type="hidden" name="grace_days" value="<?= (int) ($fonnteConfig['grace_days'] ?? 0); ?>">
+          <div class="row"><div class="col-6">
+            <label>Pengingat H-<?= (int) ($fonnteConfig['reminder_days'] ?? 7); ?><textarea class="form-control" name="template_reminder" rows="7" required><?= htmlspecialchars($fonnteConfig['templates']['reminder'] ?? '', ENT_QUOTES); ?></textarea></label>
+            <label>Pesan Isolir<textarea class="form-control" name="template_isolation" rows="6" required><?= htmlspecialchars($fonnteConfig['templates']['isolation'] ?? '', ENT_QUOTES); ?></textarea></label>
+            <label>Konfirmasi Pembayaran &amp; Aktif Kembali<textarea class="form-control" name="template_payment" rows="6" required><?= htmlspecialchars($fonnteConfig['templates']['payment'] ?? '', ENT_QUOTES); ?></textarea></label>
+          </div></div>
+          <button class="btn bg-primary" type="submit"><i class="fa fa-save"></i> Simpan Template</button>
         </form>
 
         <hr>
