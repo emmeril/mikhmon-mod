@@ -127,7 +127,7 @@ function mikhmonRowBelongsToCurrentMitra($row) {
 
 function mikhmonCanOpenMainRoute($route) {
   if (mikhmonIsAdmin()) return true;
-  if (mikhmonIsBiller()) return $route === 'billing' || $route === 'logout';
+  if (mikhmonIsBiller()) return in_array($route, array('billing', 'commission', 'logout'), true);
   if (mikhmonIsMitra()) return in_array($route, array('home', 'customer-list', 'customer-add', 'customer-edit', 'report-selling', 'report-resume', 'hotspot-generate', 'hotspot-active', 'hotspot-vouchers', 'hotspot-users', 'hotspot-print-center', 'pppoe-users', 'pppoe-active', 'logout'), true);
   return false;
 }

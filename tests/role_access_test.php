@@ -53,6 +53,7 @@ roleTestAssert(mikhmonRowBelongsToCurrentMitra(array('comment' => mikhmonOwnerTa
 
 mikhmonSetLoginSession(mikhmonFindUser($billerId));
 roleTestAssert(mikhmonCanOpenMainRoute('billing'), 'biller can open billing');
+roleTestAssert(mikhmonCanOpenMainRoute('commission'), 'biller can open commission details');
 roleTestAssert(!mikhmonCanOpenMainRoute('customer-list'), 'biller cannot open customer management');
 
 $invoice = array(

@@ -97,6 +97,9 @@ if (!isset($_SESSION["mikhmon"])) {
     $slog = "active";
     $mpage = $_hotspot_log;
     $lmenu = "menu-open";
+  } elseif ($commission == "1") {
+    $scommission = "active";
+    $mpage = "Komisi Saya";
   } elseif ($billing == "1") {
     $mcustomers = "active";
     $customermenu = "menu-open";
@@ -341,6 +344,7 @@ include('./info.php');
   <div class="menu text-center align-middle card-header" style="border-radius:0;"><h3><?= $identity; ?></h3><?php if (!mikhmonIsAdmin()): ?><small><?= htmlspecialchars(mikhmonUserName(), ENT_QUOTES); ?> &middot; <?= strtoupper(htmlspecialchars(mikhmonRole(), ENT_QUOTES)); ?></small><?php endif; ?></div>
 <?php if (mikhmonIsBiller()): ?>
   <a href="./?billing=1&session=<?= $session; ?>" class="menu <?= $sbilling; ?>"><i class="fa fa-money"></i> Billing</a>
+  <a href="./?commission=1&session=<?= $session; ?>" class="menu <?= $scommission; ?>"><i class="fa fa-line-chart"></i> Komisi Saya</a>
 <?php elseif (mikhmonIsMitra()): ?>
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
   <div class="dropdown-btn <?= $susers . $sactive . $susersbp; ?>"><i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down"></i></div>

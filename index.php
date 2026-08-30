@@ -146,11 +146,13 @@ if (!isset($_SESSION["mikhmon"])) {
   $customer = $_GET['customer'];
   $customerid = $_GET['customer-id'];
   $billing = $_GET['billing'];
+  $commission = $_GET['commission'];
   $admin = $_GET['admin'];
 
   $requestedRoute = 'other';
   if ($hotspot == 'logout') $requestedRoute = 'logout';
   elseif ($billing == '1') $requestedRoute = 'billing';
+  elseif ($commission == '1') $requestedRoute = 'commission';
   elseif ($customer == 'list' && $customerid == '') $requestedRoute = 'customer-list';
   elseif (($customer == 'edit' || ($customer == 'list' && $customerid != ''))) $requestedRoute = 'customer-edit';
   elseif ($customer == 'add') $requestedRoute = 'customer-add';
@@ -238,6 +240,9 @@ if (!isset($_SESSION["mikhmon"])) {
   }
 
 // customer database
+  elseif ($commission == "1") {
+    include_once('./customer/commission.php');
+  }
   elseif ($billing == "1") {
     include_once('./customer/billing.php');
   }

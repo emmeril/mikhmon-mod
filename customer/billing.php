@@ -205,7 +205,6 @@ foreach ($invoices as $invoice) {
     $latestInvoices[$invoice['customer_id']] = $invoice;
   }
 }
-$commissionStats = mikhmonBillerCommissionStats($session, mikhmonIsBiller() ? mikhmonUserId() : '');
 ?>
 <div class="row"><div class="col-12"><div class="card">
   <div class="card-header"><h3><i class="fa fa-money"></i> Billing <span style="font-size:14px"> &nbsp;|&nbsp; <span id="billingVisibleCount"><?= count($customers); ?></span> pelanggan</span></h3></div>
@@ -265,9 +264,6 @@ $commissionStats = mikhmonBillerCommissionStats($session, mikhmonIsBiller() ? mi
       <?php endforeach; ?>
       <?php if (!$customers): ?><tr class="billing-info-row"><td colspan="13" class="text-center">Belum ada data pelanggan.</td></tr><?php endif; ?><tr id="billingNoResults" style="display:none"><td colspan="13" class="text-center">Data billing tidak ditemukan.</td></tr>
       </tbody></table></div>
-    <?php if (mikhmonIsBiller()): ?>
-      <p class="text-secondary" style="font-size:12px; margin:8px 0 0;"><strong>Komisi Anda:</strong> bulan ini <?= (int) $commissionStats['month_count']; ?> pembayaran / <?= htmlspecialchars($currency . ' ' . number_format($commissionStats['month_amount'], 0, ',', '.'), ENT_QUOTES); ?> &middot; total <?= (int) $commissionStats['count']; ?> pembayaran / <?= htmlspecialchars($currency . ' ' . number_format($commissionStats['amount'], 0, ',', '.'), ENT_QUOTES); ?>.</p>
-    <?php endif; ?>
   </div>
 </div></div></div>
 <script>
