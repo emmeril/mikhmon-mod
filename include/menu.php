@@ -198,6 +198,18 @@ if($idleto != "disable"){
 }
 ?>
 <span style="display:none;" id="idto"><?= $idleto ;?></span>
+<style>
+  #sidenav {
+    height: calc(100vh - 51px);
+    height: calc(100dvh - 51px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+    padding-bottom: 24px;
+  }
+</style>
 
 
 <?php if ($id != "") { ?>
