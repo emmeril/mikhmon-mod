@@ -14,6 +14,7 @@ $mitraHotspotActive = array();
 $mitraPppSecrets = array();
 $mitraPppActive = array();
 $mitraHotspotLogs = array();
+$interfaceName = '';
 $monthKey = strtolower(date('M')) . date('Y');
 $todayKey = strtolower(date('M/d/Y'));
 $monthReports = array();
@@ -24,9 +25,16 @@ if (!empty($routerConnected)) {
   $clockRows = $API->comm('/system/clock/print');
   $resourceRows = $API->comm('/system/resource/print');
   $routerboardRows = $API->comm('/system/routerboard/print');
+  $interfaceRows = (array) $API->comm('/interface/print');
   if (isset($clockRows[0])) $clock = $clockRows[0];
   if (isset($resourceRows[0])) $resource = $resourceRows[0];
   if (isset($routerboardRows[0])) $routerboard = $routerboardRows[0];
+  $interfaceIndex = max(0, (int) $iface - 1);
+  if (isset($interfaceRows[$interfaceIndex]['name'])) {
+    $interfaceName = (string) $interfaceRows[$interfaceIndex]['name'];
+  } elseif (isset($interfaceRows[0]['name'])) {
+    $interfaceName = (string) $interfaceRows[0]['name'];
+  }
   if (!empty($clock['time-zone-name'])) {
     $_SESSION['timezone'] = $clock['time-zone-name'];
     date_default_timezone_set($clock['time-zone-name']);
@@ -145,6 +153,62 @@ $pppoeCustomers = count($pppoeCustomerNames);
         <div class="col-4 col-box-6"><div class="box bg-green bmh-75"><a href="./?ppp=secrets&session=<?= $session; ?>"><h1><?= count($mitraPppSecrets); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-users"></i> <?= $_ppp_secrets ?></div></a></div></div>
         <div class="col-4 col-box-6"><div class="box bg-yellow bmh-75"><a href="./?customer=add&service=pppoe&session=<?= $session; ?>"><h1><i class="fa fa-user-plus"></i> <span style="font-size:15px"><?= $_add ?></span></h1><div><i class="fa fa-user-plus"></i> <?= $_ppp_secrets ?></div></a></div></div>
       </div></div></div></div>
+
+      <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-area-chart"></i> <?= $_traffic ?></h3></div><div class="card-body">
+        <div id="mitraTrafficMonitor"></div>
+      </div></div></div>
+      <script>
+      (function () {
+        var mitraTrafficChart;
+        var mitraTrafficSession = <?= json_encode((string) $session); ?>;
+        var mitraTrafficInterface = <?= json_encode($interfaceName); ?>;
+
+        function requestMitraTraffic() {
+          if (!mitraTrafficChart || !mitraTrafficInterface) return;
+          $.ajax({
+            url: './traffic/traffic.php?session=' + encodeURIComponent(mitraTrafficSession) + '&iface=' + encodeURIComponent(mitraTrafficInterface),
+            dataType: 'json',
+            success: function (data) {
+              if (!Array.isArray(data) || data.length < 2) return;
+              var tx = parseInt(data[0].data, 10) || 0;
+              var rx = parseInt(data[1].data, 10) || 0;
+              var now = (new Date()).getTime();
+              var shift = mitraTrafficChart.series[0].data.length > 19;
+              mitraTrafficChart.series[0].addPoint([now, tx], true, shift);
+              mitraTrafficChart.series[1].addPoint([now, rx], true, shift);
+            }
+          });
+        }
+
+        $(function () {
+          if (!window.Highcharts || !document.getElementById('mitraTrafficMonitor')) return;
+          mitraTrafficChart = new Highcharts.Chart({
+            chart: { renderTo: 'mitraTrafficMonitor', type: 'areaspline', height: 250 },
+            title: { text: <?= json_encode($_interface); ?> + ' ' + mitraTrafficInterface },
+            xAxis: { type: 'datetime', tickPixelInterval: 150 },
+            yAxis: {
+              minPadding: 0.2,
+              maxPadding: 0.2,
+              title: { text: null },
+              labels: { formatter: function () {
+                var bytes = this.value;
+                var sizes = ['bps', 'kbps', 'Mbps', 'Gbps', 'Tbps'];
+                if (!bytes) return '0 bps';
+                var index = Math.floor(Math.log(bytes) / Math.log(1024));
+                return parseFloat((bytes / Math.pow(1024, index)).toFixed(2)) + ' ' + sizes[index];
+              } }
+            },
+            series: [
+              { name: 'Tx', data: [], marker: { symbol: 'circle' } },
+              { name: 'Rx', data: [], marker: { symbol: 'circle' } }
+            ],
+            tooltip: { shared: true }
+          });
+          requestMitraTraffic();
+          setInterval(requestMitraTraffic, 8000);
+        });
+      })();
+      </script>
 
       <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-address-card"></i> Pelanggan</h3></div><div class="card-body"><div class="row">
         <div class="col-4"><div class="box bg-blue bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= count($mitraCustomers); ?></h1><div><i class="fa fa-users"></i> Pelanggan</div></a></div></div>
