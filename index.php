@@ -158,6 +158,7 @@ if (!isset($_SESSION["mikhmon"])) {
   elseif ($report == 'resume-report') $requestedRoute = 'report-resume';
   elseif ($admin == 'settings') $requestedRoute = 'admin-settings';
   elseif ($admin == 'routers') $requestedRoute = 'admin-routers';
+  elseif ($admin == 'users') $requestedRoute = 'admin-users';
   elseif ($hotspotuser == 'generate') $requestedRoute = 'hotspot-generate';
   elseif ($hotspot == 'active') $requestedRoute = 'hotspot-active';
   elseif ($hotspot == 'users-by-profile') $requestedRoute = 'hotspot-vouchers';
@@ -228,6 +229,11 @@ if (!isset($_SESSION["mikhmon"])) {
 // router management inside the router dashboard
   elseif ($admin == "routers" && mikhmonIsAdmin()) {
     include_once('./settings/sessions.php');
+  }
+
+// user and role management inside the router dashboard
+  elseif ($admin == "users" && mikhmonIsAdmin()) {
+    include_once('./settings/users.php');
   }
 
 // customer database

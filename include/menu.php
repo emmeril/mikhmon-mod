@@ -159,9 +159,14 @@ if (!isset($_SESSION["mikhmon"])) {
     $ssett = "active";
   } elseif ($admin == "routers") {
     $srouterlist = "active";
-    $mrouter = "active";
-    $routermenu = "menu-open";
+    $ssett = "active";
+    $settmenu = "menu-open";
     $mpage = $_router_list;
+  } elseif ($admin == "users") {
+    $sroleusers = "active";
+    $ssett = "active";
+    $settmenu = "menu-open";
+    $mpage = "Manajemen User";
   } elseif ($id == "sessions" || $id == "remove" || $router == "new") {
     $ssesslist = "active";
     $mpage = $_admin_settings;
@@ -350,12 +355,6 @@ include('./info.php');
   </div>
 <?php else: ?>
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
-  <div class="dropdown-btn <?= $mrouter; ?>"><i class="fa fa-server"></i> Router <i class="fa fa-caret-down"></i></div>
-  <div class="dropdown-container <?= $routermenu; ?>">
-    <a href="./?admin=routers&session=<?= rawurlencode($session); ?>" class="<?= $srouterlist; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> <?= $_router_list ?></a>
-    <a href="./admin.php?id=settings&router=new-<?= rand(1111, 9999); ?>&return=routers" class="">&nbsp;&nbsp;&nbsp;<i class="fa fa-plus"></i> <?= $_add_router ?></a>
-    <a href="./admin.php?id=settings&session=<?= rawurlencode($session); ?>" class="">&nbsp;&nbsp;&nbsp;<i class="fa fa-gear"></i> <?= $_session_settings ?></a>
-  </div>
   <!--hotspot-->
   <div class="dropdown-btn <?= $susers . $suserprof . $sactive . $shosts . $sipbind . $scookies; ?>"><i class="fa fa-wifi"></i> Hotspot
     <i class="fa fa-caret-down"></i>
@@ -440,6 +439,10 @@ include('./info.php');
   </div>
   <div class="dropdown-container <?= $settmenu; ?>">
   <a href="./?admin=settings&session=<?= rawurlencode($session); ?>" class="menu <?= $sadminsettings; ?>"> <i class="fa fa-user-circle"></i> <?= $_admin_settings ?> </a>
+  <a href="./?admin=routers&session=<?= rawurlencode($session); ?>" class="menu <?= $srouterlist; ?>"> <i class="fa fa-server"></i> <?= $_router_list ?> </a>
+  <a href="./admin.php?id=settings&router=new-<?= rand(1111, 9999); ?>&return=routers" class="menu"> <i class="fa fa-plus"></i> <?= $_add_router ?> </a>
+  <a href="./?admin=users&session=<?= rawurlencode($session); ?>" class="menu <?= $sroleusers; ?>"> <i class="fa fa-users"></i> Manajemen User </a>
+  <a href="./admin.php?id=settings&session=<?= rawurlencode($session); ?>" class="menu"> <i class="fa fa-gear"></i> <?= $_session_settings ?> </a>
   <a href="./?hotspot=uplogo&session=<?= $session; ?>" class="menu <?= $uplogo; ?>"> <i class="fa fa-upload "></i> <?= $_upload_logo ?> </a>
   <a href="./admin.php?id=database&session=<?= $session; ?>" class="menu <?= $sdatabase; ?>"><i class="fa fa-database"></i> Database Backup</a>
   <a href="./?hotspot=template-editor&template=default&session=<?= $session; ?>" class="menu <?= $teditor; ?>"> <i class="fa fa-edit "></i> <?= $_template_editor ?> </a>          

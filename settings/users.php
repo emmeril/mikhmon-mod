@@ -9,6 +9,9 @@ if (!isset($_SESSION['mikhmon']) || !mikhmonIsAdmin()) {
 $userMessage = '';
 $userError = '';
 $editUser = false;
+$userManagementBaseUrl = isset($admin) && $admin === 'users' && !empty($session)
+  ? './?admin=users&session=' . rawurlencode($session)
+  : './admin.php?id=users';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $action = isset($_POST['user_action']) ? $_POST['user_action'] : '';
@@ -71,7 +74,7 @@ foreach ((array) $data as $routerName => $routerConfig) {
             <tr><td><?= $editUser ? 'Password Baru' : 'Password'; ?></td><td><input class="form-control" type="password" name="password"<?= $editUser ? ' placeholder="Kosongkan jika tidak diubah"' : ' required'; ?>></td></tr>
             <tr><td>Status</td><td><label><input type="checkbox" name="active" value="1"<?= !$editUser || !empty($editUser['active']) ? ' checked' : ''; ?>> Aktif</label></td></tr>
           </table>
-          <?php if ($editUser): ?><a class="btn bg-warning" href="./admin.php?id=users">Batal</a><?php endif; ?>
+          <?php if ($editUser): ?><a class="btn bg-warning" href="<?= htmlspecialchars($userManagementBaseUrl, ENT_QUOTES); ?>">Batal</a><?php endif; ?>
           <button class="btn bg-primary" type="submit"><i class="fa fa-save"></i> Simpan</button>
         </form>
       </div>
@@ -79,14 +82,14 @@ foreach ((array) $data as $routerName => $routerConfig) {
   </div>
   <div class="col-7">
     <div class="card">
-      <div class="card-header"><h3><i class="fa fa-users"></i> Mitra &amp; Biller</h3></div>
+      <div class="card-header"><h3><i class="fa fa-users"></i> Manajemen User</h3></div>
       <div class="card-body">
         <p><small>Mitra hanya melihat pelanggan yang ditetapkan admin. Biller hanya mengelola Billing pada router yang dipilih.</small></p>
         <div class="overflow box-bordered"><table class="table table-bordered table-hover text-nowrap">
           <thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Router</th><th>Status</th><th>Aksi</th></tr></thead>
           <tbody><?php foreach ($users as $staff): ?><tr>
             <td><?= htmlspecialchars($staff['name'], ENT_QUOTES); ?></td><td><?= htmlspecialchars($staff['username'], ENT_QUOTES); ?></td><td><?= strtoupper(htmlspecialchars($staff['role'], ENT_QUOTES)); ?></td><td><?= htmlspecialchars($staff['session'], ENT_QUOTES); ?></td><td class="<?= !empty($staff['active']) ? 'text-success' : 'text-danger'; ?>"><?= !empty($staff['active']) ? 'Aktif' : 'Nonaktif'; ?></td>
-            <td><a class="btn bg-primary" href="./admin.php?id=users&amp;user-id=<?= rawurlencode($staff['id']); ?>"><i class="fa fa-edit"></i> Edit</a> <form method="post" style="display:inline"><input type="hidden" name="user_action" value="delete"><input type="hidden" name="user_id" value="<?= htmlspecialchars($staff['id'], ENT_QUOTES); ?>"><button class="btn bg-danger" type="submit" onclick="return confirm('Hapus akun ini?');"><i class="fa fa-trash"></i> Hapus</button></form></td>
+            <td><a class="btn bg-primary" href="<?= htmlspecialchars($userManagementBaseUrl, ENT_QUOTES); ?>&amp;user-id=<?= rawurlencode($staff['id']); ?>"><i class="fa fa-edit"></i> Edit</a> <form method="post" style="display:inline"><input type="hidden" name="user_action" value="delete"><input type="hidden" name="user_id" value="<?= htmlspecialchars($staff['id'], ENT_QUOTES); ?>"><button class="btn bg-danger" type="submit" onclick="return confirm('Hapus akun ini?');"><i class="fa fa-trash"></i> Hapus</button></form></td>
           </tr><?php endforeach; ?><?php if (!$users): ?><tr><td colspan="6" class="text-center">Belum ada akun mitra atau biller.</td></tr><?php endif; ?></tbody>
         </table></div>
       </div>

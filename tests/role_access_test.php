@@ -47,6 +47,7 @@ roleTestAssert(mikhmonCanOpenMainRoute('pppoe-active'), 'mitra can view assigned
 roleTestAssert(!mikhmonCanOpenMainRoute('billing'), 'mitra cannot open billing');
 roleTestAssert(!mikhmonCanOpenMainRoute('admin-settings'), 'mitra cannot open admin settings');
 roleTestAssert(!mikhmonCanOpenMainRoute('admin-routers'), 'mitra cannot open router management');
+roleTestAssert(!mikhmonCanOpenMainRoute('admin-users'), 'mitra cannot open user role management');
 roleTestAssert(strpos(mikhmonOwnerTag(), $mitraId) !== false, 'mitra voucher owner tag is generated');
 roleTestAssert(mikhmonRowBelongsToCurrentMitra(array('comment' => mikhmonOwnerTag() . ' promo')), 'owned voucher rows are recognized');
 
