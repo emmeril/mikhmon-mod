@@ -418,7 +418,6 @@ include('./info.php');
   </div>
   <!--quick print-->
   <a href="./?hotspot=print-center&session=<?= $session; ?>" class="menu <?= $sprintcenter; ?>"><i class="fa fa-print"></i> Print Center</a>
-  <a href="./?hotspot=quick-print&session=<?= $session; ?>" class="menu <?= $squick; ?>"> <i class="fa fa-print"></i> <?= $_quick_print ?> </a>
   <!--vouchers-->
   <a href="./?hotspot=users-by-profile&session=<?= $session; ?>" class="menu <?= $susersbp; ?>"> <i class="fa fa-ticket"></i> <?= $_vouchers ?> </a>
    <!--log-->
