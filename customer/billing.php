@@ -218,8 +218,6 @@ if (mikhmonIsAdmin()) {
   <div class="card-body">
     <?php if ($customerMessage !== ''): ?><div class="box bg-success"><?= htmlspecialchars($customerMessage, ENT_QUOTES); ?></div><?php endif; ?>
     <?php if ($customerError !== ''): ?><div class="box bg-danger"><?= htmlspecialchars($customerError, ENT_QUOTES); ?></div><?php endif; ?>
-    <?php if (mikhmonIsBiller()): ?><div class="box bg-info"><strong>Komisi Anda:</strong> bulan ini <?= (int) $commissionStats['month_count']; ?> pembayaran = <?= htmlspecialchars($currency . ' ' . number_format($commissionStats['month_amount'], 0, ',', '.'), ENT_QUOTES); ?> &middot; total <?= (int) $commissionStats['count']; ?> pembayaran = <?= htmlspecialchars($currency . ' ' . number_format($commissionStats['amount'], 0, ',', '.'), ENT_QUOTES); ?>. Komisi per pelunasan <?= htmlspecialchars($currency . ' ' . number_format(mikhmonBillerCommissionAmount(), 0, ',', '.'), ENT_QUOTES); ?>.</div><?php endif; ?>
-    <?php if (mikhmonIsAdmin() && $billerSummaries): ?><div class="box bg-info"><strong>Komisi Biller Bulan Ini:</strong><?php foreach ($billerSummaries as $summary): ?> <?= htmlspecialchars($summary['user']['name'], ENT_QUOTES); ?>: <?= (int) $summary['stats']['month_count']; ?> trx / <?= htmlspecialchars($currency . ' ' . number_format($summary['stats']['month_amount'], 0, ',', '.'), ENT_QUOTES); ?>;&nbsp;<?php endforeach; ?></div><?php endif; ?>
     <?php if (empty($routerConnected)): ?><div class="box bg-warning">Router MikroTik tidak terhubung. Status user tidak dapat diperbarui, invoice baru dan aktivasi pembayaran dinonaktifkan.</div><?php endif; ?>
     <div class="row"><div class="col-6 pd-t-5 pd-b-5"><div class="input-group">
       <div class="input-group-6 col-box-6"><input id="billingSearch" type="text" class="group-item group-item-l" placeholder="<?= $_search; ?>"></div>
@@ -273,6 +271,15 @@ if (mikhmonIsAdmin()) {
       <?php endforeach; ?>
       <?php if (!$customers): ?><tr class="billing-info-row"><td colspan="13" class="text-center">Belum ada data pelanggan.</td></tr><?php endif; ?><tr id="billingNoResults" style="display:none"><td colspan="13" class="text-center">Data billing tidak ditemukan.</td></tr>
       </tbody></table></div>
+    <?php if (mikhmonIsBiller()): ?>
+      <div class="box bg-info mr-t-10"><strong>Komisi Anda</strong><br><span>Bulan ini: <?= (int) $commissionStats['month_count']; ?> pembayaran / <?= htmlspecialchars($currency . ' ' . number_format($commissionStats['month_amount'], 0, ',', '.'), ENT_QUOTES); ?> &middot; Total: <?= (int) $commissionStats['count']; ?> pembayaran / <?= htmlspecialchars($currency . ' ' . number_format($commissionStats['amount'], 0, ',', '.'), ENT_QUOTES); ?> &middot; Komisi per pelunasan: <?= htmlspecialchars($currency . ' ' . number_format(mikhmonBillerCommissionAmount(), 0, ',', '.'), ENT_QUOTES); ?></span></div>
+    <?php elseif (mikhmonIsAdmin() && $billerSummaries): ?>
+      <div class="box bg-info mr-t-10"><strong>Komisi Biller Bulan Ini</strong><div class="row">
+        <?php foreach ($billerSummaries as $summary): ?>
+          <div class="col-4 pd-t-5"><div class="box-bordered pd-5"><?= htmlspecialchars($summary['user']['name'], ENT_QUOTES); ?><br><strong><?= (int) $summary['stats']['month_count']; ?> trx / <?= htmlspecialchars($currency . ' ' . number_format($summary['stats']['month_amount'], 0, ',', '.'), ENT_QUOTES); ?></strong></div></div>
+        <?php endforeach; ?>
+      </div></div>
+    <?php endif; ?>
   </div>
 </div></div></div>
 <script>
