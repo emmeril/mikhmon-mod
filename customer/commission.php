@@ -32,25 +32,23 @@ usort($commissionRows, function ($left, $right) {
 krsort($availableMonths);
 
 $selectedMonth = isset($_GET['month']) && preg_match('/^\d{4}-\d{2}$/', (string) $_GET['month']) ? (string) $_GET['month'] : date('Y-m');
-$monthCount = 0;
-$monthAmount = 0;
 $totalAmount = 0;
 foreach ($commissionRows as $invoice) {
   $commission = isset($invoice['biller_commission']) ? (float) $invoice['biller_commission'] : mikhmonBillerCommissionAmount();
   $totalAmount += $commission;
-  if (!empty($invoice['paid_at']) && date('Y-m', (int) $invoice['paid_at']) === $selectedMonth) {
-    $monthCount++;
-    $monthAmount += $commission;
-  }
 }
 ?>
+<style>
+  .commission-toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:5px 0 10px}
+  .commission-toolbar .form-control{height:32px;margin:0}
+  @media(max-width:750px){.commission-toolbar{grid-template-columns:1fr}}
+</style>
 <div class="row"><div class="col-12"><div class="card">
   <div class="card-header"><h3><i class="fa fa-money"></i> Komisi Saya</h3></div>
   <div class="card-body">
-    <p class="text-secondary" style="font-size:12px; margin-top:0;">Periode <?= htmlspecialchars(billerCommissionMonthLabel($selectedMonth), ENT_QUOTES); ?>: <strong><?= $monthCount; ?> transaksi / <?= htmlspecialchars($currency . ' ' . number_format($monthAmount, 0, ',', '.'), ENT_QUOTES); ?></strong> &middot; Total seluruh komisi: <strong><?= htmlspecialchars($currency . ' ' . number_format($totalAmount, 0, ',', '.'), ENT_QUOTES); ?></strong></p>
-    <div class="row">
-      <div class="col-6 pd-t-5 pd-b-5"><input id="commissionSearch" type="text" class="form-control" placeholder="Cari pelanggan, username, atau invoice"></div>
-      <div class="col-6 pd-t-5 pd-b-5"><select id="commissionMonth" class="form-control" onchange="location='./?commission=1&session=<?= rawurlencode($session); ?>&month='+encodeURIComponent(this.value)"><?php foreach (array_keys($availableMonths) as $month): ?><option value="<?= htmlspecialchars($month, ENT_QUOTES); ?>"<?= $month === $selectedMonth ? ' selected' : ''; ?>><?= htmlspecialchars(billerCommissionMonthLabel($month), ENT_QUOTES); ?></option><?php endforeach; ?></select></div>
+    <div class="commission-toolbar">
+      <input id="commissionSearch" type="text" class="form-control" placeholder="Cari pelanggan, username, atau invoice">
+      <select id="commissionMonth" class="form-control" onchange="location='./?commission=1&session=<?= rawurlencode($session); ?>&month='+encodeURIComponent(this.value)"><?php foreach (array_keys($availableMonths) as $month): ?><option value="<?= htmlspecialchars($month, ENT_QUOTES); ?>"<?= $month === $selectedMonth ? ' selected' : ''; ?>><?= htmlspecialchars(billerCommissionMonthLabel($month), ENT_QUOTES); ?></option><?php endforeach; ?></select>
     </div>
     <div class="overflow box-bordered" style="max-height:75vh"><table id="commissionTable" class="table table-bordered table-hover text-nowrap">
       <thead><tr><th>No</th><th>Tanggal Bayar</th><th>Pelanggan</th><th>Layanan</th><th>Username</th><th>Invoice</th><th>Jumlah Tagihan</th><th>Komisi</th></tr></thead>
@@ -69,6 +67,7 @@ foreach ($commissionRows as $invoice) {
       <?php if ($visibleIndex === 0): ?><tr id="commissionEmpty"><td colspan="8" class="text-center">Belum ada komisi pada periode ini.</td></tr><?php endif; ?>
       <tr id="commissionNoResults" style="display:none"><td colspan="8" class="text-center">Data komisi tidak ditemukan.</td></tr>
       </tbody>
+      <tfoot><tr><th colspan="7" class="text-right">Total</th><th class="text-success"><strong><?= htmlspecialchars($currency . ' ' . number_format($totalAmount, 0, ',', '.'), ENT_QUOTES); ?></strong></th></tr></tfoot>
     </table></div>
   </div>
 </div></div></div>
