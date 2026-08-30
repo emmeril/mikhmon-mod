@@ -7,5 +7,6 @@ Thumbs.db
 *.log
 /data/*.json
 /data/*.tmp.*
+/data/*.lock
 .idea/
 .vscode/

@@ -86,27 +86,6 @@ $maskedToken = $fonnteConfig['token'] !== '' ? str_repeat('*', max(4, min(20, st
         </form>
 
         <hr>
-        <h4><i class="fa fa-pencil"></i> Template Pesan Otomatis</h4>
-        <p>Variabel yang tersedia: <code>{{nama_pelanggan}}</code>, <code>{{nama_brand}}</code>, <code>{{nomor_invoice}}</code>, <code>{{total_tagihan}}</code>, <code>{{jatuh_tempo}}</code>, <code>{{detail_layanan}}</code>, <code>{{tanggal_bayar}}</code>, <code>{{jatuh_tempo_berikutnya}}</code>.</p>
-        <form autocomplete="off" method="post" action="">
-          <input type="hidden" name="fonnte_action" value="save">
-          <input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>">
-          <input type="hidden" name="enabled" value="<?= !empty($fonnteConfig['enabled']) ? '1' : '0'; ?>">
-          <input type="hidden" name="automation_enabled" value="<?= !empty($fonnteConfig['automation_enabled']) ? '1' : '0'; ?>">
-          <input type="hidden" name="reminder_enabled" value="<?= !empty($fonnteConfig['reminder_enabled']) ? '1' : '0'; ?>">
-          <input type="hidden" name="isolation_enabled" value="<?= !empty($fonnteConfig['isolation_enabled']) ? '1' : '0'; ?>">
-          <input type="hidden" name="payment_enabled" value="<?= !empty($fonnteConfig['payment_enabled']) ? '1' : '0'; ?>">
-          <input type="hidden" name="country_code" value="<?= htmlspecialchars($fonnteConfig['country_code'], ENT_QUOTES); ?>">
-          <input type="hidden" name="reminder_days" value="<?= (int) ($fonnteConfig['reminder_days'] ?? 7); ?>"><input type="hidden" name="grace_days" value="<?= (int) ($fonnteConfig['grace_days'] ?? 0); ?>">
-          <div class="row"><div class="col-6">
-            <label>Pengingat H-<?= (int) ($fonnteConfig['reminder_days'] ?? 7); ?><textarea class="form-control" name="template_reminder" rows="7" required><?= htmlspecialchars($fonnteConfig['templates']['reminder'] ?? '', ENT_QUOTES); ?></textarea></label>
-            <label>Pesan Isolir<textarea class="form-control" name="template_isolation" rows="6" required><?= htmlspecialchars($fonnteConfig['templates']['isolation'] ?? '', ENT_QUOTES); ?></textarea></label>
-            <label>Konfirmasi Pembayaran &amp; Aktif Kembali<textarea class="form-control" name="template_payment" rows="6" required><?= htmlspecialchars($fonnteConfig['templates']['payment'] ?? '', ENT_QUOTES); ?></textarea></label>
-          </div></div>
-          <button class="btn bg-primary" type="submit"><i class="fa fa-save"></i> Simpan Template</button>
-        </form>
-
-        <hr>
         <div class="row">
           <div class="col-6">
             <h4><i class="fa fa-mobile"></i> Status Perangkat</h4>

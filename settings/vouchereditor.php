@@ -28,6 +28,11 @@ if (!isset($_SESSION["mikhmon"])) {
 // load config
 include('../include/config.php');
 include('../include/readcfg.php');
+include_once(dirname(__DIR__) . '/lib/fonnte.php');
+
+$fonnteConfig = mikhmonFonnteReadConfig();
+$fonnteTemplateMessage = '';
+$fonnteTemplateError = '';
 
 
 
@@ -45,6 +50,25 @@ if ($telplate == "default" || $telplate == "rdefault") {
 	$telplatet = "template-small";
 	$popup = "javascript:window.open('./voucher/vpreview.php?usermode=up&small=yes&qr=no&session=" . $session . "','_blank','width=310,height=310')";
 	$popupQR = "javascript:window.open('./voucher/vpreview.php?usermode=up&small=yes&qr=yes&session=" . $session . "','_blank','width=310,height=310')";
+}
+if (isset($_POST['fonnte_template_save'])) {
+	if (!function_exists('mikhmonIsAdmin') || !mikhmonIsAdmin()) {
+		$fonnteTemplateError = 'Hanya administrator yang dapat mengubah template WhatsApp.';
+	} elseif (!mikhmonFonnteValidCsrf($_POST['fonnte_csrf'] ?? '')) {
+		$fonnteTemplateError = 'Sesi formulir tidak valid. Muat ulang halaman lalu coba lagi.';
+	} else {
+		$fonnteConfig['templates'] = array(
+			'reminder' => trim((string) ($_POST['template_reminder'] ?? '')),
+			'isolation' => trim((string) ($_POST['template_isolation'] ?? '')),
+			'payment' => trim((string) ($_POST['template_payment'] ?? '')),
+		);
+		if (mikhmonFonnteWriteConfig($fonnteConfig)) {
+			$fonnteConfig = mikhmonFonnteReadConfig();
+			$fonnteTemplateMessage = 'Template pesan WhatsApp berhasil disimpan.';
+		} else {
+			$fonnteTemplateError = 'Template pesan WhatsApp gagal disimpan.';
+		}
+	}
 }
 if (isset($_POST['save'])) {
 	$template = './voucher/' . $telplatet . '.php';
@@ -156,8 +180,38 @@ textarea{
 		</div>
 </div>
 
+<div class="row">
+	<div class="col-12">
+		<div class="card">
+			<div class="card-header">
+				<h3><i class="fa fa-whatsapp"></i> Template Pesan Otomatis Fonnte</h3>
+			</div>
+			<div class="card-body">
+				<?php if ($fonnteTemplateMessage !== ''): ?><div class="bg-success pd-10 radius-3 mr-b-10"><i class="fa fa-check"></i> <?= htmlspecialchars($fonnteTemplateMessage, ENT_QUOTES); ?></div><?php endif; ?>
+				<?php if ($fonnteTemplateError !== ''): ?><div class="bg-danger pd-10 radius-3 mr-b-10"><i class="fa fa-ban"></i> <?= htmlspecialchars($fonnteTemplateError, ENT_QUOTES); ?></div><?php endif; ?>
+				<p>Variabel: <code>{{nama_pelanggan}}</code>, <code>{{nama_brand}}</code>, <code>{{nomor_invoice}}</code>, <code>{{total_tagihan}}</code>, <code>{{jatuh_tempo}}</code>, <code>{{detail_layanan}}</code>, <code>{{tanggal_bayar}}</code>, <code>{{jatuh_tempo_berikutnya}}</code>.</p>
+				<form autocomplete="off" method="post" action="">
+					<input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>">
+					<div class="row">
+						<div class="col-6 col-box-12">
+							<label style="display:block">Pengingat H-<?= (int) ($fonnteConfig['reminder_days'] ?? 7); ?>
+								<textarea class="form-control" name="template_reminder" rows="7" required><?= htmlspecialchars($fonnteConfig['templates']['reminder'] ?? '', ENT_QUOTES); ?></textarea>
+							</label>
+							<label style="display:block">Pesan Isolir
+								<textarea class="form-control" name="template_isolation" rows="6" required><?= htmlspecialchars($fonnteConfig['templates']['isolation'] ?? '', ENT_QUOTES); ?></textarea>
+							</label>
+							<label style="display:block">Konfirmasi Pembayaran &amp; Aktif Kembali
+								<textarea class="form-control" name="template_payment" rows="6" required><?= htmlspecialchars($fonnteConfig['templates']['payment'] ?? '', ENT_QUOTES); ?></textarea>
+							</label>
+						</div>
+					</div>
+					<button class="btn bg-primary" type="submit" name="fonnte_template_save"><i class="fa fa-save"></i> Simpan Template WhatsApp</button>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
 <script>
 var _0x5b73=["\x75\x6E\x64\x65\x66\x69\x6E\x65\x64","\x4D\x69\x6B\x68\x6D\x6F\x6E\x53\x65\x73\x73\x69\x6F\x6E","\x69\x6E\x6E\x65\x72\x48\x54\x4D\x4C","\x67\x65\x74\x45\x6C\x65\x6D\x65\x6E\x74\x42\x79\x49\x64","\x73\x65\x74\x49\x74\x65\x6D","\x50\x6C\x65\x61\x73\x65\x20\x75\x73\x65\x20\x47\x6F\x6F\x67\x6C\x65\x20\x43\x68\x72\x6F\x6D\x65","\x67\x65\x74\x49\x74\x65\x6D","\x6E\x75\x6C\x6C","","\x4D\x69\x6B\x68\x6D\x6F\x6E\x20\x62\x61\x6A\x61\x6B\x61\x6E\x21\x20\x3A\x29","\x65\x64\x69\x74\x6F\x72\x4D\x69\x6B\x68\x6D\x6F\x6E","\x61\x70\x70\x6C\x69\x63\x61\x74\x69\x6F\x6E\x2F\x78\x2D\x68\x74\x74\x70\x64\x2D\x70\x68\x70","\x74\x6F\x4D\x61\x74\x63\x68\x69\x6E\x67\x54\x61\x67","\x66\x72\x6F\x6D\x54\x65\x78\x74\x41\x72\x65\x61","\x74\x68\x65\x6D\x65","\x6D\x61\x74\x65\x72\x69\x61\x6C","\x73\x65\x74\x4F\x70\x74\x69\x6F\x6E"];if( typeof (Storage)!== _0x5b73[0]){sessionStorage[_0x5b73[4]](_0x5b73[1],document[_0x5b73[3]](_0x5b73[1])[_0x5b73[2]])}else {alert(_0x5b73[5])};var session=sessionStorage[_0x5b73[6]](_0x5b73[1]);if(session=== _0x5b73[7]|| session=== _0x5b73[8]){alert(_0x5b73[9])};var editor=CodeMirror[_0x5b73[13]](document[_0x5b73[3]](_0x5b73[10]),{lineNumbers:true,matchBrackets:true,mode:_0x5b73[11],indentUnit:4,indentWithTabs:true,lineWrapping:true,viewportMargin:Infinity,matchTags:{bothTags:true},extraKeys:{"\x43\x74\x72\x6C\x2D\x4A":_0x5b73[12]}});editor[_0x5b73[16]](_0x5b73[14],_0x5b73[15])
 </script>
-
-
