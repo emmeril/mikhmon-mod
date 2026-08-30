@@ -15,6 +15,9 @@ roleTestAssert(getenv('MIKHMON_DATABASE_PATH') !== false, 'isolated database pat
 roleTestAssert(mikhmonDefaultRouterSession(array('mikhmon' => array(), 'router-a' => array('configured'))) === 'router-a', 'admin landing selects the first configured router');
 roleTestAssert(mikhmonAdminLandingUrl(array('mikhmon' => array(), 'router-a' => array('configured'))) === './?session=router-a', 'admin landing opens the router dashboard');
 roleTestAssert(mikhmonAdminLandingUrl(array('mikhmon' => array())) === './admin.php?id=sessions', 'admin landing falls back to settings when no router exists');
+$routerConfigLine = mikhmonBuildRouterConfigLine('router-a', array('1' => 'router-a!10.0.0.1', '2' => 'router-a@|@admin'));
+roleTestAssert(substr_count(trim($routerConfigLine), "\n") === 0, 'new router config stays on one removable line');
+roleTestAssert(strpos($routerConfigLine, "\$data['router-a'] = array (") !== false, 'new router config uses the existing config format');
 
 $mitraId = mikhmonSaveUser('', 'Mitra Satu', 'mitra1', 'mitra', 'router-a', 'secret', true);
 $billerId = mikhmonSaveUser('', 'Biller Satu', 'biller1', 'biller', 'router-a', 'secret', true);

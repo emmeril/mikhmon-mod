@@ -47,6 +47,14 @@ function mikhmonAdminLandingUrl($config = null) {
   return $session !== '' ? './?session=' . rawurlencode($session) : './admin.php?id=sessions';
 }
 
+function mikhmonBuildRouterConfigLine($session, $settings) {
+  $configValues = array();
+  foreach ((array) $settings as $configKey => $configValue) {
+    $configValues[] = var_export((string) $configKey, true) . '=>' . var_export((string) $configValue, true);
+  }
+  return "\n\$data[" . var_export((string) $session, true) . "] = array (" . implode(',', $configValues) . ");\n";
+}
+
 function mikhmonLoginStaff($username, $password) {
   $user = false;
   foreach (mikhmonGetUsers() as $candidate) {

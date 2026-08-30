@@ -23,63 +23,98 @@ if (!isset($_SESSION["mikhmon"])) {
   header("Location:../admin.php?id=login");
 } else {
 
-  if ($id == "settings" && explode("-",$router)[0] == "new") {
-    $data = '$data';
-    $f = fopen('./include/config.php', 'a');
-    fwrite($f, "\n'$'data['".$router."'] = array ('1'=>'".$router."!','".$router."@|@','".$router."#|#','".$router."%','".$router."^','".$router."&Rp','".$router."*10','".$router."(1','".$router.")','".$router."=10','".$router."@!@disable');");
-    fclose($f);
-    $search = "'$'data";
-    $replace = (string)"$data";
-    $file = file("./include/config.php");
-    $content = file_get_contents("./include/config.php");
-    $newcontent = str_replace((string)$search, (string)$replace, "$content");
-    file_put_contents("./include/config.php", "$newcontent");
-    $newRouterTarget = isset($_GET['return']) && $_GET['return'] === 'routers'
-      ? './admin.php?id=settings&session=' . rawurlencode($router) . '&return=routers'
-      : './admin.php?id=settings&session=' . rawurlencode($router);
-    echo "<script>window.location=" . json_encode($newRouterTarget) . "</script>";
+  $isNewRouter = $id == "settings" && !empty($router) && explode("-", $router, 2)[0] == "new" && empty($session);
+  if ($isNewRouter) {
+    $currency = 'Rp';
+    $areload = 10;
+    $iface = 1;
+    $idleto = 10;
+    $livereport = 'disable';
   }
 
   if (isset($_POST['save'])) {
 
-    $siphost = (preg_replace('/\s+/', '', $_POST['ipmik']));
-    $suserhost = ($_POST['usermik']);
-    $spasswdhost = encrypt($_POST['passmik']);
-    $shotspotname = str_replace("'","",$_POST['hotspotname']);
-    $sdnsname = ($_POST['dnsname']);
-    $scurrency = ($_POST['currency']);
-    $sreload = ($_POST['areload']);
+    $siphost = preg_replace('/\s+/', '', (string) $_POST['ipmik']);
+    $suserhost = trim((string) $_POST['usermik']);
+    $rawRouterPassword = (string) $_POST['passmik'];
+    $spasswdhost = encrypt($rawRouterPassword);
+    $shotspotname = trim(str_replace("'", "", (string) $_POST['hotspotname']));
+    $sdnsname = trim((string) $_POST['dnsname']);
+    $scurrency = trim((string) $_POST['currency']);
+    $sreload = (int) $_POST['areload'];
     if ($sreload < 10) {
       $sreload = 10;
     } else {
       $sreload = $sreload;
     }
-    $siface = ($_POST['iface']);
-    $sinfolp = implode(unpack("H*", $_POST['infolp']));
+    $siface = (int) $_POST['iface'];
+    $infoValue = isset($_POST['infolp']) ? (string) $_POST['infolp'] : '';
+    $sinfolp = $infoValue !== '' ? implode(unpack("H*", $infoValue)) : (string) $infolp;
     //$sinfolp = encrypt($_POST['infolp']);
     //$sinfolp = ($_POST['infolp']);
-    $sidleto = ($_POST['idleto']);
+    $sidleto = trim((string) $_POST['idleto']);
 
-    $sesname = (preg_replace('/\s+/', '-', $_POST['sessname']));
-    $slivereport = ($_POST['livereport']);
+    $sesname = preg_replace('/[^A-Za-z0-9_-]+/', '-', trim((string) $_POST['sessname']));
+    $sesname = trim($sesname, '-');
+    $slivereport = isset($_POST['livereport']) ? $_POST['livereport'] : (isset($livereport) && $livereport !== '' ? $livereport : 'disable');
 
-    $search = array('1' => "$session!$iphost", "$session@|@$userhost", "$session#|#$passwdhost", "$session%$hotspotname", "$session^$dnsname", "$session&$currency", "$session*$areload", "$session($iface", "$session)$infolp", "$session=$idleto", "'$session'", "$session@!@$livereport");
+    $requiredRouterDataComplete = $siphost !== ''
+      && $suserhost !== ''
+      && $rawRouterPassword !== ''
+      && $shotspotname !== ''
+      && $sdnsname !== ''
+      && $scurrency !== ''
+      && $siface > 0
+      && $sidleto !== '';
 
-    $replace = array('1' => "$sesname!$siphost", "$sesname@|@$suserhost", "$sesname#|#$spasswdhost", "$sesname%$shotspotname", "$sesname^$sdnsname", "$sesname&$scurrency", "$sesname*$sreload", "$sesname($siface", "$sesname)$sinfolp", "$sesname=$sidleto", "'$sesname'", "$sesname@!@$slivereport");
-
-    for ($i = 1; $i < 15; $i++) {
-      $file = file("./include/config.php");
-      $content = file_get_contents("./include/config.php");
-      $newcontent = str_replace((string)$search[$i], (string)$replace[$i], "$content");
-      file_put_contents("./include/config.php", "$newcontent");
+    if (!$requiredRouterDataComplete) {
+      echo "<script>alert('Lengkapi semua data router sebelum menyimpan.');</script>";
+    } elseif ($sesname === '' || strtolower($sesname) === 'mikhmon') {
+      echo "<script>alert('Nama router wajib diisi dan tidak boleh menggunakan nama Mikhmon.');</script>";
+    } elseif ($isNewRouter && isset($data[$sesname])) {
+      echo "<script>alert('Nama router sudah digunakan. Silakan pilih nama lain.');</script>";
+    } elseif ($isNewRouter) {
+      $newRouterData = array(
+        '1' => $sesname . '!' . $siphost,
+        '2' => $sesname . '@|@' . $suserhost,
+        '3' => $sesname . '#|#' . $spasswdhost,
+        '4' => $sesname . '%' . $shotspotname,
+        '5' => $sesname . '^' . $sdnsname,
+        '6' => $sesname . '&' . $scurrency,
+        '7' => $sesname . '*' . $sreload,
+        '8' => $sesname . '(' . $siface,
+        '9' => $sesname . ')' . $sinfolp,
+        '10' => $sesname . '=' . $sidleto,
+        '11' => $sesname . '@!@' . $slivereport,
+      );
+      $configLine = mikhmonBuildRouterConfigLine($sesname, $newRouterData);
+      file_put_contents('./include/config.php', $configLine, FILE_APPEND);
+      $_SESSION["connect"] = "";
+      $settingsTarget = isset($_GET['return']) && $_GET['return'] === 'routers'
+        ? './?admin=routers&session=' . rawurlencode($sesname)
+        : './admin.php?id=settings&session=' . rawurlencode($sesname);
+      echo "<script>window.location=" . json_encode($settingsTarget) . "</script>";
+      exit;
     }
-    $_SESSION["connect"] = "";
-    $settingsTarget = isset($_GET['return']) && $_GET['return'] === 'routers'
-      ? './?admin=routers&session=' . rawurlencode($sesname)
-      : './admin.php?id=settings&session=' . rawurlencode($sesname);
-    echo "<script>window.location=" . json_encode($settingsTarget) . "</script>";
+
+    if (!$isNewRouter && $sesname !== '' && isset($data[$session])) {
+      $search = array('1' => "$session!$iphost", "$session@|@$userhost", "$session#|#$passwdhost", "$session%$hotspotname", "$session^$dnsname", "$session&$currency", "$session*$areload", "$session($iface", "$session)$infolp", "$session=$idleto", "'$session'", "$session@!@$livereport");
+
+      $replace = array('1' => "$sesname!$siphost", "$sesname@|@$suserhost", "$sesname#|#$spasswdhost", "$sesname%$shotspotname", "$sesname^$sdnsname", "$sesname&$scurrency", "$sesname*$sreload", "$sesname($siface", "$sesname)$sinfolp", "$sesname=$sidleto", "'$sesname'", "$sesname@!@$slivereport");
+
+      for ($i = 1; $i < 12; $i++) {
+        $content = file_get_contents("./include/config.php");
+        $newcontent = str_replace((string) $search[$i], (string) $replace[$i], $content);
+        file_put_contents("./include/config.php", $newcontent);
+      }
+      $_SESSION["connect"] = "";
+      $settingsTarget = isset($_GET['return']) && $_GET['return'] === 'routers'
+        ? './?admin=routers&session=' . rawurlencode($sesname)
+        : './admin.php?id=settings&session=' . rawurlencode($sesname);
+      echo "<script>window.location=" . json_encode($settingsTarget) . "</script>";
+    }
   }
-  if ($currency == "") {
+  if ($currency == "" && !$isNewRouter) {
     echo "<script>window.location='./admin.php?id=settings&session=" . $session . "'</script>";
   }
 }
@@ -285,4 +320,3 @@ if (pingButton && sessionName) {
   };
 }
 </script>
-

@@ -237,7 +237,7 @@ if($idleto != "disable"){
   <a href="./admin.php?id=sessions" class="menu"><i class="fa fa-server"></i> Router</a>
   <a href="./admin.php?id=admin-settings" class="menu active"><i class="fa fa-user-circle"></i> <?= $_admin_settings ?></a>
   <a href="./admin.php?id=users" class="menu"><i class="fa fa-users"></i> Mitra &amp; Biller</a>
-<?php } elseif (($id == "settings" && $session == "new") || $id == "settings" && $router == "new") {
+<?php } elseif (($id == "settings" && $session == "new") || ($id == "settings" && !empty($router) && explode("-", $router, 2)[0] == "new")) {
 }else if ($id == "settings" || $id == "editor"|| $id == "uplogo" || $id == "database" || $id == "connect"){
 ?>  
   <div class="menu text-center align-middle card-header" style="border-radius:0;"><h3 id="MikhmonSession"><?= $session; ?></h3></div>
