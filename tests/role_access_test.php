@@ -65,12 +65,16 @@ roleTestAssert(!mikhmonCanOpenMainRoute('customer-list'), 'biller cannot open cu
 $invoice = array(
   'id' => 'invoice-test',
   'customer_id' => $customerOne,
+  'services' => mikhmonCustomerServices(mikhmonFindCustomer('router-a', $customerOne)),
+  'service_count' => 2,
   'status' => 'paid',
   'paid_at' => time(),
   'paid_by_user_id' => $billerId,
   'biller_commission' => 2500,
 );
 roleTestAssert(mikhmonSaveInvoice('router-a', $invoice) !== false, 'paid invoice can be saved');
+$savedInvoice = mikhmonGetInvoices('router-a')[0];
+roleTestAssert(count($savedInvoice['services']) === 2, 'one invoice can contain all customer services');
 $stats = mikhmonBillerCommissionStats('router-a', $billerId);
 roleTestAssert($stats['count'] === 1 && $stats['amount'] === 2500, 'biller earns Rp2.500 once per paid invoice');
 
