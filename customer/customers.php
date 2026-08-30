@@ -22,6 +22,8 @@ if (isset($_GET['created']) && $_GET['created'] === '1') {
   $customerMessage = 'Pelanggan dan user MikroTik berhasil dibuat.';
 } elseif (isset($_GET['updated']) && $_GET['updated'] === '1') {
   $customerMessage = 'Data pelanggan dan user MikroTik berhasil diperbarui.';
+} elseif (isset($_GET['service-added']) && $_GET['service-added'] === '1') {
+  $customerMessage = 'Layanan berhasil dikaitkan ke pelanggan.';
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -85,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 
-$customers = mikhmonVisibleCustomers($session);
+$customers = array_values(array_filter(mikhmonVisibleCustomers($session), function ($customer) { return count(mikhmonCustomerServices($customer)) > 0; }));
 $mitras = mikhmonIsAdmin() ? mikhmonGetUsers('mitra', $session) : array();
 ?>
 <div class="row"><div class="col-12"><div class="card">
@@ -98,7 +100,7 @@ $mitras = mikhmonIsAdmin() ? mikhmonGetUsers('mitra', $session) : array();
         <div class="input-group-6 col-box-6"><input id="customerSearch" type="text" style="padding:5.8px" class="group-item group-item-l" placeholder="<?= $_search ?>"></div>
         <div class="input-group-6 col-box-6"><select id="customerServiceFilter" class="group-item group-item-r"><option value="all">Layanan: Semua</option><option value="hotspot">Hotspot</option><option value="pppoe">PPPoE</option></select></div>
       </div></div>
-      <div class="col-6 text-right"><button id="customerReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button><?php if (mikhmonIsAdmin() || mikhmonIsMitra()): ?><a class="btn bg-primary" href="./?customer=add&session=<?= rawurlencode($session); ?>"><i class="fa fa-user-plus"></i> Tambah Pelanggan</a><?php endif; ?></div>
+      <div class="col-6 text-right"><button id="customerReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button><?php if (mikhmonIsAdmin() || mikhmonIsMitra()): ?><a class="btn bg-primary" href="./?customer=service-add&session=<?= rawurlencode($session); ?>"><i class="fa fa-link"></i> Tambah Layanan</a><?php endif; ?></div>
     </div>
     <style>
       #dataTable .customer-service-select { min-width:115px; }
@@ -116,7 +118,7 @@ $mitras = mikhmonIsAdmin() ? mikhmonGetUsers('mitra', $session) : array();
           $firstCustomerService = isset($customerServices[0]) ? $customerServices[0] : array('username' => '', 'profile' => '');
         ?>
         <tr class="customer-row" data-search="<?= htmlspecialchars(strtolower($customerSearchData), ENT_QUOTES); ?>" data-service="<?= htmlspecialchars(strtolower(implode(',', array_map(function ($item) { return $item['service']; }, $customerServices))), ENT_QUOTES); ?>"><td><?= $customerIndex + 1; ?></td><td><?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['phone']) ? $customerRow['phone'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['address']) ? $customerRow['address'] : '', ENT_QUOTES); ?></td><td class="customer-service-total"><?= count($customerServices); ?></td><td><select class="form-control customer-service-select"><?php foreach ($customerServices as $serviceIndex => $customerService): ?><option value="<?= $serviceIndex; ?>" data-type="<?= htmlspecialchars($customerService['service'], ENT_QUOTES); ?>" data-username="<?= htmlspecialchars($customerService['username'], ENT_QUOTES); ?>" data-profile="<?= htmlspecialchars($customerService['profile'], ENT_QUOTES); ?>"><?= strtoupper(htmlspecialchars($customerService['service'], ENT_QUOTES)); ?></option><?php endforeach; ?></select></td><td class="customer-username-cell"><?= htmlspecialchars($firstCustomerService['username'], ENT_QUOTES); ?></td><td class="customer-profile-cell"><?= htmlspecialchars($firstCustomerService['profile'] !== '' ? $firstCustomerService['profile'] : 'Profile belum diatur', ENT_QUOTES); ?></td><td><?php if (mikhmonIsAdmin()): ?><form method="post" style="min-width:160px"><input type="hidden" name="customer_action" value="assign_mitra"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>"><select class="form-control" name="mitra_id" onchange="this.form.submit()"><option value="">Belum ditetapkan</option><?php foreach ($mitras as $mitra): ?><option value="<?= htmlspecialchars($mitra['id'], ENT_QUOTES); ?>"<?= isset($customerRow['mitra_id']) && $customerRow['mitra_id'] === $mitra['id'] ? ' selected' : ''; ?>><?= htmlspecialchars($mitra['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select></form><?php else: ?><?= htmlspecialchars(mikhmonUserName(), ENT_QUOTES); ?><?php endif; ?></td>
-        <td><a class="btn bg-primary" href="./?customer=edit&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-edit"></i> Edit</a> <button type="button" class="btn bg-danger customer-delete-button" data-customer-id="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>" data-customer-name="<?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?>" data-customer-username="<?= htmlspecialchars($customerUsername, ENT_QUOTES); ?>"><i class="fa fa-trash"></i> Hapus</button></td>
+        <td><a class="btn bg-primary" href="./?customer=identity-edit&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-edit"></i> Edit Identitas</a> <a class="btn bg-secondary" href="./?customer=service-add&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-plus"></i> Layanan</a> <button type="button" class="btn bg-danger customer-delete-button" data-customer-id="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>" data-customer-name="<?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?>" data-customer-username="<?= htmlspecialchars($customerUsername, ENT_QUOTES); ?>"><i class="fa fa-trash"></i> Hapus</button></td>
       </tr><?php endforeach; ?>
       <?php if (!$customers): ?><tr class="customer-info-row"><td colspan="10" class="text-center"><?= mikhmonIsMitra() ? 'Belum ada pelanggan yang ditetapkan kepada Anda.' : 'Belum ada data pelanggan.'; ?></td></tr><?php endif; ?>
       <tr id="customerNoResults" style="display:none"><td colspan="10" class="text-center">Data pelanggan tidak ditemukan.</td></tr>

@@ -151,7 +151,7 @@ $pppoeCustomers = count($pppoeCustomerNames);
       <div id="r_ppp" class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-exchange"></i> PPPoE</h3></div><div class="card-body"><div class="row">
         <div class="col-4 col-box-6"><div class="box bg-blue bmh-75"><a href="./?ppp=active&session=<?= $session; ?>"><h1><?= count($mitraPppActive); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-wifi"></i> <?= $_ppp_active ?></div></a></div></div>
         <div class="col-4 col-box-6"><div class="box bg-green bmh-75"><a href="./?ppp=secrets&session=<?= $session; ?>"><h1><?= count($mitraPppSecrets); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-users"></i> <?= $_ppp_secrets ?></div></a></div></div>
-        <div class="col-4 col-box-6"><div class="box bg-yellow bmh-75"><a href="./?customer=add&service=pppoe&session=<?= $session; ?>"><h1><i class="fa fa-user-plus"></i> <span style="font-size:15px"><?= $_add ?></span></h1><div><i class="fa fa-user-plus"></i> <?= $_ppp_secrets ?></div></a></div></div>
+        <div class="col-4 col-box-6"><div class="box bg-yellow bmh-75"><a href="./?customer=service-add&service=pppoe&session=<?= $session; ?>"><h1><i class="fa fa-user-plus"></i> <span style="font-size:15px"><?= $_add ?></span></h1><div><i class="fa fa-user-plus"></i> <?= $_ppp_secrets ?></div></a></div></div>
       </div></div></div></div>
 
       <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-area-chart"></i> <?= $_traffic ?></h3></div><div class="card-body">

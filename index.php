@@ -153,9 +153,12 @@ if (!isset($_SESSION["mikhmon"])) {
   if ($hotspot == 'logout') $requestedRoute = 'logout';
   elseif ($billing == '1') $requestedRoute = 'billing';
   elseif ($commission == '1') $requestedRoute = 'commission';
-  elseif ($customer == 'list' && $customerid == '') $requestedRoute = 'customer-list';
-  elseif (($customer == 'edit' || ($customer == 'list' && $customerid != ''))) $requestedRoute = 'customer-edit';
-  elseif ($customer == 'add') $requestedRoute = 'customer-add';
+  elseif ($customer == 'list' && $customerid != '') $requestedRoute = 'customer-identity-edit';
+  elseif ($customer == 'list') $requestedRoute = 'customer-list';
+  elseif ($customer == 'identity-list') $requestedRoute = 'customer-identity-list';
+  elseif ($customer == 'identity-edit' || $customer == 'edit') $requestedRoute = 'customer-identity-edit';
+  elseif ($customer == 'identity-add' || $customer == 'add') $requestedRoute = 'customer-identity-add';
+  elseif ($customer == 'service-add') $requestedRoute = 'customer-service-add';
   elseif ($report == 'selling') $requestedRoute = 'report-selling';
   elseif ($report == 'resume-report') $requestedRoute = 'report-resume';
   elseif ($admin == 'settings') $requestedRoute = 'admin-settings';
@@ -246,12 +249,20 @@ if (!isset($_SESSION["mikhmon"])) {
   elseif ($billing == "1") {
     include_once('./customer/billing.php');
   }
-  elseif ($customer == "list" && $customerid == "") {
+  elseif ($customer == "list" && $customerid != "") {
+    include_once('./customer/identityadd.php');
+  }
+  elseif ($customer == "list") {
     include_once('./customer/customers.php');
   }
-
-  elseif ($customer == "add" || $customer == "edit" || ($customer == "list" && $customerid != "")) {
-    include_once('./customer/addcustomer.php');
+  elseif ($customer == "identity-list") {
+    include_once('./customer/identities.php');
+  }
+  elseif ($customer == "identity-add" || $customer == "identity-edit" || $customer == "edit" || $customer == "add") {
+    include_once('./customer/identityadd.php');
+  }
+  elseif ($customer == "service-add") {
+    include_once('./customer/serviceadd.php');
   }
 
 // hotspot log

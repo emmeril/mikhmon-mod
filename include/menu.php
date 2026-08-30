@@ -105,10 +105,13 @@ if (!isset($_SESSION["mikhmon"])) {
     $customermenu = "menu-open";
     $sbilling = "active";
     $mpage = "Billing";
-  } elseif ($customer == "list" || $customer == "add" || $customer == "edit") {
+  } elseif (in_array($customer, array("list", "identity-list", "identity-add", "identity-edit", "service-add", "add", "edit"), true)) {
     $mcustomers = "active";
     $customermenu = "menu-open";
-    if ($customer == "add") { $saddcustomer = "active"; } else { $scustomers = "active"; }
+    if ($customer == "identity-add" || $customer == "add") $sidentityadd = "active";
+    elseif ($customer == "identity-list" || $customer == "identity-edit" || $customer == "edit" || ($customer == "list" && $customerid != "")) $sidentitylist = "active";
+    elseif ($customer == "service-add") $sserviceadd = "active";
+    else $scustomers = "active";
     $mpage = "Pelanggan";
   } elseif ($report == "userlog") {
     $log = "active";
@@ -350,7 +353,7 @@ include('./info.php');
   <div class="dropdown-btn <?= $susers . $sactive . $susersbp; ?>"><i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $umenu . $hamenu; ?>">
     <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-users"></i> <?= $_user_list ?></a>
-    <a href="./?customer=add&service=hotspot&session=<?= $session; ?>" class="<?= $saddcustomer; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_add_user ?></a>
+    <a href="./?customer=service-add&service=hotspot&session=<?= $session; ?>" class="<?= $sserviceadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_add_user ?></a>
     <a href="./?hotspot-user=generate&session=<?= $session; ?>" class="<?= $sgenuser; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_generate ?></a>
     <a href="./?hotspot=users-by-profile&session=<?= $session; ?>" class="<?= $susersbp; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-ticket"></i> <?= $_vouchers ?></a>
     <a href="./?hotspot=active&session=<?= $session; ?>" class="<?= $sactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi"></i> <?= $_hotspot_active ?></a>
@@ -358,13 +361,15 @@ include('./info.php');
   <div class="dropdown-btn <?= $mppp; ?>"><i class="fa fa-exchange"></i> PPPoE <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $pppmenu; ?>">
     <a href="./?ppp=secrets&session=<?= $session; ?>" class="<?= $ssecrets; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-users"></i> <?= $_ppp_secrets ?></a>
-    <a href="./?customer=add&service=pppoe&session=<?= $session; ?>" class="<?= $saddcustomer; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_add_user ?></a>
+    <a href="./?customer=service-add&service=pppoe&session=<?= $session; ?>" class="<?= $sserviceadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_add_user ?></a>
     <a href="./?ppp=active&session=<?= $session; ?>" class="<?= $spactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi"></i> <?= $_ppp_active ?></a>
   </div>
   <div class="dropdown-btn <?= $mcustomers; ?>"><i class="fa fa-address-card"></i> Pelanggan <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $customermenu; ?>">
-    <a href="./?customer=add&session=<?= $session; ?>" class="<?= $saddcustomer; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> Tambah Pelanggan</a>
-    <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> Pelanggan Saya</a>
+    <a href="./?customer=identity-add&session=<?= $session; ?>" class="<?= $sidentityadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> Tambah Identitas</a>
+    <a href="./?customer=identity-list&session=<?= $session; ?>" class="<?= $sidentitylist; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-id-card"></i> Daftar Identitas</a>
+    <a href="./?customer=service-add&session=<?= $session; ?>" class="<?= $sserviceadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-link"></i> Tambah Layanan</a>
+    <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> Daftar Pelanggan</a>
   </div>
   <a href="./?hotspot=print-center&session=<?= $session; ?>" class="menu <?= $sprintcenter; ?>"><i class="fa fa-print"></i> Print Center</a>
   <div class="dropdown-btn <?= $sselling; ?>"><i class="fa fa-money"></i> <?= $_report ?> <i class="fa fa-caret-down"></i></div>
@@ -417,7 +422,9 @@ include('./info.php');
   </div>
   <div class="dropdown-btn <?= $mcustomers; ?>"><i class="fa fa-address-card"></i> Pelanggan <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $customermenu; ?>">
-    <a href="./?customer=add&session=<?= $session; ?>" class="<?= $saddcustomer; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> Tambah Pelanggan</a>
+    <a href="./?customer=identity-add&session=<?= $session; ?>" class="<?= $sidentityadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> Tambah Identitas</a>
+    <a href="./?customer=identity-list&session=<?= $session; ?>" class="<?= $sidentitylist; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-id-card"></i> Daftar Identitas</a>
+    <a href="./?customer=service-add&session=<?= $session; ?>" class="<?= $sserviceadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-link"></i> Tambah Layanan</a>
     <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> Daftar Pelanggan</a>
     <a href="./?billing=1&session=<?= $session; ?>" class="<?= $sbilling; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-money"></i> Billing</a>
   </div>

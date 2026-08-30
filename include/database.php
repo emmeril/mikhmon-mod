@@ -322,6 +322,76 @@ function mikhmonSaveCustomer($session, $id, $name, $phone, $address, $service, $
   )), $mitraId);
 }
 
+function mikhmonSaveCustomerIdentity($session, $id, $name, $phone, $address, $mitraId = null) {
+  $database = mikhmonReadDatabase();
+  if (!isset($database['customers'][$session]) || !is_array($database['customers'][$session])) $database['customers'][$session] = array();
+  $name = trim(strip_tags((string) $name));
+  if ($name === '') return false;
+
+  $existingCustomer = array();
+  $nameKey = mikhmonCustomerNameKey($name);
+  foreach ($database['customers'][$session] as $existing) {
+    if ($nameKey === '' || mikhmonCustomerNameKey($existing['name'] ?? '') !== $nameKey) continue;
+    if ($id !== '' && (string) ($existing['id'] ?? '') !== (string) $id) return false;
+  }
+  if ($id === '') {
+    foreach ($database['customers'][$session] as $existing) {
+      if ($nameKey !== '' && mikhmonCustomerNameKey($existing['name'] ?? '') === $nameKey) {
+        $id = (string) ($existing['id'] ?? '');
+        $existingCustomer = mikhmonNormalizeCustomer($existing);
+        break;
+      }
+    }
+  }
+  foreach ($database['customers'][$session] as $existing) {
+    if ($id !== '' && isset($existing['id']) && (string) $existing['id'] === (string) $id) {
+      $existingCustomer = mikhmonNormalizeCustomer($existing);
+      break;
+    }
+  }
+
+  $customer = mikhmonNormalizeCustomer(array(
+    'id' => $id !== '' ? (string) $id : 'customer-' . uniqid(),
+    'name' => $name,
+    'phone' => trim(strip_tags((string) $phone)),
+    'address' => trim(strip_tags((string) $address)),
+    'services' => mikhmonCustomerServices($existingCustomer),
+    'mitra_id' => $mitraId !== null ? trim(strip_tags((string) $mitraId)) : ($existingCustomer['mitra_id'] ?? ''),
+    'due_date' => $existingCustomer['due_date'] ?? '',
+    'updated_at' => time(),
+  ));
+  foreach ($database['customers'][$session] as $index => $existing) {
+    if (isset($existing['id']) && (string) $existing['id'] === (string) $customer['id']) {
+      $database['customers'][$session][$index] = $customer;
+      return mikhmonWriteDatabase($database) ? $customer['id'] : false;
+    }
+  }
+  $database['customers'][$session][] = $customer;
+  return mikhmonWriteDatabase($database) ? $customer['id'] : false;
+}
+
+function mikhmonAddCustomerService($session, $customerId, $service) {
+  $customer = mikhmonFindCustomer($session, $customerId);
+  if (!$customer || !is_array($service)) return false;
+  $serviceType = ($service['service'] ?? '') === 'pppoe' ? 'pppoe' : 'hotspot';
+  $username = trim(strip_tags((string) ($service['username'] ?? '')));
+  if ($username === '') return false;
+  foreach (mikhmonGetCustomers($session) as $candidate) {
+    foreach (mikhmonCustomerServices($candidate) as $existingService) {
+      if ($existingService['service'] === $serviceType && strtolower($existingService['username']) === strtolower($username)) return false;
+    }
+  }
+  $services = mikhmonCustomerServices($customer);
+  $services[] = array(
+    'id' => 'service-' . uniqid(),
+    'service' => $serviceType,
+    'username' => $username,
+    'profile' => trim(strip_tags((string) ($service['profile'] ?? ''))),
+    'server' => trim(strip_tags((string) ($service['server'] ?? 'all'))),
+  );
+  return mikhmonSaveCustomerWithServices($session, $customer['id'], $customer['name'], $customer['phone'] ?? '', $customer['address'] ?? '', $services, $customer['mitra_id'] ?? '');
+}
+
 function mikhmonSaveCustomerWithServices($session, $id, $name, $phone, $address, $services, $mitraId = null) {
   $database = mikhmonReadDatabase();
   if (!isset($database['customers'][$session]) || !is_array($database['customers'][$session])) {
@@ -373,6 +443,7 @@ function mikhmonSaveCustomerWithServices($session, $id, $name, $phone, $address,
     'address' => $matchedByName && mikhmonCustomerValueIsEmpty($address) ? ($existingCustomer['address'] ?? '') : trim(strip_tags($address)),
     'services' => $normalizedServices,
     'mitra_id' => $matchedByName && mikhmonCustomerValueIsEmpty($mitraId) ? ($existingCustomer['mitra_id'] ?? '') : ($mitraId !== null ? trim(strip_tags($mitraId)) : (isset($existingCustomer['mitra_id']) ? $existingCustomer['mitra_id'] : '')),
+    'due_date' => $existingCustomer['due_date'] ?? '',
     'updated_at' => time(),
   );
   $customer = mikhmonNormalizeCustomer($customer);

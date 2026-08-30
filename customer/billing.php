@@ -275,7 +275,7 @@ function billingSyncUnpaidInvoice($session, &$invoices, $customer, $customerUser
   return $changed;
 }
 
-$customers = mikhmonGetCustomers($session);
+$customers = array_values(array_filter(mikhmonGetCustomers($session), function ($customer) { return count(mikhmonCustomerServices($customer)) > 0; }));
 $invoices = mikhmonGetInvoices($session);
 $hotspotProfiles = array(); $pppoeProfiles = array();
 $customerUsers = array('hotspot' => array(), 'pppoe' => array());
