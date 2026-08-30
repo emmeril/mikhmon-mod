@@ -63,6 +63,7 @@ if ($_SESSION['theme'] == "") {
 include_once('./include/headhtml.php');
 include('./include/config.php');
 include('./include/readcfg.php');
+include_once('./include/access.php');
 
 include_once('./lib/routeros_api.class.php');
 include_once('./lib/formatbytesbites.php');
@@ -72,15 +73,21 @@ include_once('./lib/formatbytesbites.php');
 if ($id == "login" || substr($url, -1) == "p") {
 
   if (isset($_POST['login'])) {
-    $user = $_POST['user'];
-    $pass = $_POST['pass'];
+    $user = trim((string) $_POST['user']);
+    $pass = (string) $_POST['pass'];
     if ($user == $useradm && $pass == decrypt($passadm)) {
-      $_SESSION["mikhmon"] = $user;
-
-        echo "<script>window.location='./admin.php?id=sessions'</script>";
-    
+      mikhmonSetLoginSession(array('username' => $user, 'name' => 'Administrator'), 'admin');
+      echo "<script>window.location='./admin.php?id=sessions'</script>";
     } else {
-      $error = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-danger"><i class="fa fa-ban"></i> Alert!<br>Invalid username or password.</div>';
+      $staff = mikhmonLoginStaff($user, $pass);
+      if ($staff) {
+        mikhmonSetLoginSession($staff);
+        $staffSession = rawurlencode($staff['session']);
+        $target = $staff['role'] === 'biller' ? './?billing=1&session=' . $staffSession : './?session=' . $staffSession;
+        echo "<script>window.location=" . json_encode($target) . "</script>";
+      } else {
+        $error = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-danger"><i class="fa fa-ban"></i> Alert!<br>Invalid username or password.</div>';
+      }
     }
   }
   
@@ -88,6 +95,13 @@ if ($id == "login" || substr($url, -1) == "p") {
   include_once('./include/login.php');
 } elseif (!isset($_SESSION["mikhmon"])) {
   echo "<script>window.location='./admin.php?id=login'</script>";
+} elseif (!mikhmonRefreshStaffSession()) {
+  session_destroy();
+  echo "<script>window.location='./admin.php?id=login'</script>";
+} elseif (!mikhmonIsAdmin() && $id !== 'logout') {
+  $staffSession = rawurlencode(mikhmonAssignedSession());
+  $target = mikhmonIsBiller() ? './?billing=1&session=' . $staffSession : './?session=' . $staffSession;
+  echo "<script>window.location=" . json_encode($target) . "</script>";
 } elseif (substr($url, -1) == "/" || substr($url, -4) == ".php") {
   echo "<script>window.location='./admin.php?id=sessions'</script>";
 
@@ -103,6 +117,9 @@ if ($id == "login" || substr($url, -1) == "p") {
         return false;
     };
     </script>';*/
+} elseif ($id == "users") {
+  include_once('./include/menu.php');
+  include_once('./settings/users.php');
 } elseif ($id == "settings" && !empty($session) || $id == "settings" && !empty($router)) {
   include_once('./include/menu.php');
   include_once('./settings/settings.php');

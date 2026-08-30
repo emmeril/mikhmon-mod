@@ -88,6 +88,10 @@ date_default_timezone_set($_SESSION['timezone']);
 		} else {
 			$adcomment = $adcomment;
 		}
+		$ownerTag = function_exists('mikhmonOwnerTag') ? mikhmonOwnerTag() : '';
+		if ($ownerTag !== '') {
+			$adcomment = $ownerTag . ($adcomment !== '' ? ' ' . $adcomment : '');
+		}
 		$getprofile = $API->comm("/ip/hotspot/user/profile/print", array("?name" => "$profile"));
 		$ponlogin = $getprofile[0]['on-login'];
 		$getvalid = explode(",", $ponlogin)[3];
@@ -223,7 +227,7 @@ date_default_timezone_set($_SESSION['timezone']);
 		}
 
 
-		if ($qty < 2) {
+		if ($qty < 2 && !(function_exists('mikhmonIsMitra') && mikhmonIsMitra())) {
 			echo "<script>window.location='./?hotspot-user=" . $u[1] . "&session=" . $session . "'</script>";
 		} else {
 			echo "<script>window.location='./?hotspot-user=generate&session=" . $session . "'</script>";

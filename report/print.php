@@ -32,6 +32,11 @@ if (!isset($_SESSION["mikhmon"])) {
 
   // load config
   include('../include/config.php');
+  include_once('../include/access.php');
+	if (!mikhmonIsAdmin() && (!mikhmonIsMitra() || mikhmonAssignedSession() !== (string) $session)) {
+		header('Location:../admin.php?id=login');
+		exit;
+	}
   include('../include/readcfg.php');
 
   // routeros api
@@ -69,7 +74,7 @@ if (!isset($_SESSION["mikhmon"])) {
 	$timezone = $gettimezone[0]['time-zone-name'];
 	date_default_timezone_set($timezone);
 
-	if (isset($remdata)) {
+	if (isset($remdata) && mikhmonIsAdmin()) {
 		if (strlen($idhr) > "0") {
 			if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
 				$API->write('/system/script/print', false);
@@ -151,6 +156,13 @@ if (!isset($_SESSION["mikhmon"])) {
 	}
 
 	$getData = mikhmonFilterReportRecords($getData);
+	if (mikhmonIsMitra()) {
+		$mitraUsernames = mikhmonMitraUsernames($session);
+		$getData = array_values(array_filter($getData, function ($row) use ($mitraUsernames) {
+			$parts = mikhmonReportParts($row);
+			return mikhmonRowBelongsToCurrentMitra($row) || (isset($parts[2]) && isset($mitraUsernames[trim($parts[2])]));
+		}));
+	}
 	$hotspotProfiles = $API->comm('/ip/hotspot/user/profile/print');
 	$pppProfiles = $API->comm('/ppp/profile/print');
 	$profileCosts = mikhmonReportProfileCosts($hotspotProfiles, $pppProfiles);

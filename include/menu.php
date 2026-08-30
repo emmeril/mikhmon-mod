@@ -147,6 +147,7 @@ if (!isset($_SESSION["mikhmon"])) {
     $upmenu = "menu-open";
   } elseif ($hotspot == "users-by-profile") {
     $susersbp = "active";
+    $umenu = "menu-open";
     $mpage = $_vouchers;
   } elseif ($userbyname != "") {
     $mpage = $_users;
@@ -154,6 +155,9 @@ if (!isset($_SESSION["mikhmon"])) {
   } elseif ($id == "sessions" || $id == "remove" || $router == "new") {
     $ssesslist = "active";
     $mpage = $_admin_settings;
+  } elseif ($id == "users") {
+    $susersadmin = "active";
+    $mpage = "Mitra & Biller";
   } elseif ($id == "settings" && $session == "new") {
     $snsettings = "active";
     $mpage = $_add_router;
@@ -232,6 +236,7 @@ if($idleto != "disable"){
 <?php 
 } ?>  
   <a href="./admin.php?id=sessions" class="menu <?= $ssesslist; ?>"><i class="fa fa-gear"></i> <?= $_admin_settings ?></a>
+  <a href="./admin.php?id=users" class="menu <?= $susersadmin; ?>"><i class="fa fa-users"></i> Mitra &amp; Biller</a>
   <a href="./admin.php?id=settings&router=new-<?= rand(1111,9999) ?>" class="menu <?= $snsettings ?>"><i class="fa fa-plus"></i> <?= $_add_router ?></a>
 
 </div>
@@ -280,6 +285,7 @@ include('./info.php');
       <?php
       foreach (file('./include/config.php') as $line) {
         $sesname = explode("'", $line)[1];
+        if (!mikhmonIsAdmin() && $sesname !== mikhmonAssignedSession()) continue;
         if ($sesname == "" || $sesname== "mikhmon") {
         } else {
         if($sesname == $session){
@@ -297,7 +303,37 @@ include('./info.php');
 </div>
 
 <div id="sidenav" class="sidenav">
-  <div class="menu text-center align-middle card-header" style="border-radius:0;"><h3><?= $identity; ?></h3></div>
+  <div class="menu text-center align-middle card-header" style="border-radius:0;"><h3><?= $identity; ?></h3><?php if (!mikhmonIsAdmin()): ?><small><?= htmlspecialchars(mikhmonUserName(), ENT_QUOTES); ?> &middot; <?= strtoupper(htmlspecialchars(mikhmonRole(), ENT_QUOTES)); ?></small><?php endif; ?></div>
+<?php if (mikhmonIsBiller()): ?>
+  <a href="./?billing=1&session=<?= $session; ?>" class="menu <?= $sbilling; ?>"><i class="fa fa-money"></i> Billing</a>
+<?php elseif (mikhmonIsMitra()): ?>
+  <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
+  <div class="dropdown-btn <?= $susers . $sactive . $susersbp; ?>"><i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-container <?= $umenu . $hamenu; ?>">
+    <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-users"></i> Voucher Saya</a>
+    <a href="./?customer=add&service=hotspot&session=<?= $session; ?>" class="<?= $saddcustomer; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> Tambah Pelanggan Hotspot</a>
+    <a href="./?hotspot-user=generate&session=<?= $session; ?>" class="<?= $sgenuser; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> Generate Voucher</a>
+    <a href="./?hotspot=users-by-profile&session=<?= $session; ?>" class="<?= $susersbp; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-ticket"></i> Voucher per Profile</a>
+    <a href="./?hotspot=active&session=<?= $session; ?>" class="<?= $sactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi"></i> <?= $_hotspot_active ?></a>
+  </div>
+  <div class="dropdown-btn <?= $mppp; ?>"><i class="fa fa-exchange"></i> PPPoE <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-container <?= $pppmenu; ?>">
+    <a href="./?ppp=secrets&session=<?= $session; ?>" class="<?= $ssecrets; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-users"></i> Pelanggan PPPoE</a>
+    <a href="./?customer=add&service=pppoe&session=<?= $session; ?>" class="<?= $saddcustomer; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> Tambah Pelanggan PPPoE</a>
+    <a href="./?ppp=active&session=<?= $session; ?>" class="<?= $spactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi"></i> <?= $_ppp_active ?></a>
+  </div>
+  <div class="dropdown-btn <?= $mcustomers; ?>"><i class="fa fa-address-card"></i> Pelanggan <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-container <?= $customermenu; ?>">
+    <a href="./?customer=add&session=<?= $session; ?>" class="<?= $saddcustomer; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> Tambah Pelanggan</a>
+    <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> Pelanggan Saya</a>
+  </div>
+  <div class="dropdown-btn <?= $sselling; ?>"><i class="fa fa-money"></i> <?= $_report ?> <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-container <?= $reportmenu; ?>">
+    <a href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&session=<?= $session; ?>" class="<?= $sreportall; ?>"><i class="fa fa-list"></i> Semua</a>
+    <a href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&service=hotspot&session=<?= $session; ?>" class="<?= $sreporthotspot; ?>"><i class="fa fa-wifi"></i> Hotspot</a>
+    <a href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&service=pppoe&session=<?= $session; ?>" class="<?= $sreportpppoe; ?>"><i class="fa fa-exchange"></i> PPPoE</a>
+  </div>
+<?php else: ?>
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
   <!--hotspot-->
   <div class="dropdown-btn <?= $susers . $suserprof . $sactive . $shosts . $sipbind . $scookies; ?>"><i class="fa fa-wifi"></i> Hotspot
@@ -388,6 +424,7 @@ include('./info.php');
   <a href="./admin.php?id=database&session=<?= $session; ?>" class="menu <?= $sdatabase; ?>"><i class="fa fa-database"></i> Database Backup</a>
   <a href="./?hotspot=template-editor&template=default&session=<?= $session; ?>" class="menu <?= $teditor; ?>"> <i class="fa fa-edit "></i> <?= $_template_editor ?> </a>          
   </div>
+<?php endif; ?>
 
 </div>
 <script>

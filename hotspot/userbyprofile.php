@@ -18,6 +18,17 @@
 
 // hide all error
 error_reporting(0);
+
+if (function_exists('mikhmonIsMitra') && mikhmonIsMitra()) {
+  $mitraVoucherUsers = array();
+  foreach ((array) $API->comm('/ip/hotspot/user/print') as $voucherUser) {
+    if (mikhmonRowBelongsToCurrentMitra($voucherUser)) $mitraVoucherUsers[] = $voucherUser;
+  }
+  $mitraVoucherProfiles = array();
+  foreach ($mitraVoucherUsers as $voucherUser) {
+    if (!empty($voucherUser['profile'])) $mitraVoucherProfiles[(string) $voucherUser['profile']] = true;
+  }
+}
 if (!isset($_SESSION["mikhmon"])) {
   header("Location:../admin.php?id=login");
 } else {
@@ -43,7 +54,7 @@ if (!isset($_SESSION["mikhmon"])) {
             </div>
               <div class="box-group-area">
                 <h3 >Profile : all<br>
-                <?php $countuser = $API->comm("/ip/hotspot/user/print", array("count-only" => ""));
+                <?php $countuser = isset($mitraVoucherUsers) ? count($mitraVoucherUsers) : $API->comm("/ip/hotspot/user/print", array("count-only" => ""));
                 if ($countuser < 2) {
                   echo $countuser . " Item";
                 } elseif ($countuser > 1) {
@@ -65,6 +76,7 @@ $TotalReg = count($getprofile);
 for ($i = 0; $i < $TotalReg; $i++) {
   $profiledetalis = $getprofile[$i];
   $pname = $profiledetalis['name'];
+  if (isset($mitraVoucherUsers) && !isset($mitraVoucherProfiles[$pname])) { continue; }
   ?>
 	     <div class="col-4">
         <div class="box bmh-75 box-bordered <?= $color[rand(1, 11)]; ?>">
@@ -75,7 +87,7 @@ for ($i = 0; $i < $TotalReg; $i++) {
             </div>
               <div class="box-group-area">
                 <h3 >Profile : <?= $pname; ?><br>
-                <?php	$countuser = $API->comm("/ip/hotspot/user/print", array("count-only" => "", "?profile" => "$pname", ));
+                <?php	$countuser = isset($mitraVoucherUsers) ? count(array_filter($mitraVoucherUsers, function ($voucherUser) use ($pname) { return isset($voucherUser['profile']) && (string) $voucherUser['profile'] === (string) $pname; })) : $API->comm("/ip/hotspot/user/print", array("count-only" => "", "?profile" => "$pname", ));
                 if ($countuser < 2) {
                   echo $countuser . " Item";
                 } elseif ($countuser > 1) {

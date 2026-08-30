@@ -27,6 +27,11 @@ $session = $_GET['session'];
 
 // load config
   include('../include/config.php');
+  include_once('../include/access.php');
+  if (!mikhmonIsAdmin() && (!mikhmonIsMitra() || mikhmonAssignedSession() !== (string) $session)) {
+    header('Location:../admin.php?id=login');
+    exit;
+  }
   include('../include/readcfg.php');
 
 $idbl = $_GET['idbl'];
@@ -169,4 +174,4 @@ for ($i = 1; $i < $totD; $i++) {
 
 </script>
                 </div>
-              </div>  
+              </div>

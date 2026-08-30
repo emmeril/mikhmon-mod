@@ -45,7 +45,7 @@ if (!isset($_SESSION["mikhmon"])) {
 	$timezone = $gettimezone[0]['time-zone-name'];
 	date_default_timezone_set($timezone);
 
-	if (isset($remdata)) {
+	if (isset($remdata) && mikhmonIsAdmin()) {
 		if (strlen($idhr) > "0") {
 			if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
 				$API->write('/system/script/print', false);
@@ -125,6 +125,13 @@ if (!isset($_SESSION["mikhmon"])) {
 	}
 
 	$getData = mikhmonFilterReportRecords($getData);
+	if (mikhmonIsMitra()) {
+		$mitraUsernames = mikhmonMitraUsernames($session);
+		$getData = array_values(array_filter($getData, function ($row) use ($mitraUsernames) {
+			$parts = mikhmonReportParts($row);
+			return mikhmonRowBelongsToCurrentMitra($row) || (isset($parts[2]) && isset($mitraUsernames[trim($parts[2])]));
+		}));
+	}
 	$hotspotProfiles = $API->comm('/ip/hotspot/user/profile/print');
 	$pppProfiles = $API->comm('/ppp/profile/print');
 	$profileCosts = mikhmonReportProfileCosts($hotspotProfiles, $pppProfiles);
@@ -250,8 +257,8 @@ $(document).ready(function(){
 			<?php if(!empty($idbl)){echo '<button name="resume" id="openResume" class="btn bg-primary"title="Resume Report"><i class="fa fa-area-chart"></i> '.$_resume.'</button>';}else{
 				echo '<a class="btn bg-primary" href="./?report=selling&idbl='.$idbl2.$serviceQuery.'&session='.$session.'" title="Show '.ucfirst(substr($idbl2,0,3).' '.substr($idbl2,3,5)).'"><i class="fa fa-search"></i> '.ucfirst(substr($idbl2,0,3).' '.substr($idbl2,3,5)).'</a>';}?>
 		  <button name="print" class="btn bg-primary" onclick="window.open('./report/print.php?<?= explode("?report=selling&",$url)[1] ?>','_blank');" title="Print"><i class="fa fa-print"></i> <?= $_print ?></button>
-		  <button style="display: <?= $shd; ?>;" name="remdata" class="btn bg-danger" onclick="location.href='#remdata';" title="Delete Data <?= $filedownload; ?>"><i class="fa fa-trash"></i> <?= $_delete_data.' '. $filedownload; ?></button>
-		  <button  id="remSelected" style="display: none;" class="btn bg-red" onclick="MikhmonRemoveReportSelected()"><i class="fa fa-trash"></i> <span id="selected"></span> <?= $_selected ?></button>
+		  <?php if (mikhmonIsAdmin()): ?><button style="display: <?= $shd; ?>;" name="remdata" class="btn bg-danger" onclick="location.href='#remdata';" title="Delete Data <?= $filedownload; ?>"><i class="fa fa-trash"></i> <?= $_delete_data.' '. $filedownload; ?></button>
+		  <button  id="remSelected" style="display: none;" class="btn bg-red" onclick="MikhmonRemoveReportSelected()"><i class="fa fa-trash"></i> <span id="selected"></span> <?= $_selected ?></button><?php endif; ?>
 		</div>
 	</div>
 	</div>

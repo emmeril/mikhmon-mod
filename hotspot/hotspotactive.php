@@ -28,6 +28,7 @@ if (!isset($_SESSION["mikhmon"])) {
 
 // load config
 	include('../include/config.php');
+	include_once('../include/access.php');
 	include('../include/readcfg.php');
 	
 // lang
@@ -56,6 +57,18 @@ if (!isset($_SESSION["mikhmon"])) {
 		$counthotspotactive = $API->comm("/ip/hotspot/active/print", array(
 			"count-only" => "",
 		));
+	}
+	if (mikhmonIsMitra()) {
+		$mitraUsers = array();
+		foreach (mikhmonMitraUsernames($session) as $assignedUsername => $unused) $mitraUsers[(string) $assignedUsername] = true;
+		foreach ((array) $API->comm('/ip/hotspot/user/print') as $mitraUser) {
+			if (isset($mitraUser['name']) && mikhmonRowBelongsToCurrentMitra($mitraUser)) $mitraUsers[(string) $mitraUser['name']] = true;
+		}
+		$gethotspotactive = array_values(array_filter((array) $gethotspotactive, function ($active) use ($mitraUsers) {
+			return isset($active['user']) && isset($mitraUsers[(string) $active['user']]);
+		}));
+		$TotalReg = count($gethotspotactive);
+		$counthotspotactive = $TotalReg;
 	}
 }
 ?>

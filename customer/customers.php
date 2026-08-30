@@ -26,23 +26,33 @@ if (isset($_GET['created']) && $_GET['created'] === '1') {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $action = isset($_POST['customer_action']) ? $_POST['customer_action'] : '';
-  if ($action === 'delete') {
-    if (mikhmonDeleteCustomer($session, isset($_POST['customer_id']) ? $_POST['customer_id'] : '')) {
+  $actionCustomerId = isset($_POST['customer_id']) ? (string) $_POST['customer_id'] : '';
+  $actionCustomer = mikhmonFindCustomer($session, $actionCustomerId);
+  if ($action === 'assign_mitra' && mikhmonIsAdmin()) {
+    $mitraId = isset($_POST['mitra_id']) ? (string) $_POST['mitra_id'] : '';
+    $mitra = $mitraId !== '' ? mikhmonFindUser($mitraId) : false;
+    if ($mitraId !== '' && (!$mitra || $mitra['role'] !== 'mitra' || $mitra['session'] !== $session)) {
+      $customerError = 'Mitra tidak valid untuk router ini.';
+    } elseif (mikhmonAssignCustomer($session, $actionCustomerId, $mitraId)) {
+      $customerMessage = $mitra ? 'Pelanggan berhasil ditetapkan ke ' . $mitra['name'] . '.' : 'Assignment mitra berhasil dilepas.';
+    } else {
+      $customerError = 'Assignment mitra gagal disimpan.';
+    }
+  } elseif ($action === 'delete') {
+    if (!$actionCustomer || !mikhmonCanManageCustomer($actionCustomer)) {
+      $customerError = 'Anda tidak berhak menghapus pelanggan ini.';
+    } elseif (mikhmonDeleteCustomer($session, $actionCustomerId)) {
       $customerMessage = 'Data pelanggan berhasil dihapus.';
     } else {
       $customerError = 'Data pelanggan tidak ditemukan.';
     }
   } elseif ($action === 'delete_all') {
-    $deleteId = isset($_POST['customer_id']) ? (string) $_POST['customer_id'] : '';
-    $deleteCustomer = array();
-    foreach (mikhmonGetCustomers($session) as $customerRow) {
-      if (isset($customerRow['id']) && (string) $customerRow['id'] === $deleteId) {
-        $deleteCustomer = $customerRow;
-        break;
-      }
-    }
+    $deleteId = $actionCustomerId;
+    $deleteCustomer = $actionCustomer;
     if (!$deleteCustomer) {
       $customerError = 'Data pelanggan tidak ditemukan.';
+    } elseif (!mikhmonCanManageCustomer($deleteCustomer)) {
+      $customerError = 'Anda tidak berhak menghapus pelanggan ini.';
     } elseif (empty($routerConnected)) {
       $customerError = 'Router MikroTik tidak terhubung. Data tidak dihapus.';
     } else {
@@ -87,7 +97,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 
-$customers = mikhmonGetCustomers($session);
+$customers = mikhmonVisibleCustomers($session);
+$mitras = mikhmonIsAdmin() ? mikhmonGetUsers('mitra', $session) : array();
 ?>
 <div class="row"><div class="col-12"><div class="card">
   <div class="card-header"><h3><i class="fa fa-address-card"></i> Pelanggan <span style="font-size:14px">&nbsp;|&nbsp; <span id="customerVisibleCount"><?= count($customers); ?></span> pelanggan</span></h3></div>
@@ -99,21 +110,21 @@ $customers = mikhmonGetCustomers($session);
         <div class="input-group-6 col-box-6"><input id="customerSearch" type="text" style="padding:5.8px" class="group-item group-item-l" placeholder="<?= $_search ?>"></div>
         <div class="input-group-6 col-box-6"><select id="customerServiceFilter" class="group-item group-item-r"><option value="all">Layanan: Semua</option><option value="hotspot">Hotspot</option><option value="pppoe">PPPoE</option></select></div>
       </div></div>
-      <div class="col-6 text-right"><button id="customerReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button><a class="btn bg-primary" href="./?customer=add&session=<?= rawurlencode($session); ?>"><i class="fa fa-user-plus"></i> Tambah Pelanggan</a></div>
+      <div class="col-6 text-right"><button id="customerReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button><?php if (mikhmonIsAdmin() || mikhmonIsMitra()): ?><a class="btn bg-primary" href="./?customer=add&session=<?= rawurlencode($session); ?>"><i class="fa fa-user-plus"></i> Tambah Pelanggan</a><?php endif; ?></div>
     </div>
     <p><small>Status, tanggal jatuh tempo, invoice, dan aktivasi user dikelola di menu Billing.</small></p>
     <div class="overflow box-bordered" style="max-height:65vh"><table id="dataTable" class="table table-bordered table-hover text-nowrap">
-      <thead><tr><th>No</th><th>Nama Pelanggan</th><th>Nomor HP</th><th>Alamat</th><th>Layanan</th><th>Username</th><th>Profile</th><th>Aksi</th></tr></thead><tbody>
+      <thead><tr><th>No</th><th>Nama Pelanggan</th><th>Nomor HP</th><th>Alamat</th><th>Layanan</th><th>Username</th><th>Profile</th><th>Mitra</th><th>Aksi</th></tr></thead><tbody>
       <?php foreach ($customers as $customerIndex => $customerRow): ?>
         <?php
           $customerService = isset($customerRow['service']) && $customerRow['service'] === 'pppoe' ? 'pppoe' : 'hotspot';
           $customerUsername = isset($customerRow['username']) ? (string) $customerRow['username'] : '';
         ?>
-        <tr class="customer-row" data-service="<?= htmlspecialchars($customerService, ENT_QUOTES); ?>"><td><?= $customerIndex + 1; ?></td><td><?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['phone']) ? $customerRow['phone'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['address']) ? $customerRow['address'] : '', ENT_QUOTES); ?></td><td><?= strtoupper(htmlspecialchars($customerService, ENT_QUOTES)); ?></td><td><?= htmlspecialchars($customerUsername, ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['profile']) ? $customerRow['profile'] : '', ENT_QUOTES); ?></td>
+        <tr class="customer-row" data-service="<?= htmlspecialchars($customerService, ENT_QUOTES); ?>"><td><?= $customerIndex + 1; ?></td><td><?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['phone']) ? $customerRow['phone'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['address']) ? $customerRow['address'] : '', ENT_QUOTES); ?></td><td><?= strtoupper(htmlspecialchars($customerService, ENT_QUOTES)); ?></td><td><?= htmlspecialchars($customerUsername, ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['profile']) ? $customerRow['profile'] : '', ENT_QUOTES); ?></td><td><?php if (mikhmonIsAdmin()): ?><form method="post" style="min-width:160px"><input type="hidden" name="customer_action" value="assign_mitra"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>"><select class="form-control" name="mitra_id" onchange="this.form.submit()"><option value="">Belum ditetapkan</option><?php foreach ($mitras as $mitra): ?><option value="<?= htmlspecialchars($mitra['id'], ENT_QUOTES); ?>"<?= isset($customerRow['mitra_id']) && $customerRow['mitra_id'] === $mitra['id'] ? ' selected' : ''; ?>><?= htmlspecialchars($mitra['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select></form><?php else: ?><?= htmlspecialchars(mikhmonUserName(), ENT_QUOTES); ?><?php endif; ?></td>
         <td><a class="btn bg-primary" href="./?customer=edit&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-edit"></i> Edit</a> <button type="button" class="btn bg-danger customer-delete-button" data-customer-id="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>" data-customer-name="<?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?>" data-customer-username="<?= htmlspecialchars($customerUsername, ENT_QUOTES); ?>"><i class="fa fa-trash"></i> Hapus</button></td>
       </tr><?php endforeach; ?>
-      <?php if (!$customers): ?><tr class="customer-info-row"><td colspan="8" class="text-center">Belum ada data pelanggan.</td></tr><?php endif; ?>
-      <tr id="customerNoResults" style="display:none"><td colspan="8" class="text-center">Data pelanggan tidak ditemukan.</td></tr>
+      <?php if (!$customers): ?><tr class="customer-info-row"><td colspan="9" class="text-center"><?= mikhmonIsMitra() ? 'Belum ada pelanggan yang ditetapkan kepada Anda.' : 'Belum ada data pelanggan.'; ?></td></tr><?php endif; ?>
+      <tr id="customerNoResults" style="display:none"><td colspan="9" class="text-center">Data pelanggan tidak ditemukan.</td></tr>
       </tbody></table></div>
   </div>
 </div></div></div>

@@ -20,6 +20,9 @@ session_start();
 error_reporting(0);
 if (!isset($_SESSION["mikhmon"])) {
   header("Location:../admin.php?id=login");
+} elseif (isset($_SESSION['mikhmon_role']) && $_SESSION['mikhmon_role'] !== 'admin') {
+  http_response_code(403);
+  exit;
 } else {
 // load session MikroTik
   $session = $_GET['session'];

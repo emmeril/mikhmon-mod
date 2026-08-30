@@ -10,11 +10,17 @@ if ($filter !== '') {
 }
 $secrets = is_array($secrets) ? $secrets : array();
 $profiles = is_array($profiles) ? $profiles : array();
+if (function_exists('mikhmonIsMitra') && mikhmonIsMitra()) {
+  $mitraPppUsernames = mikhmonMitraUsernamesByService($session, 'pppoe');
+  $secrets = array_values(array_filter($secrets, function ($secret) use ($mitraPppUsernames) {
+    return isset($secret['name']) && isset($mitraPppUsernames[(string) $secret['name']]);
+  }));
+}
 $count = count($secrets);
 ?>
 <div class="row"><div class="col-12"><div class="card">
   <div class="card-header"><h3><i class="fa fa-users"></i> <?= $_ppp_secrets ?>
-    <span style="font-size:14px"> &nbsp;|&nbsp; <a href="./?ppp=addsecret&session=<?= $session ?>"><i class="fa fa-user-plus"></i> <?= $_add ?></a></span>
+    <?php if (!(function_exists('mikhmonIsMitra') && mikhmonIsMitra())): ?><span style="font-size:14px"> &nbsp;|&nbsp; <a href="./?ppp=addsecret&session=<?= $session ?>"><i class="fa fa-user-plus"></i> <?= $_add ?></a></span><?php endif; ?>
     <small id="loader" style="display:none"><i class="fa fa-circle-o-notch fa-spin"></i> <?= $_processing ?></small>
   </h3></div>
   <div class="card-body">
@@ -33,11 +39,11 @@ $count = count($secrets);
     <div class="overflow mr-t-10 box-bordered" style="max-height:75vh"><table id="dataTable" class="table table-bordered table-hover text-nowrap">
       <thead><tr><th id="pppVisibleCount" class="text-center"><?= $count ?></th><th><?= $_name ?></th><th><?= $_password ?></th><th><?= $_profile ?></th><th>Service</th><th>Caller ID</th><th>Status</th><th><?= $_action ?></th></tr></thead><tbody>
       <?php foreach ($secrets as $secret): $id = $secret['.id']; $name = $secret['name']; $disabled = ($secret['disabled'] === 'true' || $secret['disabled'] === 'yes'); ?>
-      <tr class="ppp-secret-row" data-status="<?= $disabled ? 'disabled' : 'enabled'; ?>"><td class="text-center"><i class="fa fa-minus-square text-danger pointer" title="<?= $_delete ?>" onclick="if(confirm('Delete <?= htmlspecialchars(addslashes($name)) ?>?')){loadpage('./?remove-pppsecret=<?= rawurlencode($id) ?>&session=<?= $session ?>');loader()}"></i></td>
-        <td><a href="./?secret=<?= rawurlencode($name) ?>&session=<?= $session ?>"><i class="fa fa-edit"></i> <?= htmlspecialchars($name) ?></a></td>
+      <tr class="ppp-secret-row" data-status="<?= $disabled ? 'disabled' : 'enabled'; ?>"><td class="text-center"><?php if (!(function_exists('mikhmonIsMitra') && mikhmonIsMitra())): ?><i class="fa fa-minus-square text-danger pointer" title="<?= $_delete ?>" onclick="if(confirm('Delete <?= htmlspecialchars(addslashes($name)) ?>?')){loadpage('./?remove-pppsecret=<?= rawurlencode($id) ?>&session=<?= $session ?>');loader()}"></i><?php else: ?><i class="fa fa-user"></i><?php endif; ?></td>
+        <td><?php if (!(function_exists('mikhmonIsMitra') && mikhmonIsMitra())): ?><a href="./?secret=<?= rawurlencode($name) ?>&session=<?= $session ?>"><i class="fa fa-edit"></i> <?= htmlspecialchars($name) ?></a><?php else: ?><?= htmlspecialchars($name) ?><?php endif; ?></td>
         <td><?= htmlspecialchars(isset($secret['password']) ? $secret['password'] : '') ?></td><td><?= htmlspecialchars(isset($secret['profile']) ? $secret['profile'] : '') ?></td><td><?= htmlspecialchars(isset($secret['service']) ? $secret['service'] : 'any') ?></td><td><?= htmlspecialchars(isset($secret['caller-id']) ? $secret['caller-id'] : '') ?></td>
         <td><?php if ($disabled): ?><span class="text-red">Disabled</span><?php else: ?><span class="text-green">Enabled</span><?php endif; ?></td>
-        <td><?php if ($disabled): ?><a href="./?enable-pppsecret=<?= rawurlencode($id) ?>&session=<?= $session ?>"><i class="fa fa-unlock text-green"></i></a><?php else: ?><a href="./?disable-pppsecret=<?= rawurlencode($id) ?>&session=<?= $session ?>"><i class="fa fa-lock text-orange"></i></a><?php endif; ?></td>
+        <td><?php if (function_exists('mikhmonIsMitra') && mikhmonIsMitra()): ?>- <?php elseif ($disabled): ?><a href="./?enable-pppsecret=<?= rawurlencode($id) ?>&session=<?= $session ?>"><i class="fa fa-unlock text-green"></i></a><?php else: ?><a href="./?disable-pppsecret=<?= rawurlencode($id) ?>&session=<?= $session ?>"><i class="fa fa-lock text-orange"></i></a><?php endif; ?></td>
       </tr><?php endforeach; ?>
       <tr id="pppNoResults" style="display:none"><td colspan="8" class="text-center">Data PPP Secret tidak ditemukan.</td></tr>
       </tbody></table></div>

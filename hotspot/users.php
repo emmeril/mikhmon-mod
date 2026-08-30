@@ -69,6 +69,14 @@ if (!isset($_SESSION["mikhmon"])) {
     ));
     
   }
+  if (function_exists('mikhmonIsMitra') && mikhmonIsMitra()) {
+    $assignedUsernames = function_exists('mikhmonMitraUsernames') ? mikhmonMitraUsernames($session) : array();
+    $getuser = array_values(array_filter((array) $getuser, function ($hotspotUser) use ($assignedUsernames) {
+      return mikhmonRowBelongsToCurrentMitra($hotspotUser) || (isset($hotspotUser['name']) && isset($assignedUsernames[(string) $hotspotUser['name']]));
+    }));
+    $TotalReg = count($getuser);
+    $counttuser = $TotalReg;
+  }
   $getprofile = $API->comm("/ip/hotspot/user/profile/print");
   $TotalReg2 = count($getprofile);
 }
@@ -81,10 +89,10 @@ if (!isset($_SESSION["mikhmon"])) {
     <h3><i class="fa fa-users"></i> <?= $_users ?>
       <span style="font-size: 14px">
         <?php
-        if ($counttuser == 0) {
+        if ($counttuser == 0 && !(function_exists('mikhmonIsMitra') && mikhmonIsMitra())) {
           echo "<script>window.location='./?hotspot=users&profile=all&session=" . $session . "</script>";
         } ?>
-         &nbsp; | &nbsp; <a href="./?hotspot-user=add&session=<?= $session; ?>" title="Add User"><i class="fa fa-user-plus"></i> <?= $_add ?></a>
+         <?php if (!(function_exists('mikhmonIsMitra') && mikhmonIsMitra())): ?>&nbsp; | &nbsp; <a href="./?hotspot-user=add&session=<?= $session; ?>" title="Add User"><i class="fa fa-user-plus"></i> <?= $_add ?></a><?php endif; ?>
         &nbsp; | &nbsp; <a href="./?hotspot-user=generate&session=<?= $session; ?>" title="Generate User"><i class="fa fa-users"></i> <?= $_generate ?></a>
          &nbsp; | &nbsp; <a href="<?= str_replace("=users", "=export-users", $url); ?>&export=script" title="Download User List as Mikrotik Script"><i class="fa fa-download"></i> Script</a>&nbsp; | &nbsp; <a href="<?= str_replace("=users", "=export-users", $url); ?>&export=csv" title="Download User List as CSV"><i class="fa fa-download"></i> CSV</a>
         </span>  &nbsp;

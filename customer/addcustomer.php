@@ -44,8 +44,13 @@ if ($isEdit) {
   }
   if (!$editCustomer) {
     $customerError = 'Data pelanggan tidak ditemukan.';
+  } elseif (!mikhmonCanManageCustomer($editCustomer)) {
+    $customerError = 'Anda tidak berhak mengelola pelanggan ini.';
+    $editCustomer = array();
   }
 }
+
+$mitras = mikhmonIsAdmin() ? mikhmonGetUsers('mitra', $session) : array();
 
 if (!empty($routerConnected)) {
   $hotspotProfiles = $API->comm('/ip/hotspot/user/profile/print');
@@ -67,7 +72,7 @@ if (!empty($routerConnected)) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['customer_action'])) {
   $action = $_POST['customer_action'];
   $updating = $action === 'update' && $isEdit && $editCustomer;
-  $creating = $action === 'create' && !$isEdit;
+  $creating = $action === 'create' && !$isEdit && (mikhmonIsAdmin() || mikhmonIsMitra());
 
   if ($creating || $updating) {
     $customerName = trim(customerFormValue('customer_name'));
@@ -77,10 +82,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['customer_action'])) {
     $username = trim(customerFormValue('username'));
     $password = customerFormValue('password');
     $profile = $service === 'pppoe' ? customerFormValue('pppoe_profile') : customerFormValue('hotspot_profile');
+    $mitraId = mikhmonIsAdmin() ? trim(customerFormValue('mitra_id', isset($editCustomer['mitra_id']) ? $editCustomer['mitra_id'] : '')) : (mikhmonIsMitra() ? mikhmonUserId() : (isset($editCustomer['mitra_id']) ? $editCustomer['mitra_id'] : ''));
+    $selectedMitra = $mitraId !== '' ? mikhmonFindUser($mitraId) : false;
     $command = $service === 'pppoe' ? '/ppp/secret' : '/ip/hotspot/user';
     $oldUsername = $updating && isset($editCustomer['username']) ? $editCustomer['username'] : '';
 
-    if (empty($routerConnected)) {
+    if ($mitraId !== '' && (!$selectedMitra || $selectedMitra['role'] !== 'mitra' || $selectedMitra['session'] !== $session)) {
+      $customerError = 'Mitra yang dipilih tidak valid untuk router ini.';
+    } elseif (empty($routerConnected)) {
       $customerError = 'Router MikroTik tidak terhubung.';
     } elseif ($customerName === '' || $username === '' || $profile === '' || ($creating && $password === '')) {
       $customerError = $creating
@@ -122,6 +131,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['customer_action'])) {
               'comment' => $commentPrefix . $customerName,
             );
           }
+          if (mikhmonIsMitra()) {
+            $args['comment'] .= ' ' . mikhmonOwnerTag();
+          }
           if ($password !== '') {
             $args['password'] = $password;
           }
@@ -137,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['customer_action'])) {
             $customerError = 'MikroTik menolak penyimpanan user: ' . $responseError;
           } else {
             $customerId = $updating ? $editCustomer['id'] : '';
-            $saved = mikhmonSaveCustomer($session, $customerId, $customerName, $customerPhone, $customerAddress, $service, $username, $profile);
+            $saved = mikhmonSaveCustomer($session, $customerId, $customerName, $customerPhone, $customerAddress, $service, $username, $profile, $mitraId);
             if ($saved === false) {
               if ($creating) {
                 $created = $API->comm($command . '/print', array('?name' => $username));
@@ -163,7 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['customer_action'])) {
 $defaultName = $isEdit && isset($editCustomer['name']) ? $editCustomer['name'] : '';
 $defaultPhone = $isEdit && isset($editCustomer['phone']) ? $editCustomer['phone'] : '';
 $defaultAddress = $isEdit && isset($editCustomer['address']) ? $editCustomer['address'] : '';
-$defaultService = $isEdit && isset($editCustomer['service']) ? $editCustomer['service'] : 'hotspot';
+$defaultService = $isEdit && isset($editCustomer['service']) ? $editCustomer['service'] : (isset($_GET['service']) && $_GET['service'] === 'pppoe' ? 'pppoe' : 'hotspot');
 $defaultUsername = $isEdit && isset($editCustomer['username']) ? $editCustomer['username'] : '';
 $defaultProfile = $isEdit && isset($editCustomer['profile']) ? $editCustomer['profile'] : '';
 $defaultUserName = $isEdit && isset($linkedUser['name']) ? $linkedUser['name'] : $defaultUsername;
@@ -182,6 +194,7 @@ $defaultServer = $isEdit && isset($linkedUser['server']) ? $linkedUser['server']
         <tr><td>Nama Pelanggan</td><td><input class="form-control" name="customer_name" maxlength="100" required value="<?= htmlspecialchars(customerFormValue('customer_name', $defaultName), ENT_QUOTES); ?>"></td></tr>
         <tr><td>Nomor HP</td><td><input class="form-control" name="customer_phone" maxlength="30" value="<?= htmlspecialchars(customerFormValue('customer_phone', $defaultPhone), ENT_QUOTES); ?>"></td></tr>
         <tr><td>Alamat</td><td><textarea class="form-control" name="customer_address" maxlength="255"><?= htmlspecialchars(customerFormValue('customer_address', $defaultAddress), ENT_QUOTES); ?></textarea></td></tr>
+        <?php if (mikhmonIsAdmin()): ?><tr><td>Mitra</td><td><select class="form-control" name="mitra_id"><option value="">Belum ditetapkan</option><?php foreach ($mitras as $mitra): ?><option value="<?= htmlspecialchars($mitra['id'], ENT_QUOTES); ?>"<?= customerSelected('mitra_id', $mitra['id'], isset($editCustomer['mitra_id']) ? $editCustomer['mitra_id'] : ''); ?>><?= htmlspecialchars($mitra['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select><small>Admin menentukan pelanggan ini milik mitra siapa.</small></td></tr><?php endif; ?>
         <tr><td>Jenis Layanan</td><td>
           <?php if ($isEdit): ?><input type="hidden" id="customerService" name="customer_service" value="<?= htmlspecialchars($defaultService, ENT_QUOTES); ?>"><input class="form-control" value="<?= strtoupper(htmlspecialchars($defaultService, ENT_QUOTES)); ?>" disabled>
           <?php else: ?><select class="form-control" id="customerService" name="customer_service" onchange="toggleCustomerService()"><option value="hotspot"<?= customerSelected('customer_service', 'hotspot', 'hotspot'); ?>>Hotspot</option><option value="pppoe"<?= customerSelected('customer_service', 'pppoe'); ?>>PPPoE</option></select><?php endif; ?>

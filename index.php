@@ -51,6 +51,18 @@ if (!isset($_SESSION["mikhmon"])) {
 
 // load config
   include('./include/config.php');
+  include_once('./include/access.php');
+  if (!mikhmonRefreshStaffSession()) {
+    session_destroy();
+    header('Location:./admin.php?id=login');
+    exit;
+  }
+  if (!mikhmonIsAdmin() && mikhmonAssignedSession() !== '' && (string) $session !== mikhmonAssignedSession()) {
+    $assignedSession = rawurlencode(mikhmonAssignedSession());
+    $assignedTarget = mikhmonIsBiller() ? './?billing=1&session=' . $assignedSession : './?session=' . $assignedSession;
+    header('Location: ' . $assignedTarget);
+    exit;
+  }
   include('./include/readcfg.php');
 
 // theme  
@@ -67,7 +79,6 @@ if (!isset($_SESSION["mikhmon"])) {
 // routeros api
   include_once('./lib/routeros_api.class.php');
   include_once('./lib/formatbytesbites.php');
-  include_once('./include/database.php');
   $API = new RouterosAPI();
   $API->debug = false;
   $routerConnected = $API->connect($iphost, $userhost, decrypt($passwdhost));
@@ -123,6 +134,30 @@ if (!isset($_SESSION["mikhmon"])) {
   $customerid = $_GET['customer-id'];
   $billing = $_GET['billing'];
 
+  $requestedRoute = 'other';
+  if ($hotspot == 'logout') $requestedRoute = 'logout';
+  elseif ($billing == '1') $requestedRoute = 'billing';
+  elseif ($customer == 'list' && $customerid == '') $requestedRoute = 'customer-list';
+  elseif (($customer == 'edit' || ($customer == 'list' && $customerid != ''))) $requestedRoute = 'customer-edit';
+  elseif ($customer == 'add') $requestedRoute = 'customer-add';
+  elseif ($report == 'selling') $requestedRoute = 'report-selling';
+  elseif ($report == 'resume-report') $requestedRoute = 'report-resume';
+  elseif ($hotspotuser == 'generate') $requestedRoute = 'hotspot-generate';
+  elseif ($hotspot == 'active') $requestedRoute = 'hotspot-active';
+  elseif ($hotspot == 'users-by-profile') $requestedRoute = 'hotspot-vouchers';
+  elseif ($hotspot == 'users') $requestedRoute = 'hotspot-users';
+  elseif ($ppp == 'secrets') $requestedRoute = 'pppoe-users';
+  elseif ($ppp == 'active') $requestedRoute = 'pppoe-active';
+  elseif ($hotspot == 'dashboard' || substr(explode('=', $url)[0], -9) == '/?session') $requestedRoute = 'home';
+
+  if (!mikhmonCanOpenMainRoute($requestedRoute)) {
+    $roleTarget = mikhmonIsBiller()
+      ? './?billing=1&session=' . rawurlencode($session)
+      : './?session=' . rawurlencode($session);
+    header('Location: ' . $roleTarget);
+    exit;
+  }
+
 
   $pagehotspot = array('users','hosts','ipbinding','cookies','log','dhcp-leases');
   $pageppp = array('secrets','profiles','active',);
@@ -151,14 +186,15 @@ if (!isset($_SESSION["mikhmon"])) {
   }
 // redirect to home
   elseif (substr(explode("=", $url)[0],-9) == "/?session") {
-
-    include_once('./dashboard/home.php');
+    if (mikhmonIsMitra()) include_once('./dashboard/rolehome.php');
+    else include_once('./dashboard/home.php');
     $_SESSION['ubn'] = "";
   }
 
 // redirect to home
   elseif ($hotspot == "dashboard") {
-    include_once('./dashboard/home.php');
+    if (mikhmonIsMitra()) include_once('./dashboard/rolehome.php');
+    else include_once('./dashboard/home.php');
     $_SESSION['ubn'] = "";
 
   }
@@ -527,7 +563,7 @@ elseif ($ppp == "edit-profile") {
 <script src="./js/mikhmon.js?t=<?= str_replace(" ","_",date("Y-m-d H:i:s")); ?>"></script>
 
 <?php
-if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?session") {
+if (mikhmonIsAdmin() && ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?session")) {
   echo '<script>
     $("#r_3").load("./dashboard/aload.php?session=' . $session . '&load=logs #r_3");  
     var interval1 = "' . ($areload * 1000) . '";

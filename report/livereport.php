@@ -34,6 +34,11 @@ include('../lang/'.$langid.'.php');
 
 // load config
   include('../include/config.php');
+  include_once('../include/access.php');
+  if (!mikhmonIsAdmin() && (!mikhmonIsMitra() || mikhmonAssignedSession() !== (string) $session)) {
+    http_response_code(403);
+    exit;
+  }
   include('../include/readcfg.php');
 
 // routeros api
@@ -74,6 +79,13 @@ include('../lang/'.$langid.'.php');
       "?owner" => "$idbl",
     ));
     $getSRBl = mikhmonFilterReportRecords($getSRBl);
+    if (mikhmonIsMitra()) {
+      $mitraUsernames = mikhmonMitraUsernames($session);
+      $getSRBl = array_values(array_filter($getSRBl, function ($row) use ($mitraUsernames) {
+        $parts = mikhmonReportParts($row);
+        return mikhmonRowBelongsToCurrentMitra($row) || (isset($parts[2]) && isset($mitraUsernames[trim($parts[2])]));
+      }));
+    }
     $hotspotProfiles = $API->comm('/ip/hotspot/user/profile/print');
     $pppProfiles = $API->comm('/ppp/profile/print');
     $profileCosts = mikhmonReportProfileCosts($hotspotProfiles, $pppProfiles);
