@@ -61,7 +61,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['service_action'] ?? '') ==
 ?>
 <style>
   .service-add-card{max-width:780px;margin:0 auto}
-  .service-add-help{margin:0 0 18px;color:#c5c9ce;line-height:1.5}
   .service-add-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px}
   .service-add-fields .wide{grid-column:1/-1}
   .service-add-fields label{display:block;margin-bottom:6px;font-size:12px;font-weight:bold;color:#d7dbe0}
@@ -74,7 +73,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['service_action'] ?? '') ==
   <div class="card-body">
     <?php if ($serviceError !== ''): ?><div class="box bg-danger"><i class="fa fa-warning"></i> <?= htmlspecialchars($serviceError, ENT_QUOTES); ?></div><?php endif; ?>
     <?php if (empty($routerConnected)): ?><div class="box bg-warning">Router MikroTik tidak terhubung. Layanan belum dapat ditambahkan.</div><?php endif; ?>
-    <p class="service-add-help">Pilih identitas pelanggan, lalu buat akun Hotspot atau PPPoE yang akan masuk ke daftar pelanggan dan billing yang sama.</p>
     <form method="post" autocomplete="off"><input type="hidden" name="service_action" value="save">
       <div class="service-add-fields">
         <div class="wide"><label>Identitas Pelanggan *</label><select class="form-control" name="customer_id" required><option value="">Pilih identitas pelanggan</option><?php foreach ($serviceCustomers as $customer): ?><option value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"<?= (string) $customer['id'] === (string) $selectedCustomerId ? ' selected' : ''; ?>><?= htmlspecialchars($customer['name'], ENT_QUOTES); ?><?= !empty($customer['phone']) ? ' - ' . htmlspecialchars($customer['phone'], ENT_QUOTES) : ''; ?></option><?php endforeach; ?></select><?php if (!$serviceCustomers): ?><small style="display:block;margin-top:6px;color:#888">Belum ada identitas. Buat identitas pelanggan terlebih dahulu.</small><?php endif; ?></div>
