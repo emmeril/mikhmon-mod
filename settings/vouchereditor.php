@@ -96,6 +96,30 @@ textarea{
   font-size:12px;
   border: 1px solid #2f353a;
 }
+.fonnte-template-card .card-header {
+  padding: 10px 15px;
+  margin-bottom: 0;
+}
+.fonnte-template-card .card-header h3 {
+  font-size: 20px;
+  line-height: 1.4;
+}
+.fonnte-template-card .card-body {
+  padding: 15px;
+}
+.fonnte-template-card .fonnte-template-intro {
+  margin: 0 0 15px;
+  line-height: 1.6;
+}
+.fonnte-template-card label {
+  display: block;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+.fonnte-template-card label textarea {
+  margin-top: 6px;
+  font-weight: 400;
+}
 </style>
 
 
@@ -182,14 +206,14 @@ textarea{
 
 <div class="row">
 	<div class="col-12">
-		<div class="card">
+		<div class="card fonnte-template-card">
 			<div class="card-header">
 				<h3><i class="fa fa-whatsapp"></i> Template Pesan Otomatis Fonnte</h3>
 			</div>
 			<div class="card-body">
 				<?php if ($fonnteTemplateMessage !== ''): ?><div class="bg-success pd-10 radius-3 mr-b-10"><i class="fa fa-check"></i> <?= htmlspecialchars($fonnteTemplateMessage, ENT_QUOTES); ?></div><?php endif; ?>
 				<?php if ($fonnteTemplateError !== ''): ?><div class="bg-danger pd-10 radius-3 mr-b-10"><i class="fa fa-ban"></i> <?= htmlspecialchars($fonnteTemplateError, ENT_QUOTES); ?></div><?php endif; ?>
-				<p>Variabel: <code>{{nama_pelanggan}}</code>, <code>{{nama_brand}}</code>, <code>{{nomor_invoice}}</code>, <code>{{total_tagihan}}</code>, <code>{{jatuh_tempo}}</code>, <code>{{detail_layanan}}</code>, <code>{{tanggal_bayar}}</code>, <code>{{jatuh_tempo_berikutnya}}</code>.</p>
+				<p class="fonnte-template-intro">Variabel: <code>{{nama_pelanggan}}</code>, <code>{{nama_brand}}</code>, <code>{{nomor_invoice}}</code>, <code>{{total_tagihan}}</code>, <code>{{jatuh_tempo}}</code>, <code>{{detail_layanan}}</code>, <code>{{tanggal_bayar}}</code>, <code>{{jatuh_tempo_berikutnya}}</code>.</p>
 				<form autocomplete="off" method="post" action="">
 					<input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>">
 					<div class="row">
