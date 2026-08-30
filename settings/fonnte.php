@@ -54,7 +54,6 @@ $maskedToken = $fonnteConfig['token'] !== '' ? str_repeat('*', max(4, min(20, st
       <div class="card-body">
         <?php if ($fonnteMessage !== ''): ?><div class="bg-success pd-10 radius-3 mr-b-10"><i class="fa fa-check"></i> <?= htmlspecialchars($fonnteMessage, ENT_QUOTES); ?></div><?php endif; ?>
         <?php if ($fonnteError !== ''): ?><div class="bg-danger pd-10 radius-3 mr-b-10"><i class="fa fa-ban"></i> <?= htmlspecialchars($fonnteError, ENT_QUOTES); ?></div><?php endif; ?>
-        <p>Gunakan token perangkat dari panel Fonnte untuk mengirim invoice langsung dari menu Billing. Token disimpan di <code>data/fonnte.json</code> dan tidak ditampilkan kembali.</p>
         <?php if ($fonnteEnvironmentTokenConfigured): ?><div class="bg-info pd-10 radius-3 mr-b-10"><i class="fa fa-info-circle"></i> Token aktif berasal dari environment <code>MIKHMON_FONNTE_TOKEN</code> dan tidak akan disalin ke file konfigurasi.</div><?php endif; ?>
         <form autocomplete="off" method="post" action="">
           <input type="hidden" name="fonnte_action" value="save">
@@ -64,7 +63,7 @@ $maskedToken = $fonnteConfig['token'] !== '' ? str_repeat('*', max(4, min(20, st
               <table class="table table-sm">
                 <tr><td class="align-middle">Status</td><td><label><input type="checkbox" name="enabled" value="1" <?= !empty($fonnteConfig['enabled']) ? 'checked' : ''; ?>> Aktif</label></td></tr>
                 <tr><td class="align-middle">Token Fonnte</td><td><input class="form-control" type="password" name="token" placeholder="<?= $maskedToken !== '' ? 'Token tersimpan, kosongkan untuk mempertahankan' : 'Masukkan token Fonnte'; ?>"></td></tr>
-                <tr><td class="align-middle">Kode Negara</td><td><input class="form-control" type="text" inputmode="numeric" maxlength="5" name="country_code" value="<?= htmlspecialchars($fonnteConfig['country_code'], ENT_QUOTES); ?>"><small>Default Indonesia: 62. Fonnte akan mengganti awalan 0 nomor tujuan.</small></td></tr>
+                <tr><td class="align-middle">Kode Negara</td><td><input class="form-control" type="text" inputmode="numeric" maxlength="5" name="country_code" value="<?= htmlspecialchars($fonnteConfig['country_code'], ENT_QUOTES); ?>"></td></tr>
               </table>
             </div>
           </div>
