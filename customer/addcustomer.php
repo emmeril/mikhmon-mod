@@ -50,8 +50,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['customer_action']) &&
       }
     }
     if ($failed !== '') $customerError = $failed;
-    elseif (mikhmonSaveCustomerWithServices($session, $isEdit ? $editCustomer['id'] : '', $name, $phone, $address, $processed, $mitraId) === false) $customerError = 'Data pelanggan lokal gagal disimpan.';
-    else { $result = $creating ? 'created=1' : 'updated=1'; echo "<script>window.location='./?customer=list&session=" . rawurlencode($session) . '&' . $result . "'</script>"; exit; }
+    else {
+      $savedCustomerId = mikhmonSaveCustomerWithServices($session, $isEdit ? $editCustomer['id'] : '', $name, $phone, $address, $processed, $mitraId);
+      if ($savedCustomerId === false) $customerError = 'Data pelanggan lokal gagal disimpan.';
+      else {
+        // Force billing to rebuild the customer-wide scheduler with the latest services.
+        $schedulerName = 'mikhmon-customer-' . substr(md5((string) $savedCustomerId), 0, 12);
+        $schedulerRows = $API->comm('/system/scheduler/print', array('?name' => $schedulerName));
+        if (customerApiError($schedulerRows) === '' && is_array($schedulerRows)) foreach ($schedulerRows as $schedulerRow) if (isset($schedulerRow['.id'])) $API->comm('/system/scheduler/remove', array('.id' => $schedulerRow['.id']));
+        $result = $creating ? 'created=1' : 'updated=1'; echo "<script>window.location='./?customer=list&session=" . rawurlencode($session) . '&' . $result . "'</script>"; exit;
+      }
+    }
   }
 }
 $defaultServices = !$isEdit ? array(array('service'=>isset($_GET['service']) && $_GET['service']==='pppoe' ? 'pppoe' : 'hotspot','username'=>'','profile'=>'','server'=>'all','id'=>'')) : mikhmonCustomerServices($editCustomer);

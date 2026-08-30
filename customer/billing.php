@@ -220,6 +220,61 @@ function billingInvoiceServices($invoice, $customer) {
   return mikhmonCustomerServices($customer);
 }
 
+function billingUnpaidInvoiceIndex($invoices, $customerId) {
+  $found = -1; $createdAt = -1;
+  foreach ((array) $invoices as $index => $invoice) {
+    if (($invoice['status'] ?? '') !== 'unpaid' || (string) ($invoice['customer_id'] ?? '') !== (string) $customerId) continue;
+    $invoiceCreatedAt = (int) ($invoice['created_at'] ?? 0);
+    if ($found < 0 || $invoiceCreatedAt >= $createdAt) { $found = $index; $createdAt = $invoiceCreatedAt; }
+  }
+  return $found;
+}
+
+function billingSyncUnpaidInvoice($session, &$invoices, $customer, $customerUsers, $customerSchedulers, $hotspotProfiles, $pppoeProfiles, $API, &$schedulerMap) {
+  $invoiceIndex = billingUnpaidInvoiceIndex($invoices, $customer['id'] ?? '');
+  if ($invoiceIndex < 0) return false;
+  $serviceDetails = billingServiceDetails($customer, $customerUsers, $customerSchedulers, $hotspotProfiles, $pppoeProfiles);
+  if (!$serviceDetails) return false;
+
+  $amount = 0;
+  foreach ($serviceDetails as $service) $amount += (float) ($service['amount'] ?? 0);
+  $dueTimestamp = billingDueTimestamp($invoices[$invoiceIndex]['due_date'] ?? '');
+  if ($dueTimestamp <= 0) $dueTimestamp = billingCustomerDueTimestamp($customer, $serviceDetails);
+  $dueDate = $dueTimestamp > 0 ? date('Y-m-d H:i:s', $dueTimestamp) : '';
+  $invoice = $invoices[$invoiceIndex];
+  $oldServices = billingInvoiceServices($invoice, $customer);
+  $oldSignature = json_encode(array_map(function ($service) {
+    return array('id' => $service['id'] ?? '', 'service' => $service['service'] ?? '', 'username' => $service['username'] ?? '', 'profile' => $service['profile'] ?? '', 'amount' => (float) ($service['amount'] ?? 0));
+  }, $oldServices));
+  $newSignature = json_encode(array_map(function ($service) {
+    return array('id' => $service['id'] ?? '', 'service' => $service['service'] ?? '', 'username' => $service['username'] ?? '', 'profile' => $service['profile'] ?? '', 'amount' => (float) ($service['amount'] ?? 0));
+  }, $serviceDetails));
+  $changed = $oldSignature !== $newSignature || (float) ($invoice['amount'] ?? 0) !== (float) $amount || (int) ($invoice['service_count'] ?? 0) !== count($serviceDetails) || (string) ($invoice['due_date'] ?? '') !== $dueDate || (string) ($invoice['customer_name'] ?? '') !== (string) ($customer['name'] ?? '');
+  if ($changed) {
+    $invoice['customer_name'] = $customer['name'] ?? '';
+    $invoice['services'] = $serviceDetails;
+    $invoice['service_count'] = count($serviceDetails);
+    $invoice['amount'] = $amount;
+    $invoice['due_date'] = $dueDate;
+    if (mikhmonSaveInvoice($session, $invoice) === false) return false;
+    $invoices[$invoiceIndex] = $invoice;
+  }
+  if ($dueDate !== '') {
+    mikhmonSetCustomerDueDate($session, $customer['id'], $dueDate);
+    $customer['due_date'] = $dueDate;
+  }
+  // Keep the customer scheduler current even if a service is later removed.
+  if (count($serviceDetails) >= 1) {
+    $schedulerName = billingCustomerSchedulerName($customer['id']);
+    if ($changed || !isset($schedulerMap[$schedulerName])) {
+      if (billingInstallCustomerScheduler($API, $customer, $dueTimestamp)) {
+        $schedulerMap[$schedulerName] = array('name' => $schedulerName, 'next-run' => date('M/d/Y H:i:s', $dueTimestamp));
+      }
+    }
+  }
+  return $changed;
+}
+
 $customers = mikhmonGetCustomers($session);
 $invoices = mikhmonGetInvoices($session);
 $hotspotProfiles = array(); $pppoeProfiles = array();
@@ -240,6 +295,13 @@ $hotspotProfiles = is_array($hotspotProfiles) ? $hotspotProfiles : array();
 $pppoeProfiles = is_array($pppoeProfiles) ? $pppoeProfiles : array();
 
 if (!empty($routerConnected)) {
+  // Keep an unpaid invoice aligned when services are added or removed later.
+  foreach ($customers as $customerIndex => $customer) {
+    if (billingSyncUnpaidInvoice($session, $invoices, $customer, $customerUsers, $customerSchedulers, $hotspotProfiles, $pppoeProfiles, $API, $customerSchedulers)) {
+      $updatedCustomer = mikhmonFindCustomer($session, $customer['id']);
+      if ($updatedCustomer) $customers[$customerIndex] = $updatedCustomer;
+    }
+  }
   foreach ($customers as $customerIndex => $customer) {
     if (count(mikhmonCustomerServices($customer)) < 2) continue;
     $schedulerName = billingCustomerSchedulerName($customer['id']);
@@ -259,8 +321,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $customer = billingFindCustomer($customers, $_POST['customer_id'] ?? '');
   if ($action === 'create_invoice') {
     $existingInvoice = $customer ? billingLatestInvoice($invoices, $customer['id']) : array();
+    $unpaidInvoiceIndex = $customer ? billingUnpaidInvoiceIndex($invoices, $customer['id']) : -1;
     if (!$customer) $customerError = 'Pelanggan tidak ditemukan.';
-    elseif (($existingInvoice['status'] ?? '') === 'unpaid') $customerError = 'Masih ada invoice yang belum dibayar untuk pelanggan ini.';
+    elseif ($unpaidInvoiceIndex >= 0) $customerError = 'Masih ada invoice yang belum dibayar untuk pelanggan ini.';
     elseif (empty($routerConnected)) $customerError = 'Router MikroTik tidak terhubung.';
     else {
       $invoiceServices = billingServiceDetails($customer, $customerUsers, $customerSchedulers, $hotspotProfiles, $pppoeProfiles);
