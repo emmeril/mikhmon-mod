@@ -27,6 +27,20 @@ foreach ($getuser as $user) {
 ksort($profiles);
 ksort($comments);
 ?>
+<style>
+  .print-center-toolbar {
+    display: grid;
+    grid-template-columns: auto repeat(3, minmax(0, 1fr));
+    align-items: center;
+    gap: 6px;
+  }
+  .print-center-toolbar > span { white-space: nowrap; }
+  .print-center-toolbar .btn { width: 100%; white-space: nowrap; }
+  @media (max-width: 600px) {
+    .print-center-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .print-center-toolbar > span { grid-column: 1 / -1; text-align: center; }
+  }
+</style>
 <div class="row">
   <div class="col-12">
     <div class="card">
@@ -55,7 +69,7 @@ ksort($comments);
             </select>
           </div>
         </div>
-        <div class="box bg-secondary" style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+        <div class="box bg-secondary print-center-toolbar">
           <span><i class="fa fa-check-square-o"></i> <span id="printCenterCount">0</span> dipilih</span>
           <button type="button" class="btn bg-primary" onclick="printCenterSubmit('default')"><i class="fa fa-print"></i> <?= $_print_default; ?></button>
           <button type="button" class="btn bg-primary" onclick="printCenterSubmit('qr')"><i class="fa fa-qrcode"></i> <?= $_print_qr; ?></button>
