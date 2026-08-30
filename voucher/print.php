@@ -28,7 +28,7 @@ if (!isset($_SESSION["mikhmon"])) {
   date_default_timezone_set($_SESSION['timezone']);
   
 // load session MikroTik
-  $session = $_GET['session'];
+  $session = isset($_REQUEST['session']) ? (string) $_REQUEST['session'] : '';
 
 // load config
   include('../include/config.php');
@@ -36,10 +36,17 @@ if (!isset($_SESSION["mikhmon"])) {
 
   include('../lib/formatbytesbites.php');
 
-  $id = $_GET['id'];
-  $qr = $_GET['qr'];
-  $small = $_GET['small'];
-  $userp = $_GET['user'];
+  $id = isset($_GET['id']) ? $_GET['id'] : '';
+  $qr = isset($_REQUEST['qr']) ? $_REQUEST['qr'] : '';
+  $small = isset($_REQUEST['small']) ? $_REQUEST['small'] : '';
+  $userp = isset($_GET['user']) ? $_GET['user'] : '';
+  $selectedUsers = isset($_POST['users_json']) ? json_decode((string) $_POST['users_json'], true) : array();
+  if (!is_array($selectedUsers)) $selectedUsers = array($selectedUsers);
+  $selectedUsers = array_values(array_unique(array_filter(array_map(function ($name) {
+    return is_scalar($name) ? trim((string) $name) : '';
+  }, $selectedUsers), function ($name) {
+    return $name !== '';
+  })));
 
   require('../lib/routeros_api.class.php');
   $API = new RouterosAPI();
@@ -60,6 +67,12 @@ if (!isset($_SESSION["mikhmon"])) {
       $user = $user;
     }
     $getuser = $API->comm("/ip/hotspot/user/print", array("?name" => "$user"));
+    $TotalReg = count($getuser);
+  } elseif (!empty($selectedUsers)) {
+    $selectedLookup = array_fill_keys($selectedUsers, true);
+    $getuser = array_values(array_filter((array) $API->comm("/ip/hotspot/user/print"), function ($row) use ($selectedLookup) {
+      return is_array($row) && isset($row['name']) && isset($selectedLookup[(string) $row['name']]);
+    }));
     $TotalReg = count($getuser);
   } elseif ($id != "") {
     $usermode = explode('-', $id)[0];
@@ -163,6 +176,7 @@ table.voucher {
   $idqr = str_replace("=","",base64_encode(($regtable['.id']."qr")));
   $username = $regtable['name'];
   $password = $regtable['password'];
+  if (!empty($selectedUsers)) $usermode = $username === $password ? 'vc' : 'up';
   $profile = $regtable['profile'];
   $timelimit = $regtable['limit-uptime'];
   $getdatalimit = $regtable['limit-bytes-total'];

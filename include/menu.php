@@ -30,6 +30,9 @@ if (!isset($_SESSION["mikhmon"])) {
   if ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?session") {
     $shome = "active";
     $mpage = $_dashboard;
+  } elseif ($hotspot == "print-center") {
+    $sprintcenter = "active";
+    $mpage = "Print Center";
   } elseif ($hotspot == "quick-print" || $hotspot == "list-quick-print") {
     $squick = "active";
     $mpage = $_quick_print;   
@@ -414,6 +417,7 @@ include('./info.php');
     <a href="./?billing=1&session=<?= $session; ?>" class="<?= $sbilling; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-money"></i> Billing</a>
   </div>
   <!--quick print-->
+  <a href="./?hotspot=print-center&session=<?= $session; ?>" class="menu <?= $sprintcenter; ?>"><i class="fa fa-print"></i> Print Center</a>
   <a href="./?hotspot=quick-print&session=<?= $session; ?>" class="menu <?= $squick; ?>"> <i class="fa fa-print"></i> <?= $_quick_print ?> </a>
   <!--vouchers-->
   <a href="./?hotspot=users-by-profile&session=<?= $session; ?>" class="menu <?= $susersbp; ?>"> <i class="fa fa-ticket"></i> <?= $_vouchers ?> </a>

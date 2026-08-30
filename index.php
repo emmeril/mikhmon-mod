@@ -160,6 +160,7 @@ if (!isset($_SESSION["mikhmon"])) {
   elseif ($admin == 'routers') $requestedRoute = 'admin-routers';
   elseif ($admin == 'users') $requestedRoute = 'admin-users';
   elseif ($hotspotuser == 'generate') $requestedRoute = 'hotspot-generate';
+  elseif ($hotspot == 'print-center') $requestedRoute = 'hotspot-print-center';
   elseif ($hotspot == 'active') $requestedRoute = 'hotspot-active';
   elseif ($hotspot == 'users-by-profile') $requestedRoute = 'hotspot-vouchers';
   elseif ($hotspot == 'users') $requestedRoute = 'hotspot-users';
@@ -309,6 +310,11 @@ if (!isset($_SESSION["mikhmon"])) {
 // export hotspot users
   elseif ($hotspot == "export-users") {
     include_once('./hotspot/exportusers.php');
+  }
+
+// quick print
+  elseif ($hotspot == "print-center") {
+    include_once('./hotspot/printcenter.php');
   }
 
 // quick print

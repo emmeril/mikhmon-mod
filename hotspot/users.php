@@ -157,27 +157,6 @@ if (!isset($_SESSION["mikhmon"])) {
     <?php ; }else if ($exp == "1"){ ?>
   <button class="btn bg-red" onclick="if(confirm('Are you sure to delete users?')){loadpage('./?remove-hotspot-user-expired=1&session=<?= $session; ?>');loader();}else{}" title="Remove user expired">  <i class="fa fa-trash"></i> Expired Users</button>
       <?php } ?>
-  <script>
-    function printV(a,b){
-    var comm = document.getElementById('comment').value;
-    var url = "./voucher/print.php?id="+comm+"&"+a+"="+b+"&session=<?= $session; ?>";
-    if (comm === "" ){
-      <?php if ($currency == in_array($currency, $cekindo['indo'])) { ?>
-      alert('Silakan pilih salah satu Comment terlebih dulu!');
-      <?php
-    } else { ?>
-      alert('Please choose one of the Comments first!');
-      <?php
-    } ?>
-    }else{
-      var win = window.open(url, '_blank');
-      win.focus();
-    }}
-  </script>
-  <button class="btn bg-primary" title='Print' onclick="printV('qr','no');"><i class="fa fa-print"></i> <?= $_print_default ?></button>
-  <button class="btn bg-primary" title='Print QR' onclick="printV('qr','yes');"><i class="fa fa-print"></i> <?= $_print_qr ?></button>
-  <button class="btn bg-primary" title='Print Small'onclick="printV('small','yes');"><i class="fa fa-print"></i> <?= $_print_small ?></button>
-  </div>
 </div>
 <div class="overflow mr-t-10 box-bordered" style="max-height: 75vh">
 <table id="dataTable" class="table table-bordered table-hover text-nowrap">
@@ -186,7 +165,6 @@ if (!isset($_SESSION["mikhmon"])) {
     <th style="min-width:50px;" class="align-middle text-center" id="cuser"><?= $counttuser; ?></th>
     <th style="min-width:50px;" class="pointer" title="Click to sort"><i class="fa fa-sort"></i> Server</th>
     <th class="pointer" title="Click to sort"><i class="fa fa-sort"></i> <?= $_name ?></th>
-    <th>Print</th>
     <th class="pointer" title="Click to sort"><i class="fa fa-sort"></i> <?= $_profile ?></th>
 	  <th class="pointer" title="Click to sort"><i class="fa fa-sort"></i> Mac Address</th>
     <th class="text-right align-middle pointer" title="Click to sort"><i class="fa fa-sort"></i> <?= $_uptime_user ?></th>
@@ -202,7 +180,6 @@ for ($i = 0; $i < $TotalReg; $i++) {
   $uid = $userdetails['.id'];
   $userver = $userdetails['server'];
   $uname = $userdetails['name'];
-  $upass = $userdetails['password'];
   $uprofile = $userdetails['profile'];
   $umacadd = $userdetails['mac-address'];
   $uuptime = formatDTM($userdetails['uptime']);
@@ -236,15 +213,8 @@ for ($i = 0; $i < $TotalReg; $i++) {
     echo '<span class="pointer" title="Disable User ' . $uname . '"  onclick="loadpage('.$uriprocess.')"><i class="fa fa-unlock "></i></span></td>';
   }
   echo "<td>" . $userver . "</td>";
-  if ($uname == $upass) {
-    $usermode = "vc";
-  } else {
-    $usermode = "up";
-  }
-  $popup = "javascript:window.open('./voucher/print.php?user=" . $usermode . "-" . $uname . "&qr=no&session=" . $session . "','_blank','width=320,height=550').print();";
-  $popupQR = "javascript:window.open('./voucher/print.php?user=" . $usermode . "-" . $uname . "&qr=yes&session=" . $session . "','_blank','width=320,height=550').print();";
   echo "<td><a title='Open User " . $uname . "' href=./?hotspot-user=" . $uid . "&session=" . $session . "><i class='fa fa-edit'></i> " . $uname . " </a>";
-  echo '</td><td class"text-center"><a title="Print ' . $uname . '" href="' . $popup . '"><i class="fa fa-print"></i></a> &nbsp <a title="Print ' . $uname . '" href="' . $popupQR . '"><i class="fa fa-qrcode"></i> </a></td>';
+  echo '</td>';
   echo "<td>" . $uprofile . "</td>";
   echo "<td style=' text-align:left'>" . $umacadd . "</td>";
   echo "<td style=' text-align:right'>" . $uuptime . "</td>";
