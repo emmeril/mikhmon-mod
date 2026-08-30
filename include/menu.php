@@ -108,11 +108,10 @@ if (!isset($_SESSION["mikhmon"])) {
   } elseif (in_array($customer, array("list", "identity-list", "identity-add", "identity-edit", "service-add", "add", "edit"), true)) {
     $mcustomers = "active";
     $customermenu = "menu-open";
-    if ($customer == "identity-add" || $customer == "add") $sidentityadd = "active";
-    elseif ($customer == "identity-list" || $customer == "identity-edit" || $customer == "edit" || ($customer == "list" && $customerid != "")) $sidentitylist = "active";
-    elseif ($customer == "service-add") $sserviceadd = "active";
-    else $scustomers = "active";
-    $mpage = "Pelanggan";
+    if ($customer == "identity-add" || $customer == "add") { $sidentityadd = "active"; $mpage = "Tambah Identitas Pelanggan"; }
+    elseif ($customer == "identity-list" || $customer == "identity-edit" || $customer == "edit" || ($customer == "list" && $customerid != "")) { $sidentitylist = "active"; $mpage = $customerid != "" ? "Edit Identitas Pelanggan" : "Daftar Identitas Pelanggan"; }
+    elseif ($customer == "service-add") { $sserviceadd = "active"; $mpage = "Tambah Layanan"; }
+    else { $scustomers = "active"; $mpage = "Daftar Pelanggan"; }
   } elseif ($report == "userlog") {
     $log = "active";
     $sulog = "active";

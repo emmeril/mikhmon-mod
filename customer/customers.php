@@ -91,7 +91,7 @@ $customers = array_values(array_filter(mikhmonVisibleCustomers($session), functi
 $mitras = mikhmonIsAdmin() ? mikhmonGetUsers('mitra', $session) : array();
 ?>
 <div class="row"><div class="col-12"><div class="card">
-  <div class="card-header"><h3><i class="fa fa-address-card"></i> Pelanggan <span style="font-size:14px">&nbsp;|&nbsp; <span id="customerVisibleCount"><?= count($customers); ?></span> pelanggan</span></h3></div>
+  <div class="card-header"><h3><i class="fa fa-list"></i> Daftar Pelanggan <span style="font-size:14px">&nbsp;|&nbsp; <span id="customerVisibleCount"><?= count($customers); ?></span> pelanggan</span></h3></div>
   <div class="card-body">
     <?php if ($customerMessage !== ''): ?><div class="box bg-success"><?= htmlspecialchars($customerMessage, ENT_QUOTES); ?></div><?php endif; ?>
     <?php if ($customerError !== ''): ?><div class="box bg-danger"><?= htmlspecialchars($customerError, ENT_QUOTES); ?></div><?php endif; ?>

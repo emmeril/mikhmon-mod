@@ -37,19 +37,18 @@ $identityAddress = $identityCustomer['address'] ?? '';
 ?>
 <style>
   .identity-card{max-width:760px;margin:0 auto}
-  .identity-help{margin:0 0 18px;color:#777}
   .identity-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px}
   .identity-fields .wide{grid-column:1/-1}
-  .identity-fields label{display:block;margin-bottom:6px;font-size:12px;font-weight:bold;color:#555}
+  .identity-fields label{display:block;margin-bottom:6px;font-size:12px;font-weight:bold;color:#d7dbe0}
   .identity-fields textarea{height:90px;resize:vertical}
   .identity-actions{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+  .identity-actions .btn,.identity-actions a{box-sizing:border-box;margin:0}
   @media(max-width:767px){.identity-fields{grid-template-columns:1fr}.identity-fields .wide{grid-column:auto}.identity-actions{flex-direction:column-reverse}.identity-actions .btn,.identity-actions a{width:100%;text-align:center}}
 </style>
 <div class="row"><div class="col-12"><div class="card box-bordered identity-card">
   <div class="card-header"><h3><i class="fa <?= $identityEdit ? 'fa-edit' : 'fa-user-plus'; ?>"></i> <?= $identityEdit ? 'Edit Identitas Pelanggan' : 'Tambah Identitas Pelanggan'; ?></h3></div>
   <div class="card-body">
     <?php if ($identityError !== ''): ?><div class="box bg-danger"><i class="fa fa-warning"></i> <?= htmlspecialchars($identityError, ENT_QUOTES); ?></div><?php endif; ?>
-    <p class="identity-help">Simpan identitas pelanggan terlebih dahulu. Akun Hotspot atau PPPoE dikaitkan melalui menu <strong>Tambah Layanan</strong>.</p>
     <form method="post" autocomplete="off"><input type="hidden" name="identity_action" value="save">
       <div class="identity-fields">
         <div><label>Nama Pelanggan *</label><input class="form-control" name="identity_name" maxlength="100" required value="<?= htmlspecialchars(isset($_POST['identity_name']) ? $_POST['identity_name'] : $identityName, ENT_QUOTES); ?>" placeholder="Nama lengkap pelanggan"></div>

@@ -61,11 +61,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['service_action'] ?? '') ==
 ?>
 <style>
   .service-add-card{max-width:780px;margin:0 auto}
-  .service-add-help{margin:0 0 18px;color:#777}
+  .service-add-help{margin:0 0 18px;color:#c5c9ce;line-height:1.5}
   .service-add-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px}
   .service-add-fields .wide{grid-column:1/-1}
-  .service-add-fields label{display:block;margin-bottom:6px;font-size:12px;font-weight:bold;color:#555}
+  .service-add-fields label{display:block;margin-bottom:6px;font-size:12px;font-weight:bold;color:#d7dbe0}
   .service-add-actions{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+  .service-add-actions .btn,.service-add-actions a{box-sizing:border-box;margin:0}
   @media(max-width:767px){.service-add-fields{grid-template-columns:1fr}.service-add-fields .wide{grid-column:auto}.service-add-actions{flex-direction:column-reverse}.service-add-actions .btn,.service-add-actions a{width:100%;text-align:center}}
 </style>
 <div class="row"><div class="col-12"><div class="card box-bordered service-add-card">

@@ -45,11 +45,12 @@ $identities = mikhmonVisibleCustomers($session);
 ?>
 <style>
   .identity-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
-  .identity-toolbar input{max-width:360px}
+  .identity-toolbar input{max-width:360px;margin:0}
+  .identity-toolbar .btn{margin:0}
   .identity-table td,.identity-table th{vertical-align:middle}
   .identity-service-count{text-align:center;font-weight:bold}
   .identity-empty{padding:28px;text-align:center;color:#888}
-  @media(max-width:767px){.identity-toolbar{align-items:stretch;flex-direction:column}.identity-toolbar input{max-width:none}.identity-toolbar .btn{width:100%;text-align:center}}
+  @media(max-width:767px){.identity-toolbar{align-items:stretch;flex-direction:column}.identity-toolbar input{max-width:none}.identity-toolbar .btn{width:100%;box-sizing:border-box;text-align:center}}
 </style>
 <div class="row"><div class="col-12"><div class="card">
   <div class="card-header"><h3><i class="fa fa-id-card"></i> Daftar Identitas Pelanggan <span style="font-size:14px">&nbsp;|&nbsp; <?= count($identities); ?> identitas</span></h3></div>
