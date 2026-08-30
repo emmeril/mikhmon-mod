@@ -112,7 +112,6 @@ $mitras = mikhmonIsAdmin() ? mikhmonGetUsers('mitra', $session) : array();
       </div></div>
       <div class="col-6 text-right"><button id="customerReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button><?php if (mikhmonIsAdmin() || mikhmonIsMitra()): ?><a class="btn bg-primary" href="./?customer=add&session=<?= rawurlencode($session); ?>"><i class="fa fa-user-plus"></i> Tambah Pelanggan</a><?php endif; ?></div>
     </div>
-    <p><small>Status, tanggal jatuh tempo, invoice, dan aktivasi user dikelola di menu Billing.</small></p>
     <div class="overflow box-bordered" style="max-height:65vh"><table id="dataTable" class="table table-bordered table-hover text-nowrap">
       <thead><tr><th>No</th><th>Nama Pelanggan</th><th>Nomor HP</th><th>Alamat</th><th>Layanan</th><th>Username</th><th>Profile</th><th>Mitra</th><th>Aksi</th></tr></thead><tbody>
       <?php foreach ($customers as $customerIndex => $customerRow): ?>
