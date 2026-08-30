@@ -42,6 +42,7 @@ roleTestAssert(mikhmonCanOpenMainRoute('customer-add'), 'mitra can add customers
 roleTestAssert(mikhmonCanOpenMainRoute('hotspot-generate'), 'mitra can generate vouchers');
 roleTestAssert(mikhmonCanOpenMainRoute('hotspot-active'), 'mitra can view active users');
 roleTestAssert(mikhmonCanOpenMainRoute('hotspot-vouchers'), 'mitra can view own vouchers');
+roleTestAssert(mikhmonCanOpenMainRoute('hotspot-print-center'), 'mitra can open print center');
 roleTestAssert(mikhmonCanOpenMainRoute('pppoe-users'), 'mitra can view assigned PPPoE users');
 roleTestAssert(mikhmonCanOpenMainRoute('pppoe-active'), 'mitra can view assigned PPPoE active sessions');
 roleTestAssert(!mikhmonCanOpenMainRoute('billing'), 'mitra cannot open billing');

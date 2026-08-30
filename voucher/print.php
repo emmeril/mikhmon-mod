@@ -33,6 +33,7 @@ if (!isset($_SESSION["mikhmon"])) {
 // load config
   include('../include/config.php');
   include('../include/readcfg.php');
+  include_once('../include/access.php');
 
   include('../lib/formatbytesbites.php');
 
@@ -73,6 +74,13 @@ if (!isset($_SESSION["mikhmon"])) {
     $getuser = array_values(array_filter((array) $API->comm("/ip/hotspot/user/print"), function ($row) use ($selectedLookup) {
       return is_array($row) && isset($row['name']) && isset($selectedLookup[(string) $row['name']]);
     }));
+    if (mikhmonIsMitra()) {
+      $assignedUsernames = mikhmonMitraUsernames($session);
+      $getuser = array_values(array_filter($getuser, function ($row) use ($assignedUsernames) {
+        return mikhmonRowBelongsToCurrentMitra($row)
+          || (isset($row['name']) && isset($assignedUsernames[(string) $row['name']]));
+      }));
+    }
     $TotalReg = count($getuser);
   } elseif ($id != "") {
     $usermode = explode('-', $id)[0];

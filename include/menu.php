@@ -32,6 +32,10 @@ if (!isset($_SESSION["mikhmon"])) {
     $mpage = $_dashboard;
   } elseif ($hotspot == "print-center") {
     $sprintcenter = "active";
+    if (mikhmonIsMitra()) {
+      $mcustomers = "active";
+      $customermenu = "menu-open";
+    }
     $mpage = "Print Center";
   } elseif ($hotspot == "quick-print" || $hotspot == "list-quick-print") {
     $squick = "active";
@@ -365,6 +369,7 @@ include('./info.php');
   <div class="dropdown-container <?= $customermenu; ?>">
     <a href="./?customer=add&session=<?= $session; ?>" class="<?= $saddcustomer; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> Tambah Pelanggan</a>
     <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> Pelanggan Saya</a>
+    <a href="./?hotspot=print-center&session=<?= $session; ?>" class="<?= $sprintcenter; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-print"></i> Print Center</a>
   </div>
   <div class="dropdown-btn <?= $sselling; ?>"><i class="fa fa-money"></i> <?= $_report ?> <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $reportmenu; ?>">
