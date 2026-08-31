@@ -261,9 +261,12 @@ function mikhmonAssignCustomer($session, $customerId, $mitraId) {
 function mikhmonSetCustomerDueDate($session, $customerId, $dueDate) {
   $database = mikhmonReadDatabase();
   if (!isset($database['customers'][$session]) || !is_array($database['customers'][$session])) return false;
+  $dueDate = trim(strip_tags((string) $dueDate));
   foreach ($database['customers'][$session] as $index => $customer) {
     if (isset($customer['id']) && (string) $customer['id'] === (string) $customerId) {
-      $database['customers'][$session][$index]['due_date'] = trim(strip_tags((string) $dueDate));
+      // Avoid rewriting the complete JSON database when the value is unchanged.
+      if ((string) ($customer['due_date'] ?? '') === $dueDate) return true;
+      $database['customers'][$session][$index]['due_date'] = $dueDate;
       $database['customers'][$session][$index]['updated_at'] = time();
       return mikhmonWriteDatabase($database);
     }

@@ -254,6 +254,7 @@ function billingUnpaidInvoiceIndex($invoices, $customerId) {
 }
 
 function billingSyncUnpaidInvoice($session, &$invoices, $customer, $customerUsers, $customerSchedulers, $hotspotProfiles, $pppoeProfiles, $API, &$schedulerMap) {
+  global $fonnteConfig;
   $invoiceIndex = billingUnpaidInvoiceIndex($invoices, $customer['id'] ?? '');
   if ($invoiceIndex < 0) return false;
   $serviceDetails = billingServiceDetails($customer, $customerUsers, $customerSchedulers, $hotspotProfiles, $pppoeProfiles);
@@ -285,12 +286,12 @@ function billingSyncUnpaidInvoice($session, &$invoices, $customer, $customerUser
     if (mikhmonSaveInvoice($session, $invoice) === false) return false;
     $invoices[$invoiceIndex] = $invoice;
   }
-  if ($dueDate !== '') {
+  if ($dueDate !== '' && (string) ($customer['due_date'] ?? '') !== $dueDate) {
     mikhmonSetCustomerDueDate($session, $customer['id'], $dueDate);
     $customer['due_date'] = $dueDate;
   }
-  // Keep the customer scheduler current even if a service is later removed.
-  if (count($serviceDetails) >= 1) {
+  // The CLI worker owns scheduler management while automation is enabled.
+  if (count($serviceDetails) >= 1 && empty($fonnteConfig['automation_enabled'])) {
     $schedulerName = billingCustomerSchedulerName($customer['id']);
     if ($changed || !isset($schedulerMap[$schedulerName])) {
       if (billingInstallCustomerScheduler($API, $customer, $dueTimestamp)) {
@@ -315,8 +316,11 @@ if (!empty($routerConnected)) {
     $rows = $API->comm($command);
     if (is_array($rows) && billingApiError($rows) === '') foreach ($rows as $row) if (is_array($row) && isset($row['name'])) $customerUsers[$service][(string) $row['name']] = $row;
   }
-  $schedulerRows = $API->comm('/system/scheduler/print');
-  if (is_array($schedulerRows) && billingApiError($schedulerRows) === '') foreach ($schedulerRows as $row) if (is_array($row) && isset($row['name'])) $customerSchedulers[(string) $row['name']] = $row;
+  // Scheduler state is maintained by the billing worker when automation is on.
+  if (empty($fonnteConfig['automation_enabled'])) {
+    $schedulerRows = $API->comm('/system/scheduler/print');
+    if (is_array($schedulerRows) && billingApiError($schedulerRows) === '') foreach ($schedulerRows as $row) if (is_array($row) && isset($row['name'])) $customerSchedulers[(string) $row['name']] = $row;
+  }
 }
 $hotspotProfiles = is_array($hotspotProfiles) ? $hotspotProfiles : array();
 $pppoeProfiles = is_array($pppoeProfiles) ? $pppoeProfiles : array();
@@ -329,17 +333,19 @@ if (!empty($routerConnected)) {
       if ($updatedCustomer) $customers[$customerIndex] = $updatedCustomer;
     }
   }
-  foreach ($customers as $customerIndex => $customer) {
-    if (count(mikhmonCustomerServices($customer)) < 2) continue;
-    $schedulerName = billingCustomerSchedulerName($customer['id']);
-    if (isset($customerSchedulers[$schedulerName])) continue;
-    $serviceDetails = billingServiceDetails($customer, $customerUsers, $customerSchedulers, $hotspotProfiles, $pppoeProfiles);
-    $dueTimestamp = billingExistingDueTimestamp($customer, $serviceDetails);
-    if ($dueTimestamp <= time() + 5 || !billingInstallCustomerScheduler($API, $customer, $dueTimestamp)) continue;
-    $dueDate = date('Y-m-d H:i:s', $dueTimestamp);
-    mikhmonSetCustomerDueDate($session, $customer['id'], $dueDate);
-    $customers[$customerIndex]['due_date'] = $dueDate;
-    $customerSchedulers[$schedulerName] = array('name' => $schedulerName, 'next-run' => date('M/d/Y H:i:s', $dueTimestamp));
+  if (empty($fonnteConfig['automation_enabled'])) {
+    foreach ($customers as $customerIndex => $customer) {
+      if (count(mikhmonCustomerServices($customer)) < 2) continue;
+      $schedulerName = billingCustomerSchedulerName($customer['id']);
+      if (isset($customerSchedulers[$schedulerName])) continue;
+      $serviceDetails = billingServiceDetails($customer, $customerUsers, $customerSchedulers, $hotspotProfiles, $pppoeProfiles);
+      $dueTimestamp = billingExistingDueTimestamp($customer, $serviceDetails);
+      if ($dueTimestamp <= time() + 5 || !billingInstallCustomerScheduler($API, $customer, $dueTimestamp)) continue;
+      $dueDate = date('Y-m-d H:i:s', $dueTimestamp);
+      if ((string) ($customer['due_date'] ?? '') !== $dueDate) mikhmonSetCustomerDueDate($session, $customer['id'], $dueDate);
+      $customers[$customerIndex]['due_date'] = $dueDate;
+      $customerSchedulers[$schedulerName] = array('name' => $schedulerName, 'next-run' => date('M/d/Y H:i:s', $dueTimestamp));
+    }
   }
 }
 
