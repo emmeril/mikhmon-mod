@@ -179,9 +179,9 @@ $pppoeCustomers = count($pppoeCustomerNames);
     <div class="col-8 mitra-dashboard-column">
       <div id="r_2" class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-wifi"></i> Hotspot</h3></div><div class="card-body"><div class="row">
         <div class="col-3 col-box-6"><div class="box bg-blue bmh-75"><a href="./?hotspot=active&session=<?= $session; ?>"><h1><?= count($mitraHotspotActive); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-laptop"></i> <?= $_hotspot_active ?></div></a></div></div>
-        <div class="col-3 col-box-6"><div class="box bg-green bmh-75"><a href="./?hotspot=users&profile=all&session=<?= $session; ?>"><h1><?= count($mitraHotspotUsers); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-users"></i> <?= $_hotspot_users ?></div></a></div></div>
-        <div class="col-3 col-box-6"><div class="box bg-yellow bmh-75"><a href="./?hotspot=users-by-profile&session=<?= $session; ?>"><h1><?= count($mitraVoucherUsers); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-ticket"></i> Vouchers</div></a></div></div>
-        <div class="col-3 col-box-6"><div class="box bg-red bmh-75"><a href="./?hotspot-user=generate&session=<?= $session; ?>"><h1><i class="fa fa-user-plus"></i> <span style="font-size:15px"><?= $_generate ?></span></h1><div><i class="fa fa-ticket"></i> Voucher</div></a></div></div>
+        <div class="col-3 col-box-6"><div class="box bg-green bmh-75"><a href="./?hotspot=users&profile=all&session=<?= $session; ?>"><h1><?= count($mitraVoucherUsers); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-ticket"></i> Vouchers</div></a></div></div>
+        <div class="col-3 col-box-6"><div class="box bg-yellow bmh-75"><a href="./?customer=service-add&service=hotspot&session=<?= $session; ?>"><h1><i class="fa fa-user-plus"></i> <span style="font-size:15px"><?= $_add ?></span></h1><div><i class="fa fa-ticket"></i> Vouchers</div></a></div></div>
+        <div class="col-3 col-box-6"><div class="box bg-red bmh-75"><a href="./?hotspot-user=generate&session=<?= $session; ?>"><h1><i class="fa fa-user-plus"></i> <span style="font-size:15px"><?= $_generate ?></span></h1><div><i class="fa fa-ticket"></i> Vouchers</div></a></div></div>
       </div></div></div></div>
 
       <div id="r_ppp" class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-exchange"></i> PPPoE</h3></div><div class="card-body"><div class="row">
