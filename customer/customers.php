@@ -7,6 +7,7 @@ if (!isset($_SESSION["mikhmon"])) {
 
 include_once('./include/database.php');
 include_once('./lib/fonnte.php');
+include_once('./lib/billing_automation.php');
 
 $customerMessage = '';
 $customerError = '';
@@ -206,7 +207,8 @@ if (!empty($routerConnected)) {
           if ($isolationTimestamp <= 0) {
             $billingDueDate = ($customerInvoice['status'] ?? '') === 'paid' && !empty($customerInvoice['next_due_date'])
               ? $customerInvoice['next_due_date']
-              : ($customerInvoice['due_date'] ?? ($customerRow['due_date'] ?? ''));
+              : ($customerInvoice['due_date'] ?? '');
+            if ($billingDueDate === '') $billingDueDate = date('Y-m-d H:i:s', mikhmonBillingAutomationUpcomingDueTimestamp());
             $dueTimestamp = customerListDueTimestamp($billingDueDate);
             if ($dueTimestamp > 0 && (empty($customerFonnteConfig['automation_enabled']) || !empty($customerFonnteConfig['isolation_enabled']))) {
               $graceDays = !empty($customerFonnteConfig['automation_enabled']) ? (int) ($customerFonnteConfig['grace_days'] ?? 0) : 0;
