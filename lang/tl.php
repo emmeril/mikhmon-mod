@@ -166,8 +166,9 @@ $_details_add_user = '
 
 $_details_user_profile = '
 '.$_expired_mode.' is the control for the hotspot user.<br>
-Options : Remove, Notice, Remove & Record, Notice & Record.
+Options : None, Remove, Notice, Remove & Record, Notice & Record.
 <ul>
+<li>None: Gamitin ito para sa customer profile na pinamamahalaan ng Billing. Ang expiration, due date, at isolation ay kontrolado ng Billing automation.</li>
 <li>Remove: Maaalis ang gumagamit kapag ay ubos na.</li>
 <li>Notice: Hindi maaalis ang gumagamit at makakatanggap ng paalala pagkatapos itong maubos.</li>
 <li>Record: Sagipin ang presyon ng bawat logib ng gumagamit. Para ma kwentahin ang lahat ng benta ng mga gumagamit ng hotspot.</li>

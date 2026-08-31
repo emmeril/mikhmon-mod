@@ -166,8 +166,9 @@ $_details_add_user = '
 
 $_details_user_profile = '
 '.$_expired_mode.' Es el control para el usuario del hotspot.<br>
-Opciones : Eliminar, aviso, Eliminar y registrar, Aviso y registrar.
+Opciones : None, Eliminar, aviso, Eliminar y registrar, Aviso y registrar.
 <ul>
+<li>None: Use esta opción para perfiles administrados por Billing. La expiración, el vencimiento y el aislamiento son controlados por la automatización de Billing.</li>
 <li>Eliminar: El usuario será eliminado cuando  expire..</li>
 <li>Naviso: El usuario no se eliminará y recibirá una notificación después de la expiración del usuario.</li>
 <li>Registrar: Guardar el precio de cada usuario de inicio de sesión. Para calcular las ventas totales de usuarios de hotspot..</li>

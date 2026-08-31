@@ -166,8 +166,9 @@ $_details_add_user = '
 
 $_details_user_profile = '
 '.$_expired_mode.' hotspot kullanıcısı için kontrollerdir.<br>
-Seçenekler: Kaldır, Bildir, Kaldır ve Kaydet, Bildir ve Kaydet.
+Seçenekler: None, Kaldır, Bildir, Kaldır ve Kaydet, Bildir ve Kaydet.
 <ul>
+<li>None: Billing tarafından yönetilen müşteri profilleri için kullanın. Son kullanma tarihi, ödeme tarihi ve izolasyon Billing otomasyonu tarafından yönetilir.</li>
 <li>Kaldır: Kullanıcı süresi dolduğunda silinecek.</li>
 <li>Uyarı: Kullanıcı süresi dolduktan sonra silinmeyecek ve bildirim almayacaktır.</li>
 <li>Kayıt: Her kullanıcı girişinin fiyatını kaydedin. Hotspot kullanıcılarının toplam satışlarını hesaplamak için.</li>

@@ -166,8 +166,9 @@ $_details_add_user = '
 
 $_details_user_profile = '
 '.$_expired_mode.' adalah kontrol untuk user hotspot.<br>
-        Pilihan : Remove, Notice, Remove & Record, Notice & Record.
+        Pilihan : None, Remove, Notice, Remove & Record, Notice & Record.
         <ul>
+        <li>None : Gunakan pilihan ini untuk profile pelanggan yang dikelola Billing. Masa berlaku, jatuh tempo, dan isolir dikontrol oleh otomasi Billing.</li>
         <li>Remove : User akan dihapus ketika sudah kedaluwarsa.</li>
         <li>Notice : User tidah dihapus dan akan mendapatkan notifikasi setelah user expired.</li>
         <li>Record : Menyimpan data harga tiap user yang login. Untuk menghitung total penjualan user hotspot dan ditampilkan dalam laporan penjualan.</li>
