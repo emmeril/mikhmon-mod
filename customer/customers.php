@@ -137,21 +137,38 @@ if (!empty($routerConnected)) {
   <div class="card-body">
     <?php if ($customerMessage !== ''): ?><div class="box bg-success"><?= htmlspecialchars($customerMessage, ENT_QUOTES); ?></div><?php endif; ?>
     <?php if ($customerError !== ''): ?><div class="box bg-danger"><?= htmlspecialchars($customerError, ENT_QUOTES); ?></div><?php endif; ?>
-    <div class="row">
-      <div class="col-6 pd-t-5 pd-b-5"><div class="input-group">
-        <div class="input-group-6 col-box-6"><input id="customerSearch" type="text" style="padding:5.8px" class="group-item group-item-l" placeholder="<?= $_search ?>"></div>
-        <div class="input-group-6 col-box-6"><select id="customerServiceFilter" class="group-item group-item-r"><option value="all">Layanan: Semua</option><option value="hotspot">Hotspot</option><option value="pppoe">PPPoE</option></select></div>
-      </div></div>
-      <div class="col-6 text-right"><button id="customerReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button><?php if (mikhmonIsAdmin() || mikhmonIsMitra()): ?><a class="btn bg-primary" href="./?customer=service-add&session=<?= rawurlencode($session); ?>"><i class="fa fa-link"></i> Tambah Layanan</a><?php endif; ?></div>
-    </div>
     <style>
+      .customer-toolbar { display:flex; align-items:stretch; justify-content:space-between; gap:10px; margin:5px 0 10px; }
+      .customer-filter-controls { display:flex; align-items:stretch; flex:1; gap:8px; min-width:0; }
+      .customer-toolbar-actions { display:flex; align-items:stretch; justify-content:flex-end; gap:8px; }
+      .customer-toolbar-control { height:34px; min-height:34px; margin:0; box-sizing:border-box; }
+      #customerSearch { flex:1; min-width:220px; }
+      #customerServiceFilter, #customerStatusFilter { width:155px; }
+      .customer-toolbar .btn { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:34px; margin:0; box-sizing:border-box; }
       #dataTable .customer-service-select { min-width:115px; }
       #dataTable .customer-service-total { text-align:center; font-weight:bold; }
       #dataTable .customer-username-cell { min-width:145px; font-weight:bold; }
       #dataTable .customer-profile-cell { min-width:180px; color:#888; font-size:12px; white-space:normal; }
       #dataTable .customer-isolation-date { min-width:135px; text-align:center; }
       #dataTable .customer-status { min-width:85px; text-align:center; font-weight:bold; }
+      @media(max-width:900px) {
+        .customer-toolbar { flex-direction:column; }
+        .customer-toolbar-actions { justify-content:stretch; }
+        .customer-toolbar-actions .btn { flex:1; }
+      }
+      @media(max-width:600px) {
+        .customer-filter-controls, .customer-toolbar-actions { flex-direction:column; }
+        #customerSearch, #customerServiceFilter, #customerStatusFilter { width:100%; min-width:0; }
+      }
     </style>
+    <div class="customer-toolbar">
+      <div class="customer-filter-controls">
+        <input id="customerSearch" type="text" class="form-control customer-toolbar-control" placeholder="<?= $_search ?>">
+        <select id="customerServiceFilter" class="form-control customer-toolbar-control"><option value="all">Layanan: Semua</option><option value="hotspot">Hotspot</option><option value="pppoe">PPPoE</option></select>
+        <select id="customerStatusFilter" class="form-control customer-toolbar-control"><option value="all">Status: Semua</option><option value="active">Aktif</option><option value="isolir">Isolir</option></select>
+      </div>
+      <div class="customer-toolbar-actions"><button id="customerReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button><?php if (mikhmonIsAdmin() || mikhmonIsMitra()): ?><a class="btn bg-primary" href="./?customer=service-add&session=<?= rawurlencode($session); ?>"><i class="fa fa-link"></i> Tambah Layanan</a><?php endif; ?></div>
+    </div>
     <div class="overflow box-bordered" style="max-height:65vh"><table id="dataTable" class="table table-bordered table-hover text-nowrap">
       <thead><tr><th>No</th><th>Nama Pelanggan</th><th>Nomor HP</th><th>Alamat</th><th>Jumlah Layanan</th><th>Layanan</th><th>Username</th><th>Profile</th><th>Tanggal Isolir</th><th>Status</th><th>Mitra</th><th>Aksi</th></tr></thead><tbody>
       <?php foreach ($customers as $customerIndex => $customerRow): ?>
@@ -181,7 +198,7 @@ if (!empty($routerConnected)) {
           $customerStatusText = $customerIsIsolated ? 'Isolir' : 'Aktif';
           $customerStatusClass = $customerIsIsolated ? 'text-danger' : 'text-success';
         ?>
-        <tr class="customer-row" data-search="<?= htmlspecialchars(strtolower($customerSearchData), ENT_QUOTES); ?>" data-service="<?= htmlspecialchars(strtolower(implode(',', array_map(function ($item) { return $item['service']; }, $customerServices))), ENT_QUOTES); ?>"><td><?= $customerIndex + 1; ?></td><td><?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['phone']) ? $customerRow['phone'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['address']) ? $customerRow['address'] : '', ENT_QUOTES); ?></td><td class="customer-service-total"><?= count($customerServices); ?></td><td><select class="form-control customer-service-select"><?php foreach ($customerServices as $serviceIndex => $customerService): ?><option value="<?= $serviceIndex; ?>" data-type="<?= htmlspecialchars($customerService['service'], ENT_QUOTES); ?>" data-username="<?= htmlspecialchars($customerService['username'], ENT_QUOTES); ?>" data-profile="<?= htmlspecialchars($customerService['profile'], ENT_QUOTES); ?>"><?= strtoupper(htmlspecialchars($customerService['service'], ENT_QUOTES)); ?></option><?php endforeach; ?></select></td><td class="customer-username-cell"><?= htmlspecialchars($firstCustomerService['username'], ENT_QUOTES); ?></td><td class="customer-profile-cell"><?= htmlspecialchars($firstCustomerService['profile'] !== '' ? $firstCustomerService['profile'] : 'Profile belum diatur', ENT_QUOTES); ?></td><td class="customer-isolation-date"><?= $isolationTimestamp > 0 ? htmlspecialchars(date('d-m-Y H:i', $isolationTimestamp), ENT_QUOTES) : '-'; ?></td><td class="customer-status <?= $customerStatusClass; ?>"><i class="fa <?= $customerIsIsolated ? 'fa-ban' : 'fa-check-circle'; ?>"></i> <?= $customerStatusText; ?></td><td><?php if (mikhmonIsAdmin()): ?><form method="post" style="min-width:160px"><input type="hidden" name="customer_action" value="assign_mitra"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>"><select class="form-control" name="mitra_id" onchange="this.form.submit()"><option value="">Belum ditetapkan</option><?php foreach ($mitras as $mitra): ?><option value="<?= htmlspecialchars($mitra['id'], ENT_QUOTES); ?>"<?= isset($customerRow['mitra_id']) && $customerRow['mitra_id'] === $mitra['id'] ? ' selected' : ''; ?>><?= htmlspecialchars($mitra['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select></form><?php else: ?><?= htmlspecialchars(mikhmonUserName(), ENT_QUOTES); ?><?php endif; ?></td>
+        <tr class="customer-row" data-search="<?= htmlspecialchars(strtolower($customerSearchData), ENT_QUOTES); ?>" data-service="<?= htmlspecialchars(strtolower(implode(',', array_map(function ($item) { return $item['service']; }, $customerServices))), ENT_QUOTES); ?>" data-status="<?= $customerIsIsolated ? 'isolir' : 'active'; ?>"><td><?= $customerIndex + 1; ?></td><td><?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['phone']) ? $customerRow['phone'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['address']) ? $customerRow['address'] : '', ENT_QUOTES); ?></td><td class="customer-service-total"><?= count($customerServices); ?></td><td><select class="form-control customer-service-select"><?php foreach ($customerServices as $serviceIndex => $customerService): ?><option value="<?= $serviceIndex; ?>" data-type="<?= htmlspecialchars($customerService['service'], ENT_QUOTES); ?>" data-username="<?= htmlspecialchars($customerService['username'], ENT_QUOTES); ?>" data-profile="<?= htmlspecialchars($customerService['profile'], ENT_QUOTES); ?>"><?= strtoupper(htmlspecialchars($customerService['service'], ENT_QUOTES)); ?></option><?php endforeach; ?></select></td><td class="customer-username-cell"><?= htmlspecialchars($firstCustomerService['username'], ENT_QUOTES); ?></td><td class="customer-profile-cell"><?= htmlspecialchars($firstCustomerService['profile'] !== '' ? $firstCustomerService['profile'] : 'Profile belum diatur', ENT_QUOTES); ?></td><td class="customer-isolation-date"><?= $isolationTimestamp > 0 ? htmlspecialchars(date('d-m-Y H:i', $isolationTimestamp), ENT_QUOTES) : '-'; ?></td><td class="customer-status <?= $customerStatusClass; ?>"><i class="fa <?= $customerIsIsolated ? 'fa-ban' : 'fa-check-circle'; ?>"></i> <?= $customerStatusText; ?></td><td><?php if (mikhmonIsAdmin()): ?><form method="post" style="min-width:160px"><input type="hidden" name="customer_action" value="assign_mitra"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>"><select class="form-control" name="mitra_id" onchange="this.form.submit()"><option value="">Belum ditetapkan</option><?php foreach ($mitras as $mitra): ?><option value="<?= htmlspecialchars($mitra['id'], ENT_QUOTES); ?>"<?= isset($customerRow['mitra_id']) && $customerRow['mitra_id'] === $mitra['id'] ? ' selected' : ''; ?>><?= htmlspecialchars($mitra['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select></form><?php else: ?><?= htmlspecialchars(mikhmonUserName(), ENT_QUOTES); ?><?php endif; ?></td>
         <td><a class="btn bg-primary" href="./?customer=identity-edit&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-edit"></i> Edit Identitas</a> <a class="btn bg-secondary" href="./?customer=service-add&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-plus"></i> Layanan</a> <button type="button" class="btn bg-danger customer-delete-button" data-customer-id="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>" data-customer-name="<?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?>" data-customer-username="<?= htmlspecialchars($customerUsername, ENT_QUOTES); ?>"><i class="fa fa-trash"></i> Hapus</button></td>
       </tr><?php endforeach; ?>
       <?php if (!$customers): ?><tr class="customer-info-row"><td colspan="12" class="text-center"><?= mikhmonIsMitra() ? 'Belum ada pelanggan yang ditetapkan kepada Anda.' : 'Belum ada data pelanggan.'; ?></td></tr><?php endif; ?>
@@ -216,12 +233,14 @@ $(function() {
   function filterCustomers() {
     var search = $('#customerSearch').val().toLowerCase();
     var service = $('#customerServiceFilter').val();
+    var status = $('#customerStatusFilter').val();
     var visible = 0;
     $('.customer-row').each(function() {
       var row = $(this);
       var searchableText = row.text().toLowerCase() + ' ' + String(row.data('search') || '');
       var matchesSearch = searchableText.indexOf(search) > -1;
       var matchesService = service === 'all' || String(row.data('service')).split(',').indexOf(service) !== -1;
+      var matchesStatus = status === 'all' || String(row.data('status')) === status;
       if (matchesService && service !== 'all') {
         var serviceSelect = row.find('.customer-service-select');
         var matchingOption = serviceSelect.find('option[data-type="' + service + '"]').first();
@@ -230,7 +249,7 @@ $(function() {
           showSelectedCustomerAccount(serviceSelect[0]);
         }
       }
-      var show = matchesSearch && matchesService;
+      var show = matchesSearch && matchesService && matchesStatus;
       row.toggle(show);
       if (show) visible++;
     });
@@ -239,9 +258,11 @@ $(function() {
   }
   $('#customerSearch').on('input', filterCustomers);
   $('#customerServiceFilter').on('change', filterCustomers);
+  $('#customerStatusFilter').on('change', filterCustomers);
   $('#customerReset').on('click', function() {
     $('#customerSearch').val('');
     $('#customerServiceFilter').val('all');
+    $('#customerStatusFilter').val('all');
     filterCustomers();
   });
   filterCustomers();
