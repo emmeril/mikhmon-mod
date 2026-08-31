@@ -2,6 +2,8 @@
 error_reporting(0);
 if (!isset($_SESSION['mikhmon'])) { header('Location:../admin.php?id=login'); exit; }
 include_once('./include/database.php');
+include_once('./lib/billing_profile.php');
+include_once('./ppp/profilemeta.php');
 $serviceError = '';
 $selectedServiceType = ($_POST['service_type'] ?? ($_GET['service'] ?? '')) === 'pppoe' ? 'pppoe' : 'hotspot';
 $serviceCustomers = mikhmonVisibleCustomers($session);
@@ -18,6 +20,8 @@ if (!empty($routerConnected)) {
   if (!is_array($hotspotServers) || serviceAddApiError($hotspotServers) !== '') $hotspotServers = array();
   if (!is_array($pppoeProfiles) || serviceAddApiError($pppoeProfiles) !== '') $pppoeProfiles = array();
 }
+$billingHotspotProfiles = array_values(array_filter($hotspotProfiles, function ($profile) { return isset($profile['name']) && mikhmonBillingProfileCanManage('hotspot', $profile); }));
+$billingPppoeProfiles = array_values(array_filter($pppoeProfiles, function ($profile) { return isset($profile['name']) && mikhmonBillingProfileCanManage('pppoe', $profile); }));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['service_action'] ?? '') === 'save') {
   $customerId = (string) ($_POST['customer_id'] ?? '');
@@ -33,6 +37,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['service_action'] ?? '') ==
   elseif ($username === '' || $profile === '') $serviceError = 'Username dan profile wajib diisi.';
   elseif ($password === '') $serviceError = 'Password wajib diisi untuk layanan baru.';
   else {
+    $profileRows = $service === 'pppoe' ? $pppoeProfiles : $hotspotProfiles;
+    $profileRow = array();
+    foreach ((array) $profileRows as $candidate) if (isset($candidate['name']) && (string) $candidate['name'] === $profile) { $profileRow = $candidate; break; }
+    if (!$profileRow || !mikhmonBillingProfileCanManage($service, $profileRow)) $serviceError = 'Profile yang dikelola Billing wajib menggunakan Expired Mode = None.';
+    if ($serviceError !== '') {
+      // Keep the MikroTik state untouched when a non-Billing profile is submitted.
+    } else {
     $command = $service === 'pppoe' ? '/ppp/secret' : '/ip/hotspot/user';
     $existing = $API->comm($command . '/print', array('?name' => $username));
     if (serviceAddApiError($existing) !== '') $serviceError = 'Gagal memeriksa username MikroTik: ' . serviceAddApiError($existing);
@@ -55,6 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['service_action'] ?? '') ==
         $query = './?customer=list&session=' . rawurlencode($session) . '&service-added=1';
         echo "<script>window.location=" . json_encode($query) . "</script>"; exit;
       }
+    }
     }
   }
 }
@@ -79,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['service_action'] ?? '') ==
         <div><label>Jenis Layanan *</label><select class="form-control service-type" name="service_type" required><option value="hotspot"<?= $selectedServiceType === 'hotspot' ? ' selected' : ''; ?>>Hotspot</option><option value="pppoe"<?= $selectedServiceType === 'pppoe' ? ' selected' : ''; ?>>PPPoE</option></select></div>
         <div><label>Username *</label><input class="form-control" name="service_username" required value="<?= htmlspecialchars($_POST['service_username'] ?? '', ENT_QUOTES); ?>" placeholder="Username MikroTik"></div>
         <div><label>Password *</label><input class="form-control" type="password" name="service_password" required placeholder="Password layanan"></div>
-        <div><label>Profile *</label><select class="form-control service-profile" name="service_profile" required><option value="">Pilih profile</option><?php foreach ($hotspotProfiles as $profileRow): if(isset($profileRow['name'])): ?><option data-service="hotspot" value="<?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?>"<?= (string) ($_POST['service_profile'] ?? '') === (string) $profileRow['name'] ? ' selected' : ''; ?>><?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?></option><?php endif; endforeach; ?><?php foreach ($pppoeProfiles as $profileRow): if(isset($profileRow['name'])): ?><option data-service="pppoe" value="<?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?>" style="display:none"<?= (string) ($_POST['service_profile'] ?? '') === (string) $profileRow['name'] ? ' selected' : ''; ?>><?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?></option><?php endif; endforeach; ?></select></div>
+        <div><label>Profile *</label><select class="form-control service-profile" name="service_profile" required><option value="">Pilih profile</option><?php foreach ($billingHotspotProfiles as $profileRow): ?><option data-service="hotspot" value="<?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?>"<?= (string) ($_POST['service_profile'] ?? '') === (string) $profileRow['name'] ? ' selected' : ''; ?>><?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?></option><?php endforeach; ?><?php foreach ($billingPppoeProfiles as $profileRow): ?><option data-service="pppoe" value="<?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?>" style="display:none"<?= (string) ($_POST['service_profile'] ?? '') === (string) $profileRow['name'] ? ' selected' : ''; ?>><?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select><small style="display:block;margin-top:6px;color:#888">Hanya profile dengan Expired Mode = None yang tersedia untuk Billing.</small></div>
         <div class="service-server-field"><label>Server Hotspot</label><select class="form-control" name="service_server"><option value="all">all</option><?php foreach ($hotspotServers as $serverRow): if(isset($serverRow['name'])): ?><option value="<?= htmlspecialchars($serverRow['name'], ENT_QUOTES); ?>"><?= htmlspecialchars($serverRow['name'], ENT_QUOTES); ?></option><?php endif; endforeach; ?></select></div>
       </div>
       <div class="service-add-actions"><button class="btn bg-primary" type="submit" onclick="loader()"><i class="fa fa-link"></i> Simpan Layanan</button><a class="btn bg-warning" href="./?customer=list&session=<?= rawurlencode($session); ?>"><i class="fa fa-close"></i> Batal</a></div>

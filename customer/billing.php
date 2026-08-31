@@ -7,6 +7,7 @@ include_once('./include/database.php');
 include_once('./ppp/profilemeta.php');
 include_once('./lib/fonnte.php');
 include_once('./lib/billing_automation.php');
+include_once('./lib/billing_profile.php');
 
 function billingApiError($response) {
   if (!is_array($response)) return '';
@@ -40,6 +41,12 @@ function billingProfilePrice($service, $profileName, $hotspotProfiles, $pppoePro
     if (preg_match('/,([^,]*),([^,]*),([^,]*),([^,]*),/', $login, $matches)) return array('price' => $matches[2], 'selling_price' => $matches[4], 'validity' => $matches[3]);
   }
   return array('price' => '', 'selling_price' => '', 'validity' => '');
+}
+
+function billingProfileRow($service, $profileName, $hotspotProfiles, $pppoeProfiles) {
+  $rows = $service === 'pppoe' ? $pppoeProfiles : $hotspotProfiles;
+  foreach ((array) $rows as $profile) if (isset($profile['name']) && (string) $profile['name'] === (string) $profileName) return $profile;
+  return array();
 }
 
 function billingDueDate($service, $username, $user, $schedulers) {
@@ -217,13 +224,16 @@ function billingServiceDetails($customer, $customerUsers, $customerSchedulers, $
     $disabled = !$missing && isset($user['disabled']) && ($user['disabled'] === 'true' || $user['disabled'] === 'yes');
     $expired = $disabled || ($service === 'hotspot' && !$missing && isset($user['limit-uptime']) && $user['limit-uptime'] === '1s');
     $prices = billingProfilePrice($service, $serviceRow['profile'], $hotspotProfiles, $pppoeProfiles);
+    $profileRow = billingProfileRow($service, $serviceRow['profile'], $hotspotProfiles, $pppoeProfiles);
+    $profileAllowed = $profileRow && mikhmonBillingProfileCanManage($service, $profileRow);
     $amount = (float) ($prices['selling_price'] !== '' ? $prices['selling_price'] : $prices['price']);
     $details[] = array(
       'id' => $serviceRow['id'], 'service' => $service, 'username' => $username,
       'profile' => $serviceRow['profile'], 'amount' => $amount, 'validity' => $prices['validity'] ?? '',
       'due_date' => billingDueDate($service, $username, $user, $customerSchedulers),
-      'status' => $missing ? 'missing' : ($expired ? 'expired' : 'active'),
-      'status_text' => $missing ? 'Tidak ditemukan' : ($expired ? 'Expired' : 'Aktif'),
+      'profile_expired_mode' => $profileRow ? mikhmonBillingProfileExpiredMode($service, $profileRow) : '',
+      'status' => $missing ? 'missing' : (!$profileAllowed ? 'invalid-profile' : ($expired ? 'expired' : 'active')),
+      'status_text' => $missing ? 'Tidak ditemukan' : (!$profileAllowed ? 'Profile harus None' : ($expired ? 'Expired' : 'Aktif')),
     );
   }
   return $details;
@@ -348,13 +358,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     else {
       $invoiceServices = billingServiceDetails($customer, $customerUsers, $customerSchedulers, $hotspotProfiles, $pppoeProfiles);
       $amount = 0; $missingPrice = array();
+      $invalidProfiles = array();
       foreach ($invoiceServices as $serviceDetail) {
         $amount += (float) $serviceDetail['amount'];
         if ((float) $serviceDetail['amount'] <= 0) $missingPrice[] = strtoupper($serviceDetail['service']) . ' ' . $serviceDetail['profile'];
+        if (($serviceDetail['status'] ?? '') === 'invalid-profile') $invalidProfiles[] = strtoupper($serviceDetail['service']) . ' ' . $serviceDetail['profile'];
       }
       $customerDueTimestamp = billingCustomerDueTimestamp($customer, $invoiceServices);
       $customerDueDate = date('Y-m-d H:i:s', $customerDueTimestamp);
-      if ($missingPrice) $customerError = 'Harga profile belum diatur: ' . implode(', ', $missingPrice) . '.';
+      if ($invalidProfiles) $customerError = 'Profile layanan berikut harus Expired Mode = None untuk dikelola Billing: ' . implode(', ', $invalidProfiles) . '.';
+      elseif ($missingPrice) $customerError = 'Harga profile belum diatur: ' . implode(', ', $missingPrice) . '.';
       elseif (!$invoiceServices) $customerError = 'Pelanggan belum memiliki layanan.';
       else {
         $invoice = array(
@@ -383,8 +396,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif (($invoices[$invoiceIndex]['status'] ?? '') === 'paid') $customerError = 'Invoice ini sudah dibayar.';
     elseif (empty($routerConnected)) $customerError = 'Router MikroTik tidak terhubung.';
     else {
-      $activationRows = array();
       foreach (billingInvoiceServices($invoices[$invoiceIndex], $customer) as $serviceRow) {
+        $serviceType = ($serviceRow['service'] ?? '') === 'pppoe' ? 'pppoe' : 'hotspot';
+        $profileRow = billingProfileRow($serviceType, $serviceRow['profile'] ?? '', $hotspotProfiles, $pppoeProfiles);
+        if (!$profileRow || !mikhmonBillingProfileCanManage($serviceType, $profileRow)) {
+          $customerError = 'Profile layanan ' . ($serviceRow['username'] ?? '') . ' harus Expired Mode = None untuk dikelola Billing.';
+          break;
+        }
+      }
+      $activationRows = array();
+      if ($customerError === '') foreach (billingInvoiceServices($invoices[$invoiceIndex], $customer) as $serviceRow) {
         $service = ($serviceRow['service'] ?? '') === 'pppoe' ? 'pppoe' : 'hotspot';
         $username = (string) ($serviceRow['username'] ?? '');
         $command = $service === 'pppoe' ? '/ppp/secret' : '/ip/hotspot/user';
