@@ -31,10 +31,10 @@ function mikhmonBillingAutomationUpcomingDueTimestamp($now = null) {
 
 function mikhmonBillingAutomationNextDueTimestamp($baseTimestamp = null, $now = null) {
   $baseTimestamp = $baseTimestamp === null ? time() : (int) $baseTimestamp;
-  $now = $now === null ? time() : (int) $now;
   if ($baseTimestamp <= 0) $baseTimestamp = time();
-  $candidate = mktime(0, 0, 0, (int) date('n', $baseTimestamp) + 1, 5, (int) date('Y', $baseTimestamp));
-  return $candidate > $now ? $candidate : mikhmonBillingAutomationUpcomingDueTimestamp($now);
+  // Advance exactly one billing cycle from the invoice being paid. A late
+  // payment must not skip outstanding monthly periods to the current month.
+  return mktime(0, 0, 0, (int) date('n', $baseTimestamp) + 1, 5, (int) date('Y', $baseTimestamp));
 }
 
 function mikhmonBillingAutomationIsWorkHour($timestamp = null) {

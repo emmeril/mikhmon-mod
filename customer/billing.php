@@ -498,10 +498,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 
+// Keep the last payment visible until the next invoice actually becomes due.
+// A new cycle is generated immediately after payment, so simply selecting the
+// newest invoice would make a successful payment look unpaid in the table.
 $latestInvoices = array();
+$invoiceCandidates = array();
 foreach ($invoices as $invoice) if (isset($invoice['customer_id'])) {
   $key = (string) $invoice['customer_id'];
-  if (!isset($latestInvoices[$key]) || (int) ($invoice['created_at'] ?? 0) >= (int) ($latestInvoices[$key]['created_at'] ?? 0)) $latestInvoices[$key] = $invoice;
+  if (!isset($invoiceCandidates[$key])) $invoiceCandidates[$key] = array('paid' => array(), 'unpaid' => array());
+  $status = (string) ($invoice['status'] ?? '');
+  if ($status !== 'paid' && $status !== 'unpaid') continue;
+  $sortAt = $status === 'paid' ? (int) ($invoice['paid_at'] ?? $invoice['created_at'] ?? 0) : (int) ($invoice['created_at'] ?? 0);
+  $current = $invoiceCandidates[$key][$status];
+  $currentSortAt = $status === 'paid' ? (int) ($current['paid_at'] ?? $current['created_at'] ?? 0) : (int) ($current['created_at'] ?? 0);
+  if (!$current || $sortAt >= $currentSortAt) $invoiceCandidates[$key][$status] = $invoice;
+}
+foreach ($invoiceCandidates as $key => $candidates) {
+  $paid = $candidates['paid']; $unpaid = $candidates['unpaid'];
+  if (!$unpaid) { if ($paid) $latestInvoices[$key] = $paid; continue; }
+  $unpaidDue = billingDueTimestamp($unpaid['due_date'] ?? '');
+  // Invalid/missing dates retain the old behavior and remain actionable.
+  $unpaidIsDue = $unpaidDue <= 0 || $unpaidDue <= time();
+  $latestInvoices[$key] = $paid && !$unpaidIsDue ? $paid : $unpaid;
 }
 ?>
 <div class="row"><div class="col-12"><div class="card">
@@ -517,8 +535,10 @@ foreach ($invoices as $invoice) if (isset($invoice['customer_id'])) {
       $serviceDetails = billingServiceDetails($customer, $customerUsers, $customerSchedulers, $hotspotProfiles, $pppoeProfiles);
       $firstService = $serviceDetails[0] ?? array('username'=>'','profile'=>'','status_text'=>'-','status'=>'missing');
       $invoice = $latestInvoices[(string) $customer['id']] ?? array();
-      $customerDueDate = !empty($invoice['due_date']) ? (string) $invoice['due_date'] : billingCustomerDueDate($customer, $serviceDetails);
       $invoiceStatus = $invoice['status'] ?? 'none';
+      $customerDueDate = $invoiceStatus === 'paid' && !empty($invoice['next_due_date'])
+        ? (string) $invoice['next_due_date']
+        : (!empty($invoice['due_date']) ? (string) $invoice['due_date'] : billingCustomerDueDate($customer, $serviceDetails));
       $invoiceStatusText = $invoiceStatus === 'paid' ? 'Sudah Bayar' : ($invoiceStatus === 'unpaid' ? 'Belum Bayar' : 'Belum Dibuat');
       $invoiceStatusClass = $invoiceStatus === 'paid' ? 'text-success' : ($invoiceStatus === 'unpaid' ? 'text-danger' : 'text-secondary');
       $estimatedAmount = 0; foreach ($serviceDetails as $detail) $estimatedAmount += (float) $detail['amount'];

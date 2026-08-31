@@ -29,6 +29,10 @@ $fonntePath = tempnam(sys_get_temp_dir(), 'mikhmon-fonnte-');
 putenv('MIKHMON_FONNTE_CONFIG=' . $fonntePath);
 mikhmonFonnteWriteConfig(array('enabled' => false, 'automation_enabled' => true, 'reminder_enabled' => false, 'isolation_enabled' => true));
 
+$novemberDue = strtotime('2026-11-05 00:00:00');
+$latePayment = strtotime('2027-02-01 12:00:00');
+billingAutomationTestAssert(date('Y-m-d H:i:s', mikhmonBillingAutomationNextDueTimestamp($novemberDue, $latePayment)) === '2026-12-05 00:00:00', 'late payment advances exactly one monthly billing cycle');
+
 $customerId = mikhmonSaveCustomer('router-a', '', 'Pelanggan A', '08123456789', '', 'hotspot', 'cust-a', 'basic');
 billingAutomationTestAssert($customerId !== false, 'customer can be created');
 $invoiceId = mikhmonSaveInvoice('router-a', array(
