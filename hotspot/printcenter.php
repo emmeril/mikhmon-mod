@@ -1,4 +1,6 @@
 <?php
+include_once(__DIR__ . '/../lib/billing_profile.php');
+
 error_reporting(0);
 
 if (!isset($_SESSION['mikhmon'])) {
@@ -6,7 +8,16 @@ if (!isset($_SESSION['mikhmon'])) {
   exit;
 }
 
-$getuser = (array) $API->comm('/ip/hotspot/user/print');
+$allProfiles = (array) $API->comm('/ip/hotspot/user/profile/print');
+$voucherProfiles = array();
+foreach ($allProfiles as $profileRow) {
+  if (isset($profileRow['name']) && mikhmonBillingProfileExpiredMode('hotspot', $profileRow) !== 'none') {
+    $voucherProfiles[(string) $profileRow['name']] = true;
+  }
+}
+$getuser = array_values(array_filter((array) $API->comm('/ip/hotspot/user/print'), function ($user) use ($voucherProfiles) {
+  return is_array($user) && isset($user['profile']) && isset($voucherProfiles[(string) $user['profile']]);
+}));
 if (function_exists('mikhmonIsMitra') && mikhmonIsMitra()) {
   $assignedUsernames = function_exists('mikhmonMitraUsernames') ? mikhmonMitraUsernames($session) : array();
   $getuser = array_values(array_filter($getuser, function ($user) use ($assignedUsernames) {
