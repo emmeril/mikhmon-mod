@@ -110,7 +110,12 @@ if (!isset($_SESSION["mikhmon"])) {
     $customermenu = "menu-open";
     if ($customer == "identity-add" || $customer == "add") { $sidentityadd = "active"; $mpage = "Tambah Identitas Pelanggan"; }
     elseif ($customer == "identity-list" || $customer == "identity-edit" || $customer == "edit" || ($customer == "list" && $customerid != "")) { $sidentitylist = "active"; $mpage = $customerid != "" ? "Edit Identitas Pelanggan" : "Daftar Identitas Pelanggan"; }
-    elseif ($customer == "service-add") { $sserviceadd = "active"; $mpage = "Tambah Layanan"; }
+    elseif ($customer == "service-add") {
+      $sserviceadd = "active"; $mpage = "Tambah Layanan";
+      if (mikhmonIsMitra() && isset($_GET['service']) && $_GET['service'] === 'hotspot') {
+        $mcustomers = ""; $customermenu = ""; $susers = "active"; $umenu = "menu-open";
+      }
+    }
     else { $scustomers = "active"; $mpage = "Daftar Pelanggan"; }
   } elseif ($report == "userlog") {
     $log = "active";
@@ -155,7 +160,7 @@ if (!isset($_SESSION["mikhmon"])) {
     $upmenu = "menu-open";
   } elseif ($hotspot == "users-by-profile") {
     $susersbp = "active";
-    $umenu = "menu-open";
+    $hotspotmenu = "menu-open";
     $mpage = $_vouchers;
   } elseif ($userbyname != "") {
     $mpage = $_users;
@@ -373,11 +378,14 @@ include('./info.php');
   <a href="./?commission=1&session=<?= $session; ?>" class="menu <?= $scommission; ?>"><i class="fa fa-line-chart"></i> Komisi Saya</a>
 <?php elseif (mikhmonIsMitra()): ?>
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
-  <div class="dropdown-btn <?= $susers . $sactive . $susersbp; ?>"><i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down"></i></div>
-  <div class="dropdown-container <?= $umenu . $hamenu; ?>">
+  <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-users"></i> <?= $_users ?> <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-container <?= $umenu; ?>">
     <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-users"></i> <?= $_user_list ?></a>
     <a href="./?customer=service-add&service=hotspot&session=<?= $session; ?>" class="<?= $sserviceadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_add_user ?></a>
     <a href="./?hotspot-user=generate&session=<?= $session; ?>" class="<?= $sgenuser; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_generate ?></a>
+  </div>
+  <div class="dropdown-btn <?= $sactive . $susersbp; ?>"><i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-container <?= $hamenu . $hotspotmenu; ?>">
     <a href="./?hotspot=users-by-profile&session=<?= $session; ?>" class="<?= $susersbp; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-ticket"></i> <?= $_vouchers ?></a>
     <a href="./?hotspot=active&session=<?= $session; ?>" class="<?= $sactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi"></i> <?= $_hotspot_active ?></a>
   </div>
@@ -403,20 +411,20 @@ include('./info.php');
   </div>
 <?php else: ?>
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
-  <!--hotspot-->
-  <div class="dropdown-btn <?= $susers . $suserprof . $sactive . $shosts . $sipbind . $scookies; ?>"><i class="fa fa-wifi"></i> Hotspot
-    <i class="fa fa-caret-down"></i>
-  </div>
-  <div class="dropdown-container <?= $umenu . $upmenu . $hamenu . $hmenu . $ibmenu . $cmenu; ?>">
-   <!--users--> 
+  <!--users-->
   <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-users"></i> <?= $_users ?>
     <i class="fa fa-caret-down"></i>
   </div>
   <div class="dropdown-container <?= $umenu; ?>">
     <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-list "></i> <?= $_user_list ?> </a>
     <a href="./?hotspot-user=add&session=<?= $session; ?>" class="<?= $sadduser; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus "></i> <?= $_add_user ?> </a>
-    <a href="./?hotspot-user=generate&session=<?= $session; ?>" class="<?= $sgenuser; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_generate ?> </a>        
+    <a href="./?hotspot-user=generate&session=<?= $session; ?>" class="<?= $sgenuser; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_generate ?> </a>
   </div>
+  <!--hotspot-->
+  <div class="dropdown-btn <?= $suserprof . $sactive . $shosts . $sipbind . $scookies; ?>"><i class="fa fa-wifi"></i> Hotspot
+    <i class="fa fa-caret-down"></i>
+  </div>
+  <div class="dropdown-container <?= $upmenu . $hamenu . $hmenu . $ibmenu . $cmenu; ?>">
   <!--profile-->
   <div class="dropdown-btn <?= $suserprof; ?>"><i class=" fa fa-pie-chart"></i>  <?= $_user_profile ?>
     <i class="fa fa-caret-down"></i>
