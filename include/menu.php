@@ -160,8 +160,9 @@ if (!isset($_SESSION["mikhmon"])) {
     $upmenu = "menu-open";
   } elseif ($hotspot == "users-by-profile") {
     $susersbp = "active";
-    $hotspotmenu = "menu-open";
-    $mpage = $_vouchers;
+    $susers = "active";
+    $umenu = "menu-open";
+    $mpage = "Jumlah Voucher";
   } elseif ($userbyname != "") {
     $mpage = "Vouchers";
     $susers = "active";
@@ -381,6 +382,7 @@ include('./info.php');
   <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-ticket"></i> Voucher <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $umenu; ?>">
     <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-ticket"></i> Voucher List</a>
+    <a href="./?hotspot=users-by-profile&session=<?= $session; ?>" class="<?= $susersbp; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-bar-chart"></i> Jumlah Voucher</a>
     <a href="./?customer=service-add&service=hotspot&session=<?= $session; ?>" class="<?= $sserviceadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_add_user ?></a>
     <a href="./?hotspot-user=generate&session=<?= $session; ?>" class="<?= $sgenuser; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_generate ?></a>
   </div>
@@ -417,6 +419,7 @@ include('./info.php');
   </div>
   <div class="dropdown-container <?= $umenu; ?>">
     <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-ticket "></i> Voucher List </a>
+    <a href="./?hotspot=users-by-profile&session=<?= $session; ?>" class="<?= $susersbp; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-bar-chart"></i> Jumlah Voucher </a>
     <a href="./?hotspot-user=add&session=<?= $session; ?>" class="<?= $sadduser; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus "></i> <?= $_add_user ?> </a>
     <a href="./?hotspot-user=generate&session=<?= $session; ?>" class="<?= $sgenuser; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_generate ?> </a>
   </div>

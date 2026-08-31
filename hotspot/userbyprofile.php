@@ -9,105 +9,78 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// hide all error
+/* Voucher counts grouped by hotspot profile. */
 error_reporting(0);
+include_once(__DIR__ . '/../lib/billing_profile.php');
+
+if (!isset($_SESSION['mikhmon'])) {
+  header('Location:../admin.php?id=login');
+  exit;
+}
+
+function voucherSummaryIsDisabled($user) {
+  $disabled = strtolower(trim((string) ($user['disabled'] ?? '')));
+  return $disabled === 'true' || $disabled === 'yes';
+}
+
+function voucherSummaryIsExpired($user) {
+  return voucherSummaryIsDisabled($user) || (string) ($user['limit-uptime'] ?? '') === '1s';
+}
+
+function voucherSummaryIsUnused($user) {
+  if (voucherSummaryIsExpired($user)) return false;
+  return preg_match('/^\s*(?:vc|up)-/i', (string) ($user['comment'] ?? '')) === 1;
+}
+
+$profileRows = $API->comm('/ip/hotspot/user/profile/print');
+$userRows = $API->comm('/ip/hotspot/user/print');
+$profileRows = is_array($profileRows) ? $profileRows : array();
+$userRows = is_array($userRows) ? $userRows : array();
 
 if (function_exists('mikhmonIsMitra') && mikhmonIsMitra()) {
-  $mitraVoucherUsers = array();
-  foreach ((array) $API->comm('/ip/hotspot/user/print') as $voucherUser) {
-    if (mikhmonRowBelongsToCurrentMitra($voucherUser)) $mitraVoucherUsers[] = $voucherUser;
-  }
-  $mitraVoucherProfiles = array();
-  foreach ($mitraVoucherUsers as $voucherUser) {
-    if (!empty($voucherUser['profile'])) $mitraVoucherProfiles[(string) $voucherUser['profile']] = true;
+  $assignedUsernames = function_exists('mikhmonMitraUsernames') ? mikhmonMitraUsernames($session) : array();
+  $userRows = array_values(array_filter($userRows, function ($user) use ($assignedUsernames) {
+    return (function_exists('mikhmonRowBelongsToCurrentMitra') && mikhmonRowBelongsToCurrentMitra($user))
+      || (isset($user['name']) && isset($assignedUsernames[(string) $user['name']]));
+  }));
+}
+
+$stats = array();
+foreach ($profileRows as $profile) {
+  if (isset($profile['name']) && mikhmonBillingProfileExpiredMode('hotspot', $profile) !== 'none') {
+    $stats[(string) $profile['name']] = array('total' => 0, 'unused' => 0, 'used' => 0, 'expired' => 0, 'profile' => $profile);
   }
 }
-if (!isset($_SESSION["mikhmon"])) {
-  header("Location:../admin.php?id=login");
-} else {
-// array color
-  $color = array('1' => 'bg-blue', 'bg-indigo', 'bg-purple', 'bg-pink', 'bg-red', 'bg-yellow', 'bg-green', 'bg-teal', 'bg-cyan', 'bg-grey', 'bg-light-blue');
+foreach ($userRows as $user) {
+  if (!isset($user['profile'])) continue;
+  $profileName = (string) $user['profile'];
+  if (!isset($stats[$profileName])) continue;
+  $stats[$profileName]['total']++;
+  if (voucherSummaryIsExpired($user)) $stats[$profileName]['expired']++;
+  elseif (voucherSummaryIsUnused($user)) $stats[$profileName]['unused']++;
+  else $stats[$profileName]['used']++;
+}
+if (function_exists('mikhmonIsMitra') && mikhmonIsMitra()) $stats = array_filter($stats, function ($row) { return $row['total'] > 0; });
 
-  ?>
-<div class="row">
-<div class="col-12">
-<div class="card">
-<div class="card-header">
-	<h3><i class=" fa fa-users"></i> <?= $_vouchers ?> &nbsp;&nbsp; | &nbsp;&nbsp;<i onclick="location.reload();" class="fa fa-refresh pointer" title="Reload data"></i></h3>
-</div>
-<div class="card-body">
-<div class="overflow" style="max-height: 80vh">	
-<div class="row">	
-      <div class="col-4">
-        <div class="box bmh-75 box-bordered <?= $color[rand(1, 11)]; ?>">
-          <div class="box-group">
-            <div class="box-group-icon">
-              <a title='Open User by profile <?= $pname; ?>'  href='./?hotspot=users&profile=all&session=<?= $session; ?>'>
-              <i class="fa fa-ticket"></i></a>
-            </div>
-              <div class="box-group-area">
-                <h3 >Profile : all<br>
-                <?php $countuser = isset($mitraVoucherUsers) ? count($mitraVoucherUsers) : $API->comm("/ip/hotspot/user/print", array("count-only" => ""));
-                if ($countuser < 2) {
-                  echo $countuser . " Item";
-                } elseif ($countuser > 1) {
-                  echo $countuser . " Items";
-                }
-                ?></h3>
-
-              <a title="Open User by profile all" href="./?hotspot=users&profile=all&session=<?= $session; ?>"><i class="fa fa-external-link"></i> <?= $_open ?></a>&nbsp;
-              <a title="Generate User by profile <?= $pname; ?>" href="./?hotspot-user=generate&session=<?= $session; ?>"><i class="fa fa-users"></i> <?= $_generate ?></a>&nbsp;
-              </div>
-            </div>
-            
-          </div>
-        </div>
-<?php
-// get user profile
-$getprofile = $API->comm("/ip/hotspot/user/profile/print");
-$TotalReg = count($getprofile);
-for ($i = 0; $i < $TotalReg; $i++) {
-  $profiledetalis = $getprofile[$i];
-  $pname = $profiledetalis['name'];
-  if (isset($mitraVoucherUsers) && !isset($mitraVoucherProfiles[$pname])) { continue; }
-  ?>
-	     <div class="col-4">
-        <div class="box bmh-75 box-bordered <?= $color[rand(1, 11)]; ?>">
-          <div class="box-group">
-            <div class="box-group-icon">
-              <a title='Open User by profile <?= $pname; ?>'  href='./?hotspot=users&profile=<?= $pname; ?>&session=<?= $session; ?>'>
-            	<i class="fa fa-ticket"></i></a>
-            </div>
-              <div class="box-group-area">
-                <h3 >Profile : <?= $pname; ?><br>
-                <?php	$countuser = isset($mitraVoucherUsers) ? count(array_filter($mitraVoucherUsers, function ($voucherUser) use ($pname) { return isset($voucherUser['profile']) && (string) $voucherUser['profile'] === (string) $pname; })) : $API->comm("/ip/hotspot/user/print", array("count-only" => "", "?profile" => "$pname", ));
-                if ($countuser < 2) {
-                  echo $countuser . " Item";
-                } elseif ($countuser > 1) {
-                  echo $countuser . " Items";
-                }
-                ?></h3>
-
-              <a title="Open User by profile <?= $pname; ?>" href="./?hotspot=users&profile=<?= $pname; ?>&session=<?= $session; ?>"><i class="fa fa-external-link"></i> <?= $_open ?></a>&nbsp;
-              <a title="Generate User by profile <?= $pname; ?>" href="./?hotspot-user=generate&genprof=<?= $pname; ?>&session=<?= $session; ?>"><i class="fa fa-users"></i> <?= $_generate ?></a>&nbsp;
-              </div>
-            </div>
-            
-          </div>
-        </div>
-        <?php 
-      }
-    } ?>
-      </div>
-    </div>
-</div>
-</div>
-</div>
-</div>
+?>
+<div class="row"><div class="col-12"><div class="card">
+  <div class="card-header"><h3><i class="fa fa-bar-chart"></i> Jumlah Voucher <small>&nbsp;|&nbsp;<i onclick="location.reload();" class="fa fa-refresh pointer" title="Reload data"></i></small></h3></div>
+  <div class="card-body">
+    <div class="overflow box-bordered" style="max-height:75vh"><table id="voucherProfileSummary" class="table table-bordered table-hover text-nowrap">
+      <thead><tr><th>No</th><th>Profile</th><th>Total Voucher</th><th>Belum Dipakai</th><th>Sudah Dipakai</th><th>Expired / Nonaktif</th><th>Aksi</th></tr></thead><tbody>
+      <?php $index = 0; foreach ($stats as $profileName => $row): $index++; $profile = $row['profile']; $profileMode = mikhmonBillingProfileExpiredMode('hotspot', $profile); ?>
+        <tr><td class="text-center"><?= $index; ?></td><td><?= htmlspecialchars($profileName, ENT_QUOTES); ?></td><td class="text-center"><?= $row['total']; ?></td><td class="text-center text-success"><strong><?= $row['unused']; ?></strong></td><td class="text-center"><?= $row['used']; ?></td><td class="text-center text-danger"><?= $row['expired']; ?></td><td><?php if ($profileMode !== 'none'): ?><a class="btn bg-primary" href="./?hotspot-user=generate&genprof=<?= rawurlencode($profileName); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-users"></i> Generate</a><?php endif; ?></td></tr>
+      <?php endforeach; ?>
+      <?php if (!$stats): ?><tr><td colspan="7" class="text-center">Belum ada voucher yang dapat ditampilkan.</td></tr><?php endif; ?>
+      </tbody></table></div>
+  </div>
+</div></div></div>
+<style>
+  #voucherProfileSummary th,#voucherProfileSummary td{text-align:center;vertical-align:middle}
+  #voucherProfileSummary th:nth-child(2),#voucherProfileSummary td:nth-child(2){text-align:left}
+  @media(max-width:750px){.col-3{width:50%}}
+</style>
