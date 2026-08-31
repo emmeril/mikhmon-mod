@@ -79,6 +79,7 @@ include('../lang/'.$langid.'.php');
       "?owner" => "$idbl",
     ));
     $getSRBl = mikhmonFilterReportRecords($getSRBl);
+	$getSRBl = mikhmonReportMergeBillingRows($session, $getSRBl, '', $idbl);
     if (mikhmonIsMitra()) {
       $mitraUsernames = mikhmonMitraUsernames($session);
       $getSRBl = array_values(array_filter($getSRBl, function ($row) use ($mitraUsernames) {

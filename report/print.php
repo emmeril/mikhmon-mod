@@ -156,6 +156,7 @@ if (!isset($_SESSION["mikhmon"])) {
 	}
 
 	$getData = mikhmonFilterReportRecords($getData);
+	$getData = mikhmonReportMergeBillingRows($session, $getData, $idhr, $idbl);
 	if (mikhmonIsMitra()) {
 		$mitraUsernames = mikhmonMitraUsernames($session);
 		$getData = array_values(array_filter($getData, function ($row) use ($mitraUsernames) {
