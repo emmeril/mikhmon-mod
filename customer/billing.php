@@ -114,19 +114,13 @@ function billingCustomerInterval($serviceDetails) {
 }
 
 function billingExistingDueTimestamp($customer, $serviceDetails) {
-  $timestamp = billingDueTimestamp($customer['due_date'] ?? '');
-  if ($timestamp > 0) return $timestamp;
-  foreach ((array) $serviceDetails as $service) {
-    $timestamp = billingDueTimestamp($service['due_date'] ?? '');
-    if ($timestamp > 0) return $timestamp;
-  }
-  return 0;
+  // Billing uses one fixed due day for every customer: the 5th of the
+  // upcoming month. Existing router comments are no longer used as dates.
+  return mikhmonBillingAutomationUpcomingDueTimestamp();
 }
 
 function billingCustomerDueTimestamp($customer, $serviceDetails) {
-  $timestamp = billingExistingDueTimestamp($customer, $serviceDetails);
-  if ($timestamp > 0) return $timestamp;
-  return time() + billingCustomerInterval($serviceDetails);
+  return billingExistingDueTimestamp($customer, $serviceDetails);
 }
 
 function billingCustomerDueDate($customer, $serviceDetails) {
@@ -267,8 +261,11 @@ function billingSyncUnpaidInvoice($session, &$invoices, $customer, $customerUser
 
   $amount = 0;
   foreach ($serviceDetails as $service) $amount += (float) ($service['amount'] ?? 0);
-  $dueTimestamp = billingDueTimestamp($invoices[$invoiceIndex]['due_date'] ?? '');
-  if ($dueTimestamp <= 0) $dueTimestamp = billingCustomerDueTimestamp($customer, $serviceDetails);
+  $existingInvoiceDue = billingDueTimestamp($invoices[$invoiceIndex]['due_date'] ?? '');
+  if ($existingInvoiceDue > 0) {
+    // Preserve the invoice month while normalizing its due day to the 5th.
+    $dueTimestamp = mktime(0, 0, 0, (int) date('n', $existingInvoiceDue), 5, (int) date('Y', $existingInvoiceDue));
+  } else $dueTimestamp = billingCustomerDueTimestamp($customer, $serviceDetails);
   $dueDate = $dueTimestamp > 0 ? date('Y-m-d H:i:s', $dueTimestamp) : '';
   $invoice = $invoices[$invoiceIndex];
   $oldServices = billingInvoiceServices($invoice, $customer);
@@ -443,7 +440,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           $invoices[$invoiceIndex]['biller_commission'] = mikhmonIsBiller() ? mikhmonBillerCommissionAmount() : 0;
           if (mikhmonSaveInvoice($session, $invoices[$invoiceIndex]) === false) $customerError = 'User aktif, tetapi status invoice gagal disimpan.';
           else {
-            $nextDueTimestamp = time() + billingCustomerInterval(billingInvoiceServices($invoices[$invoiceIndex], $customer));
+            $paidDueTimestamp = billingDueTimestamp($invoices[$invoiceIndex]['due_date'] ?? '');
+            $nextDueTimestamp = mikhmonBillingAutomationNextDueTimestamp($paidDueTimestamp > 0 ? $paidDueTimestamp : time());
             $nextDueDate = date('Y-m-d H:i:s', $nextDueTimestamp);
             $invoices[$invoiceIndex]['next_due_date'] = $nextDueDate;
             mikhmonSetCustomerDueDate($session, $customer['id'], $nextDueDate);
@@ -464,7 +462,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($paymentNotificationEnabled) $invoices[$invoiceIndex]['automation']['payment_notification_pending'] = true;
             mikhmonSaveInvoice($session, $invoices[$invoiceIndex]);
             $customerMessage = 'Pembayaran diterima dan ' . $activated . ' layanan pelanggan berhasil diaktifkan. Jatuh tempo berikutnya: ' . $nextDueDate . '.' . $schedulerWarning;
-            if ($paymentNotificationEnabled) {
+            if ($paymentNotificationEnabled && mikhmonBillingAutomationIsWorkHour()) {
               $brand = isset($brandname) && trim((string) $brandname) !== '' ? trim((string) $brandname) : 'MIKHMON';
               $paymentMessage = mikhmonBillingAutomationMessage($fonnteConfig['templates']['payment'] ?? '', $customer, $invoices[$invoiceIndex], $currency, $brand, $invoices[$invoiceIndex]['due_date'] ?? '', $nextDueDate);
               $paymentResult = mikhmonFonnteSend($customer['phone'] ?? '', $paymentMessage, $fonnteConfig);
@@ -476,6 +474,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $customerMessage .= ' Notifikasi pembayaran akan dicoba lagi oleh worker.';
               }
               mikhmonSaveInvoice($session, $invoices[$invoiceIndex]);
+            } elseif ($paymentNotificationEnabled) {
+              $customerMessage .= ' Notifikasi pembayaran akan dikirim pada jam kerja (08.00-17.00).';
             }
           }
         }
@@ -487,6 +487,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($invoices as $invoiceRow) if (isset($invoiceRow['id']) && (string) $invoiceRow['id'] === $invoiceId) { $invoiceToSend = $invoiceRow; break; }
     if (!mikhmonFonnteValidCsrf($_POST['fonnte_csrf'] ?? '')) $customerError = 'Sesi pengiriman WhatsApp tidak valid. Muat ulang halaman lalu coba lagi.';
     elseif (!$customer || !$invoiceToSend || (string) ($invoiceToSend['customer_id'] ?? '') !== (string) ($customer['id'] ?? '')) $customerError = 'Invoice atau pelanggan tidak ditemukan.';
+    elseif (!mikhmonBillingAutomationIsWorkHour()) $customerError = 'Pengiriman invoice melalui Fonnte hanya dapat dilakukan pada jam kerja (08.00-17.00).';
     else {
       $brand = isset($brandname) && trim((string) $brandname) !== '' ? trim((string) $brandname) : 'MIKHMON';
       $message = billingInvoiceMessage($customer, $invoiceToSend, $invoiceToSend['due_date'] ?? '', $currency, $brand);

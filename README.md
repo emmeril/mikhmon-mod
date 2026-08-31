@@ -56,6 +56,14 @@ For the included Docker Compose setup, use `docker exec php_7_4 php
 /var/www/cron/billing.php` as the cron command on the Docker host.
 The first invoice for a customer is still created from Billing; subsequent
 invoices are generated automatically after payment or from the last paid invoice.
+Billing due dates use the 5th day of each month. A late payment does not move
+the following billing cycle; the next invoice remains aligned to the monthly
+5th.
+
+Fonnte invoice, reminder, isolation, and payment messages are sent only during
+working hours, from 08:00 to 17:00 in the configured Mikhmon timezone. Messages
+that become pending outside those hours are retried by the billing worker on
+the next working period. Manual invoice sending follows the same restriction.
 
 #### Download update.zip
 [update.zip](https://raw.githubusercontent.com/laksa19/laksa19.github.io/master/download/update.zip){:target="_blank"}

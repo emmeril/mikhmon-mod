@@ -18,6 +18,31 @@ function mikhmonBillingAutomationDueTimestamp($value) {
   return strtotime($value) ?: 0;
 }
 
+/**
+ * Return the next upcoming billing date on the fixed monthly due day.
+ * The day is intentionally centralized so the web UI and cron worker agree.
+ */
+function mikhmonBillingAutomationUpcomingDueTimestamp($now = null) {
+  $now = $now === null ? time() : (int) $now;
+  $candidate = mktime(0, 0, 0, (int) date('n', $now), 5, (int) date('Y', $now));
+  if ($candidate <= $now) $candidate = mktime(0, 0, 0, (int) date('n', $now) + 1, 5, (int) date('Y', $now));
+  return $candidate;
+}
+
+function mikhmonBillingAutomationNextDueTimestamp($baseTimestamp = null, $now = null) {
+  $baseTimestamp = $baseTimestamp === null ? time() : (int) $baseTimestamp;
+  $now = $now === null ? time() : (int) $now;
+  if ($baseTimestamp <= 0) $baseTimestamp = time();
+  $candidate = mktime(0, 0, 0, (int) date('n', $baseTimestamp) + 1, 5, (int) date('Y', $baseTimestamp));
+  return $candidate > $now ? $candidate : mikhmonBillingAutomationUpcomingDueTimestamp($now);
+}
+
+function mikhmonBillingAutomationIsWorkHour($timestamp = null) {
+  $timestamp = $timestamp === null ? time() : (int) $timestamp;
+  $hour = (int) date('G', $timestamp);
+  return $hour >= 8 && $hour < 17;
+}
+
 function mikhmonBillingAutomationApiError($response) {
   if (!is_array($response)) return 'Respons router tidak valid.';
   foreach (array('!trap', '!fatal') as $type) if (isset($response[$type][0]['message'])) return (string) $response[$type][0]['message'];
@@ -121,8 +146,9 @@ function mikhmonBillingAutomationEnsureUnpaidInvoice($session, &$invoices, $cust
   if ($unpaid) return $unpaid;
   $paid = mikhmonBillingAutomationLatestPaid($invoices, $customerId);
   if (!$paid) return array();
-  $dueDate = trim((string) ($paid['next_due_date'] ?? ($customer['due_date'] ?? '')));
-  if (mikhmonBillingAutomationDueTimestamp($dueDate) <= 0) return array();
+  $paidDueAt = mikhmonBillingAutomationDueTimestamp($paid['due_date'] ?? '');
+  $dueAt = mikhmonBillingAutomationNextDueTimestamp($paidDueAt > 0 ? $paidDueAt : ($paid['paid_at'] ?? time()));
+  $dueDate = date('Y-m-d H:i:s', $dueAt);
   $nextInvoice = array(
     'id' => 'invoice-' . uniqid(), 'number' => 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5)),
     'customer_id' => $customerId, 'customer_name' => $customer['name'] ?? '',
@@ -176,6 +202,7 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
   $brand = trim((string) ($brandname ?? 'MIKHMON')) ?: 'MIKHMON';
   $currency = explode('&', $routerConfig[6] ?? '&Rp', 2)[1] ?? 'Rp';
   $now = time();
+  $workHours = mikhmonBillingAutomationIsWorkHour($now);
   $result = array('invoices' => 0, 'reminders' => 0, 'isolated' => 0, 'payments' => 0, 'errors' => 0);
   $customersById = array();
   foreach ($customers as $customer) {
@@ -191,7 +218,7 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
     if ($dueAt <= 0) continue;
     $automation = isset($invoice['automation']) && is_array($invoice['automation']) ? $invoice['automation'] : array();
     $reminderAt = $dueAt - ((int) ($fonnteConfig['reminder_days'] ?? 7) * 86400);
-    if (!empty($fonnteConfig['automation_enabled']) && !empty($fonnteConfig['reminder_enabled']) && empty($automation['reminder_sent_at']) && $now >= $reminderAt && $now < $dueAt) {
+    if ($workHours && !empty($fonnteConfig['automation_enabled']) && !empty($fonnteConfig['reminder_enabled']) && empty($automation['reminder_sent_at']) && $now >= $reminderAt && $now < $dueAt) {
       $message = mikhmonBillingAutomationMessage($fonnteConfig['templates']['reminder'] ?? '', $customer, $invoice, $currency, $brand, date('Y-m-d H:i:s', $dueAt));
       $send = mikhmonFonnteSend($customer['phone'] ?? '', $message, $fonnteConfig);
       if (!empty($send['status'])) { $invoice['automation']['reminder_sent_at'] = $now; mikhmonBillingAutomationClearFailure($invoice, 'reminder'); $result['reminders']++; }
@@ -205,7 +232,7 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
         $result['isolated']++;
       } else { mikhmonBillingAutomationRecordFailure($invoice, 'isolation', 'Gagal mengubah status layanan MikroTik.', $now); $result['errors']++; }
     }
-    if (!empty($fonnteConfig['automation_enabled']) && !empty($fonnteConfig['isolation_enabled']) && !empty($invoice['automation']['isolated_at']) && empty($invoice['automation']['isolation_sent_at'])) {
+    if ($workHours && !empty($fonnteConfig['automation_enabled']) && !empty($fonnteConfig['isolation_enabled']) && !empty($invoice['automation']['isolated_at']) && empty($invoice['automation']['isolation_sent_at'])) {
       $message = mikhmonBillingAutomationMessage($fonnteConfig['templates']['isolation'] ?? '', $customer, $invoice, $currency, $brand, date('Y-m-d H:i:s', $dueAt));
       $send = mikhmonFonnteSend($customer['phone'] ?? '', $message, $fonnteConfig);
       if (!empty($send['status'])) { $invoice['automation']['isolation_sent_at'] = $now; mikhmonBillingAutomationClearFailure($invoice, 'isolation_message'); }
@@ -217,7 +244,7 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
       else foreach ($invoices as $index => $row) if (($row['id'] ?? '') === ($invoice['id'] ?? '')) { $invoices[$index] = $invoice; break; }
     }
   }
-  if (!empty($fonnteConfig['payment_enabled'])) foreach ($invoices as $invoice) {
+  if ($workHours && !empty($fonnteConfig['payment_enabled'])) foreach ($invoices as $invoice) {
     if (($invoice['status'] ?? '') !== 'paid' || empty($invoice['automation']['payment_notification_pending'])) continue;
     $customerId = (string) ($invoice['customer_id'] ?? '');
     if (!isset($customersById[$customerId])) { $result['errors']++; continue; }
