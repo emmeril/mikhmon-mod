@@ -378,7 +378,6 @@ include('./info.php');
   <a href="./?commission=1&session=<?= $session; ?>" class="menu <?= $scommission; ?>"><i class="fa fa-line-chart"></i> Komisi Saya</a>
 <?php elseif (mikhmonIsMitra()): ?>
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
-  <a href="./?billing=1&session=<?= $session; ?>" class="menu <?= $sbilling; ?>"><i class="fa fa-money"></i> Billing</a>
   <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-ticket"></i> Voucher <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $umenu; ?>">
     <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-ticket"></i> Voucher List</a>
@@ -401,6 +400,7 @@ include('./info.php');
     <a href="./?customer=identity-list&session=<?= $session; ?>" class="<?= $sidentitylist; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-id-card"></i> Daftar Identitas</a>
     <a href="./?customer=service-add&session=<?= $session; ?>" class="<?= $sserviceadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-link"></i> Tambah Layanan</a>
     <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> Daftar Pelanggan</a>
+    <a href="./?billing=1&session=<?= $session; ?>" class="<?= $sbilling; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-money"></i> Billing</a>
   </div>
   <a href="./?hotspot=print-center&session=<?= $session; ?>" class="menu <?= $sprintcenter; ?>"><i class="fa fa-print"></i> Print Center</a>
   <div class="dropdown-btn <?= $sselling; ?>"><i class="fa fa-money"></i> <?= $_report ?> <i class="fa fa-caret-down"></i></div>
