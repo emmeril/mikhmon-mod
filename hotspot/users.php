@@ -86,7 +86,7 @@ if (!isset($_SESSION["mikhmon"])) {
 <div class="col-12">
 <div class="card">
 <div class="card-header">
-    <h3><i class="fa fa-users"></i> <?= $_users ?>
+    <h3><i class="fa fa-ticket"></i> Vouchers
       <span style="font-size: 14px">
         <?php
         if ($counttuser == 0 && !(function_exists('mikhmonIsMitra') && mikhmonIsMitra())) {
@@ -158,6 +158,7 @@ if (!isset($_SESSION["mikhmon"])) {
   <button class="btn bg-red" onclick="if(confirm('Are you sure to delete users?')){loadpage('./?remove-hotspot-user-expired=1&session=<?= $session; ?>');loader();}else{}" title="Remove user expired">  <i class="fa fa-trash"></i> Expired Users</button>
       <?php } ?>
 </div>
+  </div>
 <div class="overflow mr-t-10 box-bordered" style="max-height: 75vh">
 <table id="dataTable" class="table table-bordered table-hover text-nowrap">
   <thead>
@@ -230,11 +231,11 @@ for ($i = 0; $i < $TotalReg; $i++) {
     echo $ucomment.' ';
   }
   echo  "</td>";
+  echo "</tr>";
 
 
 }
 ?>
-  </tr>
   </tbody>
 </table>
 </div>

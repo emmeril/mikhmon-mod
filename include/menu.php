@@ -39,21 +39,21 @@ if (!isset($_SESSION["mikhmon"])) {
   } elseif ($hotspot == "users" || $userbyprofile != "" || $hotspot == "export-users" || $removehotspotuserbycomment != "" || $removehotspotuser != "" || $removehotspotusers != "" || $disablehotspotuser || $enablehotspotuser != "") {
     $susersl = "active";
     $susers = "active";
-    $mpage = $_users;
+    $mpage = "Vouchers";
     $umenu = "menu-open";
   } elseif ($hotspotuser == "add") {
     $sadduser = "active";
-    $mpage = $_users;
+    $mpage = "Vouchers";
     $susers = "active";
     $umenu = "menu-open";
   } elseif ($hotspotuser == "generate") {
     $sgenuser = "active";
-    $mpage = $_users;
+    $mpage = "Vouchers";
     $susers = "active";
     $umenu = "menu-open";
   } elseif ($userbyname != ""  || $resethotspotuser != "") {
     $susers = "active";
-    $mpage = $_users;
+    $mpage = "Vouchers";
     $umenu = "menu-open";
   } elseif ($hotspot == "user-profiles") {
     $suserprofiles = "active";
@@ -163,7 +163,7 @@ if (!isset($_SESSION["mikhmon"])) {
     $hotspotmenu = "menu-open";
     $mpage = $_vouchers;
   } elseif ($userbyname != "") {
-    $mpage = $_users;
+    $mpage = "Vouchers";
     $susers = "active";
   } elseif ($admin == "settings") {
     $sadminsettings = "active";
@@ -378,9 +378,9 @@ include('./info.php');
   <a href="./?commission=1&session=<?= $session; ?>" class="menu <?= $scommission; ?>"><i class="fa fa-line-chart"></i> Komisi Saya</a>
 <?php elseif (mikhmonIsMitra()): ?>
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
-  <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-users"></i> <?= $_users ?> <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-ticket"></i> Voucher <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $umenu; ?>">
-    <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-users"></i> <?= $_user_list ?></a>
+    <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-ticket"></i> Voucher List</a>
     <a href="./?customer=service-add&service=hotspot&session=<?= $session; ?>" class="<?= $sserviceadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_add_user ?></a>
     <a href="./?hotspot-user=generate&session=<?= $session; ?>" class="<?= $sgenuser; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_generate ?></a>
   </div>
@@ -411,11 +411,11 @@ include('./info.php');
 <?php else: ?>
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
   <!--users-->
-  <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-users"></i> <?= $_users ?>
+  <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-ticket"></i> Voucher
     <i class="fa fa-caret-down"></i>
   </div>
   <div class="dropdown-container <?= $umenu; ?>">
-    <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-list "></i> <?= $_user_list ?> </a>
+    <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-ticket "></i> Voucher List </a>
     <a href="./?hotspot-user=add&session=<?= $session; ?>" class="<?= $sadduser; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus "></i> <?= $_add_user ?> </a>
     <a href="./?hotspot-user=generate&session=<?= $session; ?>" class="<?= $sgenuser; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_generate ?> </a>
   </div>
