@@ -93,6 +93,18 @@ function mikhmonVisibleCustomers($session, $customers = null) {
   }));
 }
 
+function mikhmonVisibleInvoices($session, $invoices = null) {
+  $invoices = $invoices === null ? mikhmonGetInvoices($session) : (array) $invoices;
+  if (!mikhmonIsMitra()) return array_values($invoices);
+  $customerIds = array();
+  foreach (mikhmonVisibleCustomers($session) as $customer) {
+    if (isset($customer['id'])) $customerIds[(string) $customer['id']] = true;
+  }
+  return array_values(array_filter($invoices, function ($invoice) use ($customerIds) {
+    return isset($invoice['customer_id']) && isset($customerIds[(string) $invoice['customer_id']]);
+  }));
+}
+
 function mikhmonCanManageCustomer($customer) {
   if (mikhmonIsAdmin()) return true;
   return mikhmonIsMitra() && isset($customer['mitra_id']) && (string) $customer['mitra_id'] === mikhmonUserId();
@@ -131,7 +143,7 @@ function mikhmonRowBelongsToCurrentMitra($row) {
 function mikhmonCanOpenMainRoute($route) {
   if (mikhmonIsAdmin()) return true;
   if (mikhmonIsBiller()) return in_array($route, array('billing', 'commission', 'logout'), true);
-  if (mikhmonIsMitra()) return in_array($route, array('home', 'customer-list', 'customer-identity-list', 'customer-identity-add', 'customer-identity-edit', 'customer-service-add', 'report-selling', 'report-resume', 'hotspot-generate', 'hotspot-active', 'hotspot-vouchers', 'hotspot-users', 'hotspot-print-center', 'pppoe-users', 'pppoe-active', 'logout'), true);
+  if (mikhmonIsMitra()) return in_array($route, array('home', 'billing', 'customer-list', 'customer-identity-list', 'customer-identity-add', 'customer-identity-edit', 'customer-service-add', 'report-selling', 'report-resume', 'hotspot-generate', 'hotspot-active', 'hotspot-vouchers', 'hotspot-users', 'hotspot-print-center', 'pppoe-users', 'pppoe-active', 'logout'), true);
   return false;
 }
 

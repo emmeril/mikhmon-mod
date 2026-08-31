@@ -50,6 +50,10 @@ roleTestAssert(mikhmonAssignedCustomerCount($mitraId) === 2, 'assigned customer 
 mikhmonSetLoginSession(mikhmonFindUser($mitraId));
 roleTestAssert(mikhmonRefreshStaffSession(), 'active staff session remains valid');
 roleTestAssert(count(mikhmonVisibleCustomers('router-a')) === 2, 'mitra only sees assigned customer identities');
+roleTestAssert(count(mikhmonVisibleInvoices('router-a', array(
+  array('customer_id' => $customerOne),
+  array('customer_id' => $customerTwo),
+))) === 1, 'mitra only sees invoices for assigned customers');
 roleTestAssert(isset(mikhmonMitraUsernames('router-a')['cust-a']), 'report scope uses assigned usernames');
 roleTestAssert(isset(mikhmonMitraUsernamesByService('router-a', 'hotspot')['cust-a']), 'hotspot customer scope is separated');
 roleTestAssert(isset(mikhmonMitraUsernamesByService('router-a', 'pppoe')['cust-a-home']), 'all assigned customer services are visible');
@@ -64,7 +68,7 @@ roleTestAssert(mikhmonCanOpenMainRoute('hotspot-vouchers'), 'mitra can view own 
 roleTestAssert(mikhmonCanOpenMainRoute('hotspot-print-center'), 'mitra can open print center');
 roleTestAssert(mikhmonCanOpenMainRoute('pppoe-users'), 'mitra can view assigned PPPoE users');
 roleTestAssert(mikhmonCanOpenMainRoute('pppoe-active'), 'mitra can view assigned PPPoE active sessions');
-roleTestAssert(!mikhmonCanOpenMainRoute('billing'), 'mitra cannot open billing');
+roleTestAssert(mikhmonCanOpenMainRoute('billing'), 'mitra can open billing for assigned customers');
 roleTestAssert(!mikhmonCanOpenMainRoute('admin-settings'), 'mitra cannot open admin settings');
 roleTestAssert(!mikhmonCanOpenMainRoute('admin-routers'), 'mitra cannot open router management');
 roleTestAssert(!mikhmonCanOpenMainRoute('admin-users'), 'mitra cannot open user role management');

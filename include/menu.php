@@ -378,6 +378,7 @@ include('./info.php');
   <a href="./?commission=1&session=<?= $session; ?>" class="menu <?= $scommission; ?>"><i class="fa fa-line-chart"></i> Komisi Saya</a>
 <?php elseif (mikhmonIsMitra()): ?>
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
+  <a href="./?billing=1&session=<?= $session; ?>" class="menu <?= $sbilling; ?>"><i class="fa fa-money"></i> Billing</a>
   <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-ticket"></i> Voucher <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $umenu; ?>">
     <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-ticket"></i> Voucher List</a>

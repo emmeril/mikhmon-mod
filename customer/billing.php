@@ -1,7 +1,7 @@
 <?php
 error_reporting(0);
 if (!isset($_SESSION['mikhmon'])) { header('Location:../admin.php?id=login'); exit; }
-if (!mikhmonIsAdmin() && !mikhmonIsBiller()) { header('Location:../admin.php?id=login'); exit; }
+if (!mikhmonIsAdmin() && !mikhmonIsBiller() && !mikhmonIsMitra()) { header('Location:../admin.php?id=login'); exit; }
 
 include_once('./include/database.php');
 include_once('./ppp/profilemeta.php');
@@ -302,8 +302,8 @@ function billingSyncUnpaidInvoice($session, &$invoices, $customer, $customerUser
   return $changed;
 }
 
-$customers = array_values(array_filter(mikhmonGetCustomers($session), function ($customer) { return count(mikhmonCustomerServices($customer)) > 0; }));
-$invoices = mikhmonGetInvoices($session);
+$customers = array_values(array_filter(mikhmonVisibleCustomers($session), function ($customer) { return count(mikhmonCustomerServices($customer)) > 0; }));
+$invoices = mikhmonVisibleInvoices($session);
 $hotspotProfiles = array(); $pppoeProfiles = array();
 $customerUsers = array('hotspot' => array(), 'pppoe' => array());
 $customerSchedulers = array(); $customerError = ''; $customerMessage = '';
@@ -441,8 +441,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if ($customerError === '') {
           $invoices[$invoiceIndex]['status'] = 'paid'; $invoices[$invoiceIndex]['paid_at'] = time();
-          $invoices[$invoiceIndex]['paid_by_user_id'] = mikhmonIsBiller() ? mikhmonUserId() : '';
-          $invoices[$invoiceIndex]['paid_by_name'] = mikhmonIsBiller() ? mikhmonUserName() : 'Administrator';
+          $invoices[$invoiceIndex]['paid_by_user_id'] = mikhmonIsAdmin() ? '' : mikhmonUserId();
+          $invoices[$invoiceIndex]['paid_by_name'] = mikhmonIsAdmin() ? 'Administrator' : mikhmonUserName();
           $invoices[$invoiceIndex]['biller_commission'] = mikhmonIsBiller() ? mikhmonBillerCommissionAmount() : 0;
           if (mikhmonSaveInvoice($session, $invoices[$invoiceIndex]) === false) $customerError = 'User aktif, tetapi status invoice gagal disimpan.';
           else {
