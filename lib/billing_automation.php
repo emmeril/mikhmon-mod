@@ -3,6 +3,9 @@
  * CLI billing automation shared by the scheduled worker.
  */
 
+require_once dirname(__DIR__) . '/ppp/profilemeta.php';
+require_once dirname(__DIR__) . '/lib/billing_profile.php';
+
 function mikhmonBillingAutomationDueTimestamp($value) {
   $value = trim((string) $value);
   if ($value === '') return 0;
@@ -140,6 +143,65 @@ function mikhmonBillingAutomationLatestPaid($invoices, $customerId) {
   return $latest;
 }
 
+function mikhmonBillingAutomationInitialService($service, $serviceRow, $hotspotProfiles, $pppoeProfiles) {
+  $profileName = (string) ($serviceRow['profile'] ?? '');
+  $profiles = $service === 'pppoe' ? $pppoeProfiles : $hotspotProfiles;
+  foreach ((array) $profiles as $profile) {
+    if ((string) ($profile['name'] ?? '') !== $profileName) continue;
+    $price = ''; $sellingPrice = ''; $validity = '';
+    if ($service === 'pppoe') {
+      $meta = pppProfileMetaDecode($profile['comment'] ?? '');
+      $price = $meta['price']; $sellingPrice = $meta['selling-price']; $validity = $meta['validity'];
+    } elseif (preg_match('/,([^,]*),([^,]*),([^,]*),([^,]*),/', (string) ($profile['on-login'] ?? ''), $matches)) {
+      $price = $matches[2]; $validity = $matches[3]; $sellingPrice = $matches[4];
+    }
+    if (!mikhmonBillingProfileCanManage($service, $profile)) return array();
+    $amount = (float) ($sellingPrice !== '' ? $sellingPrice : $price);
+    if ($amount <= 0) return array();
+    return array(
+      'id' => $serviceRow['id'] ?? '', 'service' => $service, 'username' => (string) ($serviceRow['username'] ?? ''),
+      'profile' => $profileName, 'amount' => $amount, 'validity' => $validity,
+      'due_date' => '',
+    );
+  }
+  return array();
+}
+
+function mikhmonBillingAutomationEnsureInitialInvoice($api, $session, &$invoices, $customer, $dueAt) {
+  if (!is_object($api) || !method_exists($api, 'comm')) return array();
+  $customerId = (string) ($customer['id'] ?? '');
+  if ($customerId === '' || mikhmonBillingAutomationLatestUnpaid($invoices, $customerId)) return array();
+  static $profileCache = array();
+  $apiKey = function_exists('spl_object_hash') ? spl_object_hash($api) : 'default';
+  if (!isset($profileCache[$apiKey])) $profileCache[$apiKey] = array(
+    'api' => $api,
+    'hotspot' => $api->comm('/ip/hotspot/user/profile/print'),
+    'pppoe' => $api->comm('/ppp/profile/print'),
+  );
+  $hotspotProfiles = $profileCache[$apiKey]['hotspot'];
+  $pppoeProfiles = $profileCache[$apiKey]['pppoe'];
+  if (mikhmonBillingAutomationApiError($hotspotProfiles) !== '' || mikhmonBillingAutomationApiError($pppoeProfiles) !== '') return array();
+  $services = array(); $amount = 0;
+  foreach (mikhmonCustomerServices($customer) as $serviceRow) {
+    $service = ($serviceRow['service'] ?? '') === 'pppoe' ? 'pppoe' : 'hotspot';
+    $detail = mikhmonBillingAutomationInitialService($service, $serviceRow, $hotspotProfiles, $pppoeProfiles);
+    if (!$detail) return array();
+    $detail['due_date'] = date('Y-m-d H:i:s', $dueAt);
+    $services[] = $detail; $amount += (float) $detail['amount'];
+  }
+  if (!$services || $amount <= 0) return array();
+  $invoice = array(
+    'id' => 'invoice-' . uniqid(), 'number' => 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5)),
+    'customer_id' => $customerId, 'customer_name' => $customer['name'] ?? '',
+    'services' => $services, 'service_count' => count($services), 'amount' => $amount,
+    'due_date' => date('Y-m-d H:i:s', $dueAt), 'status' => 'unpaid', 'created_at' => time(),
+    'generated_from' => 'bootstrap',
+  );
+  if (mikhmonSaveInvoice($session, $invoice) === false) return array();
+  $invoices[] = $invoice;
+  return $invoice;
+}
+
 function mikhmonBillingAutomationEnsureUnpaidInvoice($session, &$invoices, $customer) {
   $customerId = (string) ($customer['id'] ?? '');
   $unpaid = mikhmonBillingAutomationLatestUnpaid($invoices, $customerId);
@@ -212,6 +274,15 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
     if (!$invoice) {
       $invoice = mikhmonBillingAutomationEnsureUnpaidInvoice($session, $invoices, $customer);
       if ($invoice) $result['invoices']++;
+    }
+    if (!$invoice && !empty($fonnteConfig['automation_enabled'])) {
+      $customerDueAt = mikhmonBillingAutomationDueTimestamp($customer['due_date'] ?? '');
+      if ($customerDueAt <= 0) $customerDueAt = mikhmonBillingAutomationUpcomingDueTimestamp($now);
+      $reminderAt = $customerDueAt - ((int) ($fonnteConfig['reminder_days'] ?? 7) * 86400);
+      if ($now >= $reminderAt) {
+        $invoice = mikhmonBillingAutomationEnsureInitialInvoice($api, $session, $invoices, $customer, $customerDueAt);
+        if ($invoice) $result['invoices']++;
+      }
     }
     if (!$invoice) continue;
     $dueAt = mikhmonBillingAutomationDueTimestamp($invoice['due_date'] ?? ($customer['due_date'] ?? ''));

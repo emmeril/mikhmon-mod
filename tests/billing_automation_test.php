@@ -23,6 +23,14 @@ class BillingAutomationFakeApi {
   }
 }
 
+class BillingBootstrapFakeApi {
+  public function comm($command, $args = array()) {
+    if ($command === '/ip/hotspot/user/profile/print') return array(array('name' => 'basic', 'on-login' => ':put (",none,100,30d,150,")'));
+    if ($command === '/ppp/profile/print') return array();
+    return array();
+  }
+}
+
 $databasePath = tempnam(sys_get_temp_dir(), 'mikhmon-billing-');
 putenv('MIKHMON_DATABASE_PATH=' . $databasePath);
 $fonntePath = tempnam(sys_get_temp_dir(), 'mikhmon-fonnte-');
@@ -32,6 +40,16 @@ mikhmonFonnteWriteConfig(array('enabled' => false, 'automation_enabled' => true,
 $novemberDue = strtotime('2026-11-05 00:00:00');
 $latePayment = strtotime('2027-02-01 12:00:00');
 billingAutomationTestAssert(date('Y-m-d H:i:s', mikhmonBillingAutomationNextDueTimestamp($novemberDue, $latePayment)) === '2026-12-05 00:00:00', 'late payment advances exactly one monthly billing cycle');
+
+$bootstrapCustomerId = mikhmonSaveCustomer('router-a', '', 'Bootstrap Customer', '', '', 'hotspot', 'bootstrap-user', 'basic');
+$bootstrapCustomer = mikhmonFindCustomer('router-a', $bootstrapCustomerId);
+$bootstrapInvoices = array();
+$bootstrapDue = time() + (3 * 86400);
+$bootstrapInvoice = mikhmonBillingAutomationEnsureInitialInvoice(new BillingBootstrapFakeApi(), 'router-a', $bootstrapInvoices, $bootstrapCustomer, $bootstrapDue);
+billingAutomationTestAssert($bootstrapInvoice && $bootstrapInvoice['status'] === 'unpaid', 'bootstrap invoice is generated from router profile');
+billingAutomationTestAssert((float) $bootstrapInvoice['amount'] === 150.0 && count($bootstrapInvoice['services']) === 1, 'bootstrap invoice carries profile price and service');
+$duplicateBootstrap = mikhmonBillingAutomationEnsureInitialInvoice(new BillingBootstrapFakeApi(), 'router-a', $bootstrapInvoices, $bootstrapCustomer, $bootstrapDue);
+billingAutomationTestAssert(!$duplicateBootstrap, 'bootstrap invoice generation is idempotent');
 
 $customerId = mikhmonSaveCustomer('router-a', '', 'Pelanggan A', '08123456789', '', 'hotspot', 'cust-a', 'basic');
 billingAutomationTestAssert($customerId !== false, 'customer can be created');
@@ -46,7 +64,8 @@ $api = new BillingAutomationFakeApi();
 $routerConfig = array(6 => 'router-a&Rp');
 $result = mikhmonBillingAutomationProcessSession($api, 'router-a', $routerConfig, mikhmonFonnteReadConfig());
 billingAutomationTestAssert($result['isolated'] === 1, 'overdue customer is isolated once');
-$savedInvoice = mikhmonGetInvoices('router-a')[0];
+$savedInvoice = array();
+foreach (mikhmonGetInvoices('router-a') as $candidateInvoice) if (($candidateInvoice['id'] ?? '') === $invoiceId) { $savedInvoice = $candidateInvoice; break; }
 billingAutomationTestAssert(!empty($savedInvoice['automation']['isolated_at']), 'isolation event is persisted on invoice');
 
 $setSeen = false;
