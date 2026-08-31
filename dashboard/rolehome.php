@@ -130,6 +130,34 @@ function mitraDashboardMoney($value, $currency) {
 $hotspotCustomers = count($hotspotCustomerNames);
 $pppoeCustomers = count($pppoeCustomerNames);
 ?>
+<style>
+@media screen and (min-width: 751px) {
+  .mitra-dashboard-main-row {
+    display: flex;
+    align-items: stretch;
+  }
+  .mitra-dashboard-main-row > .mitra-dashboard-column {
+    display: flex;
+    flex-direction: column;
+  }
+  .mitra-dashboard-right .mitra-hotspot-log,
+  .mitra-dashboard-right .mitra-hotspot-log .card {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+  }
+  .mitra-dashboard-right .mitra-hotspot-log .card-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+  .mitra-dashboard-right .mitra-hotspot-log .overflow {
+    flex: 1;
+    max-height: none !important;
+    width: 100%;
+  }
+}
+</style>
 <div id="reloadHome">
   <div id="r_1" class="row">
     <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-calendar"></i></div><div class="box-group-area"><span><?= $_system_date_time ?><br><?= htmlspecialchars(ucfirst(isset($clock['date']) ? $clock['date'] : date('M/d/Y')) . ' ' . (isset($clock['time']) ? $clock['time'] : date('H:i:s')), ENT_QUOTES); ?><br><?= $_uptime ?> : <?= htmlspecialchars(isset($resource['uptime']) ? formatDTM($resource['uptime']) : '-', ENT_QUOTES); ?></span></div></div></div></div>
@@ -139,8 +167,8 @@ $pppoeCustomers = count($pppoeCustomerNames);
 
   <?php if (empty($routerConnected)): ?><div class="box bg-warning">Router MikroTik tidak terhubung. Data layanan dan report belum dapat diperbarui.</div><?php endif; ?>
 
-  <div class="row">
-    <div class="col-8">
+  <div class="row mitra-dashboard-main-row">
+    <div class="col-8 mitra-dashboard-column">
       <div id="r_2" class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-wifi"></i> Hotspot</h3></div><div class="card-body"><div class="row">
         <div class="col-3 col-box-6"><div class="box bg-blue bmh-75"><a href="./?hotspot=active&session=<?= $session; ?>"><h1><?= count($mitraHotspotActive); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-laptop"></i> <?= $_hotspot_active ?></div></a></div></div>
         <div class="col-3 col-box-6"><div class="box bg-green bmh-75"><a href="./?hotspot=users&profile=all&session=<?= $session; ?>"><h1><?= count($mitraHotspotUsers); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-users"></i> <?= $_hotspot_users ?></div></a></div></div>
@@ -217,10 +245,10 @@ $pppoeCustomers = count($pppoeCustomerNames);
       </div></div></div></div>
     </div>
 
-    <div class="col-4">
+    <div class="col-4 mitra-dashboard-column mitra-dashboard-right">
       <div id="r_4" class="row"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-money"></i></div><div class="box-group-area"><span><b><?= $_income ?></b><br><?= $_today ?> <?= $reportTotals['today']['count']; ?> trx : <?= htmlspecialchars(mitraDashboardMoney($reportTotals['today']['income'], $currency), ENT_QUOTES); ?><br><?= $_this_month ?> <?= $reportTotals['all']['count']; ?> trx : <?= htmlspecialchars(mitraDashboardMoney($reportTotals['all']['income'], $currency), ENT_QUOTES); ?><hr style="margin:5px 0;border:0;border-top:1px solid currentColor;opacity:.35"><b>Net Profit Mitra</b><br><?= $_today ?>: <?= htmlspecialchars(mitraDashboardMoney($reportTotals['today']['profit'], $currency), ENT_QUOTES); ?><br><?= $_this_month ?>: <?= htmlspecialchars(mitraDashboardMoney($reportTotals['all']['profit'], $currency), ENT_QUOTES); ?></span></div></div></div></div>
 
-      <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></h3></div><div class="card-body"><div style="padding: 5px; max-height: 430px;" class="mr-t-10 overflow">
+      <div class="row mitra-hotspot-log"><div class="card"><div class="card-header"><h3><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></h3></div><div class="card-body"><div style="padding: 5px; max-height: 430px;" class="mr-t-10 overflow">
         <table class="table table-sm table-bordered table-hover" style="font-size: 12px;">
           <thead><tr><th><?= $_time ?></th><th><?= $_users ?> (IP)</th><th><?= $_messages ?></th></tr></thead>
           <tbody>

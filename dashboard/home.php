@@ -116,7 +116,36 @@ if (!isset($_SESSION["mikhmon"])) {
   }*/
 }
 ?>
-    
+
+<style>
+@media screen and (min-width: 751px) {
+  .dashboard-main-row {
+    display: flex;
+    align-items: stretch;
+  }
+  .dashboard-main-row > .dashboard-main-column {
+    display: flex;
+    flex-direction: column;
+  }
+  .dashboard-main-right #r_3,
+  .dashboard-main-right #r_3 .card {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+  }
+  .dashboard-main-right #r_3 .card-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+  .dashboard-main-right #r_3 .overflow {
+    flex: 1;
+    height: auto !important;
+    width: 100%;
+  }
+}
+</style>
+
 <div id="reloadHome">
 
     <div id="r_1" class="row">
@@ -170,8 +199,8 @@ if (!isset($_SESSION["mikhmon"])) {
           </div> 
       </div>
 
-        <div class="row">
-          <div  class="col-8">
+        <div class="row dashboard-main-row">
+          <div class="col-8 dashboard-main-column">
             <div id="r_2"class="row">
             <div class="card">
               <div class="card-header"><h3><i class="fa fa-wifi"></i> Hotspot</h3></div>
@@ -385,10 +414,10 @@ if (!isset($_SESSION["mikhmon"])) {
                     });
                   </script>
                   <div id="trafficMonitor"></div>
-                </div> 
+                </div>
               </div>
-            </div>  
-            <div class="col-4">
+            </div>
+            <div class="col-4 dashboard-main-column dashboard-main-right">
             <div id="r_4" class="row">
               <div <?= $lreport; ?> class="box bmh-75 box-bordered">
                 <div class="box-group">
