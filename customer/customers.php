@@ -148,6 +148,8 @@ if (!empty($routerConnected)) {
       #dataTable .customer-service-select { min-width:115px; }
       #dataTable .customer-service-total { text-align:center; font-weight:bold; }
       #dataTable .customer-username-cell { min-width:145px; font-weight:bold; }
+      #dataTable .customer-password-cell { min-width:105px; text-align:center; font-weight:bold; cursor:pointer; user-select:none; }
+      #dataTable .customer-password-cell i { margin-left:5px; color:#888; }
       #dataTable .customer-profile-cell { min-width:180px; color:#888; font-size:12px; white-space:normal; }
       #dataTable .customer-isolation-date { min-width:135px; text-align:center; }
       #dataTable .customer-status { min-width:85px; text-align:center; font-weight:bold; }
@@ -170,13 +172,20 @@ if (!empty($routerConnected)) {
       <div class="customer-toolbar-actions"><button id="customerReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button><?php if (mikhmonIsAdmin() || mikhmonIsMitra()): ?><a class="btn bg-primary" href="./?customer=service-add&session=<?= rawurlencode($session); ?>"><i class="fa fa-link"></i> Tambah Layanan</a><?php endif; ?></div>
     </div>
     <div class="overflow box-bordered" style="max-height:65vh"><table id="dataTable" class="table table-bordered table-hover text-nowrap">
-      <thead><tr><th>No</th><th>Nama Pelanggan</th><th>Nomor HP</th><th>Alamat</th><th>Jumlah Layanan</th><th>Layanan</th><th>Username</th><th>Profile</th><th>Tanggal Isolir</th><th>Status</th><th>Mitra</th><th>Aksi</th></tr></thead><tbody>
+      <thead><tr><th>No</th><th>Nama Pelanggan</th><th>Nomor HP</th><th>Alamat</th><th>Jumlah Layanan</th><th>Layanan</th><th>Username</th><th>Password</th><th>Profile</th><th>Tanggal Isolir</th><th>Status</th><th>Mitra</th><th>Aksi</th></tr></thead><tbody>
       <?php foreach ($customers as $customerIndex => $customerRow): ?>
         <?php
           $customerServices = mikhmonCustomerServices($customerRow);
           $customerUsername = implode(', ', array_map(function ($item) { return $item['username']; }, $customerServices));
           $customerSearchData = implode(' ', array_map(function ($item) { return $item['username'] . ' ' . $item['profile']; }, $customerServices));
           $firstCustomerService = isset($customerServices[0]) ? $customerServices[0] : array('username' => '', 'profile' => '');
+          $customerServicePasswords = array();
+          foreach ($customerServices as $serviceIndex => $customerService) {
+            $serviceType = ($customerService['service'] ?? '') === 'pppoe' ? 'pppoe' : 'hotspot';
+            $serviceUsername = (string) ($customerService['username'] ?? '');
+            $customerServicePasswords[$serviceIndex] = isset($customerRouterUsers[$serviceType][$serviceUsername]['password']) ? (string) $customerRouterUsers[$serviceType][$serviceUsername]['password'] : '';
+          }
+          $firstCustomerPassword = isset($customerServicePasswords[0]) ? $customerServicePasswords[0] : '';
           $customerId = (string) ($customerRow['id'] ?? '');
           $customerInvoice = isset($customerInvoices[$customerId]) ? $customerInvoices[$customerId] : array();
           $isolatedAt = (int) ($customerInvoice['automation']['isolated_at'] ?? 0);
@@ -198,11 +207,11 @@ if (!empty($routerConnected)) {
           $customerStatusText = $customerIsIsolated ? 'Isolir' : 'Aktif';
           $customerStatusClass = $customerIsIsolated ? 'text-danger' : 'text-success';
         ?>
-        <tr class="customer-row" data-search="<?= htmlspecialchars(strtolower($customerSearchData), ENT_QUOTES); ?>" data-service="<?= htmlspecialchars(strtolower(implode(',', array_map(function ($item) { return $item['service']; }, $customerServices))), ENT_QUOTES); ?>" data-status="<?= $customerIsIsolated ? 'isolir' : 'active'; ?>"><td><?= $customerIndex + 1; ?></td><td><?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['phone']) ? $customerRow['phone'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['address']) ? $customerRow['address'] : '', ENT_QUOTES); ?></td><td class="customer-service-total"><?= count($customerServices); ?></td><td><select class="form-control customer-service-select"><?php foreach ($customerServices as $serviceIndex => $customerService): ?><option value="<?= $serviceIndex; ?>" data-type="<?= htmlspecialchars($customerService['service'], ENT_QUOTES); ?>" data-username="<?= htmlspecialchars($customerService['username'], ENT_QUOTES); ?>" data-profile="<?= htmlspecialchars($customerService['profile'], ENT_QUOTES); ?>"><?= strtoupper(htmlspecialchars($customerService['service'], ENT_QUOTES)); ?></option><?php endforeach; ?></select></td><td class="customer-username-cell"><?= htmlspecialchars($firstCustomerService['username'], ENT_QUOTES); ?></td><td class="customer-profile-cell"><?= htmlspecialchars($firstCustomerService['profile'] !== '' ? $firstCustomerService['profile'] : 'Profile belum diatur', ENT_QUOTES); ?></td><td class="customer-isolation-date"><?= $isolationTimestamp > 0 ? htmlspecialchars(date('d-m-Y H:i', $isolationTimestamp), ENT_QUOTES) : '-'; ?></td><td class="customer-status <?= $customerStatusClass; ?>"><i class="fa <?= $customerIsIsolated ? 'fa-ban' : 'fa-check-circle'; ?>"></i> <?= $customerStatusText; ?></td><td><?php if (mikhmonIsAdmin()): ?><form method="post" style="min-width:160px"><input type="hidden" name="customer_action" value="assign_mitra"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>"><select class="form-control" name="mitra_id" onchange="this.form.submit()"><option value="">Belum ditetapkan</option><?php foreach ($mitras as $mitra): ?><option value="<?= htmlspecialchars($mitra['id'], ENT_QUOTES); ?>"<?= isset($customerRow['mitra_id']) && $customerRow['mitra_id'] === $mitra['id'] ? ' selected' : ''; ?>><?= htmlspecialchars($mitra['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select></form><?php else: ?><?= htmlspecialchars(mikhmonUserName(), ENT_QUOTES); ?><?php endif; ?></td>
+        <tr class="customer-row" data-search="<?= htmlspecialchars(strtolower($customerSearchData), ENT_QUOTES); ?>" data-service="<?= htmlspecialchars(strtolower(implode(',', array_map(function ($item) { return $item['service']; }, $customerServices))), ENT_QUOTES); ?>" data-status="<?= $customerIsIsolated ? 'isolir' : 'active'; ?>"><td><?= $customerIndex + 1; ?></td><td><?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['phone']) ? $customerRow['phone'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['address']) ? $customerRow['address'] : '', ENT_QUOTES); ?></td><td class="customer-service-total"><?= count($customerServices); ?></td><td><select class="form-control customer-service-select"><?php foreach ($customerServices as $serviceIndex => $customerService): ?><option value="<?= $serviceIndex; ?>" data-type="<?= htmlspecialchars($customerService['service'], ENT_QUOTES); ?>" data-username="<?= htmlspecialchars($customerService['username'], ENT_QUOTES); ?>" data-password="<?= htmlspecialchars(isset($customerServicePasswords[$serviceIndex]) ? $customerServicePasswords[$serviceIndex] : '', ENT_QUOTES); ?>" data-profile="<?= htmlspecialchars($customerService['profile'], ENT_QUOTES); ?>"><?= strtoupper(htmlspecialchars($customerService['service'], ENT_QUOTES)); ?></option><?php endforeach; ?></select></td><td class="customer-username-cell"><?= htmlspecialchars($firstCustomerService['username'], ENT_QUOTES); ?></td><td class="customer-password-cell" data-password="<?= htmlspecialchars($firstCustomerPassword, ENT_QUOTES); ?>" data-pinned="false" role="button" tabindex="0" aria-label="Tampilkan password" aria-pressed="false" title="Arahkan kursor atau klik untuk melihat password"><span class="customer-password-value">******</span><i class="fa fa-eye"></i></td><td class="customer-profile-cell"><?= htmlspecialchars($firstCustomerService['profile'] !== '' ? $firstCustomerService['profile'] : 'Profile belum diatur', ENT_QUOTES); ?></td><td class="customer-isolation-date"><?= $isolationTimestamp > 0 ? htmlspecialchars(date('d-m-Y H:i', $isolationTimestamp), ENT_QUOTES) : '-'; ?></td><td class="customer-status <?= $customerStatusClass; ?>"><i class="fa <?= $customerIsIsolated ? 'fa-ban' : 'fa-check-circle'; ?>"></i> <?= $customerStatusText; ?></td><td><?php if (mikhmonIsAdmin()): ?><form method="post" style="min-width:160px"><input type="hidden" name="customer_action" value="assign_mitra"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>"><select class="form-control" name="mitra_id" onchange="this.form.submit()"><option value="">Belum ditetapkan</option><?php foreach ($mitras as $mitra): ?><option value="<?= htmlspecialchars($mitra['id'], ENT_QUOTES); ?>"<?= isset($customerRow['mitra_id']) && $customerRow['mitra_id'] === $mitra['id'] ? ' selected' : ''; ?>><?= htmlspecialchars($mitra['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select></form><?php else: ?><?= htmlspecialchars(mikhmonUserName(), ENT_QUOTES); ?><?php endif; ?></td>
         <td><a class="btn bg-primary" href="./?customer=identity-edit&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-edit"></i> Edit Identitas</a> <a class="btn bg-secondary" href="./?customer=service-add&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-plus"></i> Layanan</a> <button type="button" class="btn bg-danger customer-delete-button" data-customer-id="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>" data-customer-name="<?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?>" data-customer-username="<?= htmlspecialchars($customerUsername, ENT_QUOTES); ?>"><i class="fa fa-trash"></i> Hapus</button></td>
       </tr><?php endforeach; ?>
-      <?php if (!$customers): ?><tr class="customer-info-row"><td colspan="12" class="text-center"><?= mikhmonIsMitra() ? 'Belum ada pelanggan yang ditetapkan kepada Anda.' : 'Belum ada data pelanggan.'; ?></td></tr><?php endif; ?>
-      <tr id="customerNoResults" style="display:none"><td colspan="12" class="text-center">Data pelanggan tidak ditemukan.</td></tr>
+      <?php if (!$customers): ?><tr class="customer-info-row"><td colspan="13" class="text-center"><?= mikhmonIsMitra() ? 'Belum ada pelanggan yang ditetapkan kepada Anda.' : 'Belum ada data pelanggan.'; ?></td></tr><?php endif; ?>
+      <tr id="customerNoResults" style="display:none"><td colspan="13" class="text-center">Data pelanggan tidak ditemukan.</td></tr>
       </tbody></table></div>
   </div>
 </div></div></div>
@@ -221,15 +230,33 @@ if (!empty($routerConnected)) {
 </div>
 <script>
 $(function() {
+  function setCustomerPasswordVisibility(cell, visible) {
+    var password = cell.attr('data-password') || '';
+    cell.find('.customer-password-value').text(visible ? (password || '-') : '******');
+    cell.find('i').toggleClass('fa-eye', !visible).toggleClass('fa-eye-slash', visible);
+  }
   function showSelectedCustomerAccount(select) {
     var option = $(select).find('option:selected');
     var row = $(select).closest('tr');
+    var passwordCell = row.find('.customer-password-cell');
     row.find('.customer-username-cell').text(option.data('username') || '-');
     row.find('.customer-profile-cell').text(option.data('profile') || 'Profile belum diatur');
+    passwordCell.attr('data-password', option.attr('data-password') || '').attr('data-pinned', 'false').attr('aria-pressed', 'false');
+    setCustomerPasswordVisibility(passwordCell, false);
   }
   $('.customer-service-select').on('change', function() {
     showSelectedCustomerAccount(this);
   });
+  $('.customer-password-cell')
+    .on('mouseenter focus', function() { setCustomerPasswordVisibility($(this), true); })
+    .on('mouseleave', function() { if ($(this).attr('data-pinned') !== 'true') setCustomerPasswordVisibility($(this), false); })
+    .on('blur', function() { $(this).attr('data-pinned', 'false').attr('aria-pressed', 'false'); setCustomerPasswordVisibility($(this), false); })
+    .on('click', function() {
+      var cell = $(this), pinned = cell.attr('data-pinned') !== 'true';
+      cell.attr('data-pinned', pinned ? 'true' : 'false').attr('aria-pressed', pinned ? 'true' : 'false');
+      setCustomerPasswordVisibility(cell, pinned);
+    })
+    .on('keydown', function(event) { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); $(this).trigger('click'); } });
   function filterCustomers() {
     var search = $('#customerSearch').val().toLowerCase();
     var service = $('#customerServiceFilter').val();
