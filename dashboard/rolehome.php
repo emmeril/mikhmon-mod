@@ -1,5 +1,6 @@
 <?php
 
+include_once(__DIR__ . '/../lib/billing_profile.php');
 include_once('./report/reportrecord.php');
 
 $clock = array('date' => date('M/d/Y'), 'time' => date('H:i:s'));
@@ -42,10 +43,18 @@ if (!empty($routerConnected)) {
     $todayKey = strtolower(date('M/d/Y'));
   }
 
+  $hotspotProfiles = $API->comm('/ip/hotspot/user/profile/print');
+  $voucherProfiles = array();
+  foreach ((array) $hotspotProfiles as $profileRow) {
+    if (isset($profileRow['name']) && mikhmonBillingProfileExpiredMode('hotspot', $profileRow) !== 'none') {
+      $voucherProfiles[(string) $profileRow['name']] = true;
+    }
+  }
+
   foreach ((array) $API->comm('/ip/hotspot/user/print') as $hotspotUser) {
     $isVoucherOwner = mikhmonRowBelongsToCurrentMitra($hotspotUser);
     $isAssignedCustomer = isset($hotspotUser['name']) && isset($hotspotCustomerNames[(string) $hotspotUser['name']]);
-    if ($isVoucherOwner) $mitraVoucherUsers[] = $hotspotUser;
+    if ($isVoucherOwner && isset($hotspotUser['profile']) && isset($voucherProfiles[(string) $hotspotUser['profile']])) $mitraVoucherUsers[] = $hotspotUser;
     if ($isVoucherOwner || $isAssignedCustomer) $mitraHotspotUsers[] = $hotspotUser;
   }
   $mitraHotspotNames = array();
@@ -94,7 +103,6 @@ if (!empty($routerConnected)) {
     $parts = mikhmonReportParts($row);
     return mikhmonRowBelongsToCurrentMitra($row) || (isset($parts[2]) && isset($mitraAllUsernames[trim($parts[2])]));
   }));
-  $hotspotProfiles = $API->comm('/ip/hotspot/user/profile/print');
   $pppProfiles = $API->comm('/ppp/profile/print');
 }
 
@@ -172,7 +180,7 @@ $pppoeCustomers = count($pppoeCustomerNames);
       <div id="r_2" class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-wifi"></i> Hotspot</h3></div><div class="card-body"><div class="row">
         <div class="col-3 col-box-6"><div class="box bg-blue bmh-75"><a href="./?hotspot=active&session=<?= $session; ?>"><h1><?= count($mitraHotspotActive); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-laptop"></i> <?= $_hotspot_active ?></div></a></div></div>
         <div class="col-3 col-box-6"><div class="box bg-green bmh-75"><a href="./?hotspot=users&profile=all&session=<?= $session; ?>"><h1><?= count($mitraHotspotUsers); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-users"></i> <?= $_hotspot_users ?></div></a></div></div>
-        <div class="col-3 col-box-6"><div class="box bg-yellow bmh-75"><a href="./?hotspot=users-by-profile&session=<?= $session; ?>"><h1><?= count($mitraVoucherUsers); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-ticket"></i> <?= $_vouchers ?></div></a></div></div>
+        <div class="col-3 col-box-6"><div class="box bg-yellow bmh-75"><a href="./?hotspot=users-by-profile&session=<?= $session; ?>"><h1><?= count($mitraVoucherUsers); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-ticket"></i> Vouchers</div></a></div></div>
         <div class="col-3 col-box-6"><div class="box bg-red bmh-75"><a href="./?hotspot-user=generate&session=<?= $session; ?>"><h1><i class="fa fa-user-plus"></i> <span style="font-size:15px"><?= $_generate ?></span></h1><div><i class="fa fa-ticket"></i> Voucher</div></a></div></div>
       </div></div></div></div>
 

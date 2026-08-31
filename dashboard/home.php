@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 session_start();
+include_once(__DIR__ . '/../lib/billing_profile.php');
 // hide all error
 error_reporting(0);
 if (!isset($_SESSION["mikhmon"])) {
@@ -51,8 +52,17 @@ if (!isset($_SESSION["mikhmon"])) {
   $log = array_reverse($getlog);
   $THotspotLog = count($getlog);
 */
-// get & counting hotspot users
-  $countallusers = $API->comm("/ip/hotspot/user/print", array("count-only" => ""));
+// Count only voucher users; Billing-managed profiles (Expired Mode = None) are excluded.
+  $voucherProfiles = array();
+  foreach ((array) $API->comm("/ip/hotspot/user/profile/print") as $profileRow) {
+    if (isset($profileRow['name']) && mikhmonBillingProfileExpiredMode('hotspot', $profileRow) !== 'none') {
+      $voucherProfiles[(string) $profileRow['name']] = true;
+    }
+  }
+  $countallusers = 0;
+  foreach ((array) $API->comm("/ip/hotspot/user/print") as $hotspotUser) {
+    if (isset($hotspotUser['profile']) && isset($voucherProfiles[(string) $hotspotUser['profile']])) $countallusers++;
+  }
   if ($countallusers < 2) {
     $uunit = "item";
   } elseif ($countallusers > 1) {
@@ -225,7 +235,7 @@ if (!isset($_SESSION["mikhmon"])) {
                               <span style="font-size: 15px;"><?= $uunit; ?></span>
                             </h1>
                       <div>
-                            <i class="fa fa-users"></i> <?= $_hotspot_users ?>
+                            <i class="fa fa-ticket"></i> Vouchers
                           </div>
                       </a>
                     </div>
@@ -239,7 +249,7 @@ if (!isset($_SESSION["mikhmon"])) {
                           </h1>
                         </div>
                         <div>
-                            <i class="fa fa-user-plus"></i> <?= $_hotspot_users ?>
+                            <i class="fa fa-ticket"></i> Vouchers
                         </div>
                       </a>
                     </div>
@@ -253,7 +263,7 @@ if (!isset($_SESSION["mikhmon"])) {
                           </h1>
                         </div>
                         <div>
-                            <i class="fa fa-user-plus"></i> <?= $_hotspot_users ?>
+                            <i class="fa fa-ticket"></i> Vouchers
                         </div>
                     </a>
                   </div>

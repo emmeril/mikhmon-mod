@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+include_once(__DIR__ . '/../lib/billing_profile.php');
+
 // hide all error
 error_reporting(0);
 ini_set('max_execution_time', 300);
@@ -67,8 +69,22 @@ if (!isset($_SESSION["mikhmon"])) {
       "count-only" => "",
       "?limit-uptime" => "1s",
     ));
-    
+
   }
+  $allProfiles = $API->comm("/ip/hotspot/user/profile/print");
+  $getprofile = array_values(array_filter((array) $allProfiles, function ($profileRow) {
+    return isset($profileRow['name']) && mikhmonBillingProfileExpiredMode('hotspot', $profileRow) !== 'none';
+  }));
+  $voucherProfiles = array();
+  foreach ($getprofile as $profileRow) {
+    $voucherProfiles[(string) $profileRow['name']] = true;
+  }
+  $getuser = array_values(array_filter((array) $getuser, function ($hotspotUser) use ($voucherProfiles) {
+    return isset($hotspotUser['profile']) && isset($voucherProfiles[(string) $hotspotUser['profile']]);
+  }));
+  $TotalReg = count($getuser);
+  $counttuser = $TotalReg;
+
   if (function_exists('mikhmonIsMitra') && mikhmonIsMitra()) {
     $assignedUsernames = function_exists('mikhmonMitraUsernames') ? mikhmonMitraUsernames($session) : array();
     $getuser = array_values(array_filter((array) $getuser, function ($hotspotUser) use ($assignedUsernames) {
@@ -77,7 +93,6 @@ if (!isset($_SESSION["mikhmon"])) {
     $TotalReg = count($getuser);
     $counttuser = $TotalReg;
   }
-  $getprofile = $API->comm("/ip/hotspot/user/profile/print");
   $TotalReg2 = count($getprofile);
 }
 ?>
@@ -89,7 +104,7 @@ if (!isset($_SESSION["mikhmon"])) {
     <h3><i class="fa fa-ticket"></i> Vouchers
       <span style="font-size: 14px">
         <?php
-        if ($counttuser == 0 && !(function_exists('mikhmonIsMitra') && mikhmonIsMitra())) {
+        if ($counttuser == 0 && $prof != "all" && !(function_exists('mikhmonIsMitra') && mikhmonIsMitra())) {
           echo "<script>window.location='./?hotspot=users&profile=all&session=" . $session . "</script>";
         } ?>
          <?php if (!(function_exists('mikhmonIsMitra') && mikhmonIsMitra())): ?>&nbsp; | &nbsp; <a href="./?hotspot-user=add&session=<?= $session; ?>" title="Add User"><i class="fa fa-user-plus"></i> <?= $_add ?></a><?php endif; ?>
