@@ -37,7 +37,7 @@ $identityAddress = $identityCustomer['address'] ?? '';
 ?>
 <style>
   .identity-card{max-width:760px;margin:0 auto}
-  .identity-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px}
+  .identity-fields{display:grid;grid-template-columns:1fr;gap:14px}
   .identity-fields .wide{grid-column:1/-1}
   .identity-fields label{display:block;margin-bottom:6px;font-size:12px;font-weight:bold;color:#d7dbe0}
   .identity-fields textarea{height:90px;resize:vertical}

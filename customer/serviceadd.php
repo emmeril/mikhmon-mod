@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['service_action'] ?? '') ==
 ?>
 <style>
   .service-add-card{max-width:780px;margin:0 auto}
-  .service-add-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px}
+  .service-add-fields{display:grid;grid-template-columns:1fr;gap:14px}
   .service-add-fields .wide{grid-column:1/-1}
   .service-add-fields label{display:block;margin-bottom:6px;font-size:12px;font-weight:bold;color:#d7dbe0}
   .service-add-actions{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
