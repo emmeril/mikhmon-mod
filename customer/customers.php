@@ -115,11 +115,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $customers = array_values(array_filter(mikhmonVisibleCustomers($session), function ($customer) { return count(mikhmonCustomerServices($customer)) > 0; }));
 $mitras = mikhmonIsAdmin() ? mikhmonGetUsers('mitra', $session) : array();
-$customerInvoices = array();
+$customerInvoiceCandidates = array();
 foreach (mikhmonGetInvoices($session) as $invoice) {
-  if (($invoice['status'] ?? '') !== 'unpaid' || empty($invoice['customer_id'])) continue;
-  $customerId = (string) $invoice['customer_id'];
-  if (!isset($customerInvoices[$customerId]) || (int) ($invoice['created_at'] ?? 0) >= (int) ($customerInvoices[$customerId]['created_at'] ?? 0)) $customerInvoices[$customerId] = $invoice;
+  $customerId = (string) ($invoice['customer_id'] ?? '');
+  $status = (string) ($invoice['status'] ?? '');
+  if ($customerId === '' || ($status !== 'paid' && $status !== 'unpaid')) continue;
+  if (!isset($customerInvoiceCandidates[$customerId])) $customerInvoiceCandidates[$customerId] = array('paid' => array(), 'unpaid' => array());
+  $sortAt = $status === 'paid' ? (int) ($invoice['paid_at'] ?? $invoice['created_at'] ?? 0) : (int) ($invoice['created_at'] ?? 0);
+  $current = $customerInvoiceCandidates[$customerId][$status];
+  $currentSortAt = $status === 'paid' ? (int) ($current['paid_at'] ?? $current['created_at'] ?? 0) : (int) ($current['created_at'] ?? 0);
+  if (!$current || $sortAt >= $currentSortAt) $customerInvoiceCandidates[$customerId][$status] = $invoice;
+}
+$customerInvoices = array();
+foreach ($customerInvoiceCandidates as $customerId => $candidates) {
+  $paid = $candidates['paid']; $unpaid = $candidates['unpaid'];
+  if (!$unpaid) { if ($paid) $customerInvoices[$customerId] = $paid; continue; }
+  $unpaidDue = customerListDueTimestamp($unpaid['due_date'] ?? '');
+  $unpaidIsDue = $unpaidDue <= 0 || $unpaidDue <= time();
+  $customerInvoices[$customerId] = $paid && !$unpaidIsDue ? $paid : $unpaid;
 }
 $customerFonnteConfig = mikhmonFonnteReadConfig();
 $customerRouterUsers = array('hotspot' => array(), 'pppoe' => array());
@@ -191,7 +204,10 @@ if (!empty($routerConnected)) {
           $isolatedAt = (int) ($customerInvoice['automation']['isolated_at'] ?? 0);
           $isolationTimestamp = $isolatedAt;
           if ($isolationTimestamp <= 0) {
-            $dueTimestamp = customerListDueTimestamp($customerInvoice['due_date'] ?? ($customerRow['due_date'] ?? ''));
+            $billingDueDate = ($customerInvoice['status'] ?? '') === 'paid' && !empty($customerInvoice['next_due_date'])
+              ? $customerInvoice['next_due_date']
+              : ($customerInvoice['due_date'] ?? ($customerRow['due_date'] ?? ''));
+            $dueTimestamp = customerListDueTimestamp($billingDueDate);
             if ($dueTimestamp > 0 && (empty($customerFonnteConfig['automation_enabled']) || !empty($customerFonnteConfig['isolation_enabled']))) {
               $graceDays = !empty($customerFonnteConfig['automation_enabled']) ? (int) ($customerFonnteConfig['grace_days'] ?? 0) : 0;
               $isolationTimestamp = $dueTimestamp + ($graceDays * 86400);
