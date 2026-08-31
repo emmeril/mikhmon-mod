@@ -33,6 +33,16 @@ include_once(dirname(__DIR__) . '/lib/fonnte.php');
 $fonnteConfig = mikhmonFonnteReadConfig();
 $fonnteTemplateMessage = '';
 $fonnteTemplateError = '';
+$fonnteVariables = array(
+	'{{nama_pelanggan}}' => 'Nama pelanggan',
+	'{{nama_brand}}' => 'Nama brand atau usaha',
+	'{{nomor_invoice}}' => 'Nomor invoice',
+	'{{total_tagihan}}' => 'Total tagihan',
+	'{{jatuh_tempo}}' => 'Tanggal jatuh tempo',
+	'{{detail_layanan}}' => 'Rincian layanan pelanggan',
+	'{{tanggal_bayar}}' => 'Tanggal pembayaran diterima',
+	'{{jatuh_tempo_berikutnya}}' => 'Jatuh tempo berikutnya',
+);
 
 
 
@@ -96,21 +106,6 @@ textarea{
   font-size:12px;
   border: 1px solid #2f353a;
 }
-.fonnte-template-card .card-header {
-  padding: 10px 15px;
-  margin-bottom: 0;
-}
-.fonnte-template-card .card-header h3 {
-  font-size: 20px;
-  line-height: 1.4;
-}
-.fonnte-template-card .card-body {
-  padding: 15px;
-}
-.fonnte-template-card .fonnte-template-intro {
-  margin: 0 0 15px;
-  line-height: 1.6;
-}
 .fonnte-template-card label {
   display: block;
   margin-bottom: 15px;
@@ -119,6 +114,17 @@ textarea{
 .fonnte-template-card label textarea {
   margin-top: 6px;
   font-weight: 400;
+}
+.fonnte-template-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+.fonnte-template-row > [class*="col-"] {
+  display: flex;
+}
+.fonnte-template-row .card {
+  width: 100%;
 }
 </style>
 
@@ -204,8 +210,8 @@ textarea{
 		</div>
 </div>
 
-<div class="row">
-	<div class="col-12">
+<div class="row fonnte-template-row">
+	<div class="col-9">
 		<div class="card fonnte-template-card">
 			<div class="card-header">
 				<h3><i class="fa fa-whatsapp"></i> Template Pesan Otomatis Fonnte</h3>
@@ -213,7 +219,6 @@ textarea{
 			<div class="card-body">
 				<?php if ($fonnteTemplateMessage !== ''): ?><div class="bg-success pd-10 radius-3 mr-b-10"><i class="fa fa-check"></i> <?= htmlspecialchars($fonnteTemplateMessage, ENT_QUOTES); ?></div><?php endif; ?>
 				<?php if ($fonnteTemplateError !== ''): ?><div class="bg-danger pd-10 radius-3 mr-b-10"><i class="fa fa-ban"></i> <?= htmlspecialchars($fonnteTemplateError, ENT_QUOTES); ?></div><?php endif; ?>
-				<p class="fonnte-template-intro">Variabel: <code>{{nama_pelanggan}}</code>, <code>{{nama_brand}}</code>, <code>{{nomor_invoice}}</code>, <code>{{total_tagihan}}</code>, <code>{{jatuh_tempo}}</code>, <code>{{detail_layanan}}</code>, <code>{{tanggal_bayar}}</code>, <code>{{jatuh_tempo_berikutnya}}</code>.</p>
 				<form autocomplete="off" method="post" action="">
 					<input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>">
 					<div class="row">
@@ -231,6 +236,16 @@ textarea{
 					</div>
 					<button class="btn bg-primary" type="submit" name="fonnte_template_save"><i class="fa fa-save"></i> Simpan Template WhatsApp</button>
 				</form>
+			</div>
+		</div>
+	</div>
+	<div class="col-3">
+		<div class="card">
+			<div class="card-header">
+				<h3>Variable</h3>
+			</div>
+			<div class="card-body">
+				<textarea class="bg-dark" readonly rows="39" style="width:100%" disabled><?= htmlspecialchars(implode("\n", array_keys($fonnteVariables)), ENT_QUOTES); ?></textarea>
 			</div>
 		</div>
 	</div>
