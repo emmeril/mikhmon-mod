@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 session_start();
+include_once(__DIR__ . '/../lib/billing_profile.php');
 // hide all error
 error_reporting(0);
 
@@ -28,11 +29,20 @@ if (!isset($_SESSION["mikhmon"])) {
 date_default_timezone_set($_SESSION['timezone']);
 
 	$genprof = $_GET['genprof'];
+	$allProfiles = $API->comm("/ip/hotspot/user/profile/print");
+	$getprofile = array_values(array_filter((array) $allProfiles, function ($profileRow) {
+		return isset($profileRow['name']) && mikhmonBillingProfileExpiredMode('hotspot', $profileRow) !== 'none';
+	}));
+	$profileError = '';
 	if ($genprof != "") {
-		$getprofile = $API->comm("/ip/hotspot/user/profile/print", array(
+		$selectedProfile = $API->comm("/ip/hotspot/user/profile/print", array(
 			"?name" => "$genprof",
 		));
-		$ponlogin = $getprofile[0]['on-login'];
+		if (!$selectedProfile || !isset($selectedProfile[0]) || mikhmonBillingProfileExpiredMode('hotspot', $selectedProfile[0]) === 'none') {
+			$profileError = 'Profile dengan Expired Mode = None khusus untuk Billing dan tidak dapat dipakai di menu Generate User.';
+			$genprof = '';
+		} else $getprofile = $selectedProfile;
+		$ponlogin = isset($getprofile[0]) ? $getprofile[0]['on-login'] : '';
 		$getprice = explode(",", $ponlogin)[2];
 		if ($getprice == "0") {
 			$getprice = "";
@@ -69,6 +79,12 @@ date_default_timezone_set($_SESSION['timezone']);
 		$prefix = ($_POST['prefix']);
 		$char = ($_POST['char']);
 		$profile = ($_POST['profile']);
+		$selectedProfile = array();
+		foreach ((array) $allProfiles as $profileRow) if (isset($profileRow['name']) && (string) $profileRow['name'] === (string) $profile) { $selectedProfile = $profileRow; break; }
+		if (!$selectedProfile || mikhmonBillingProfileExpiredMode('hotspot', $selectedProfile) === 'none') $profileError = 'Profile dengan Expired Mode = None khusus untuk Billing dan tidak dapat dipakai di menu Generate User.';
+		if ($profileError !== '') {
+			$_SESSION['ubp'] = '';
+		} else {
 		$timelimit = ($_POST['timelimit']);
 		$datalimit = ($_POST['datalimit']);
 		$adcomment = ($_POST['adcomment']);
@@ -232,9 +248,12 @@ date_default_timezone_set($_SESSION['timezone']);
 		} else {
 			echo "<script>window.location='./?hotspot-user=generate&session=" . $session . "'</script>";
 		}
+		}
 	}
 
-	$getprofile = $API->comm("/ip/hotspot/user/profile/print");
+	$getprofile = array_values(array_filter((array) $allProfiles, function ($profileRow) {
+		return isset($profileRow['name']) && mikhmonBillingProfileExpiredMode('hotspot', $profileRow) !== 'none';
+	}));
 	include_once('./voucher/temp.php');
 	$genuser = explode("-", decrypt($genu));
 	$genuser1 = explode("~", decrypt($genu));
@@ -294,7 +313,8 @@ date_default_timezone_set($_SESSION['timezone']);
 	<div class="card-header">
 	<h3><i class="fa fa-user-plus"></i> <?= $_generate_user ?> <small id="loader" style="display: none;" ><i><i class='fa fa-circle-o-notch fa-spin'></i> <?= $_processing ?> </i></small></h3> 
 	</div>
-	<div class="card-body">
+<div class="card-body">
+<?php if ($profileError !== ''): ?><div class="box bg-danger"><i class="fa fa-warning"></i> <?= htmlspecialchars($profileError, ENT_QUOTES); ?></div><?php endif; ?>
 <form autocomplete="off" method="post" action="">
 	<div>
 		<?php if ($_SESSION['ubp'] != "") {
@@ -386,7 +406,7 @@ date_default_timezone_set($_SESSION['timezone']);
 				echo "<option>" . $genprof . "</option>";
 			} else {
 			}
-			$TotalReg = count($getprofile);
+			$TotalReg = count($getprofile); if (!$TotalReg) echo '<option value="">Tidak ada profile non-None</option>';
 			for ($i = 0; $i < $TotalReg; $i++) {
 				echo "<option>" . $getprofile[$i]['name'] . "</option>";
 			}

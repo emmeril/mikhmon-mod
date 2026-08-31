@@ -16,14 +16,19 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 session_start();
+include_once(__DIR__ . '/../lib/billing_profile.php');
 // hide all error
 error_reporting(0);
 if (!isset($_SESSION["mikhmon"])) {
   header("Location:../admin.php?id=login");
 } else {
 
-  $getprofile = $API->comm("/ip/hotspot/user/profile/print");
+  $allProfiles = $API->comm("/ip/hotspot/user/profile/print");
+  $getprofile = array_values(array_filter((array) $allProfiles, function ($profileRow) {
+    return isset($profileRow['name']) && mikhmonBillingProfileExpiredMode('hotspot', $profileRow) !== 'none';
+  }));
   $srvlist = $API->comm("/ip/hotspot/print");
+  $profileError = '';
 
   if (isset($_POST['name'])) {
     $server = ($_POST['server']);
@@ -36,6 +41,11 @@ if (!isset($_SESSION["mikhmon"])) {
     $comment = ($_POST['comment']);
     $chkvalid = ($_POST['valid']);
     $mbgb = ($_POST['mbgb']);
+    $selectedProfile = array();
+    foreach ((array) $allProfiles as $profileRow) if (isset($profileRow['name']) && (string) $profileRow['name'] === (string) $profile) { $selectedProfile = $profileRow; break; }
+    if (!$selectedProfile || mikhmonBillingProfileExpiredMode('hotspot', $selectedProfile) === 'none') {
+      $profileError = 'Profile dengan Expired Mode = None khusus untuk Billing dan tidak dapat dipakai di menu Add User.';
+    }
     if ($timelimit == "") {
       $timelimit = "0";
     } else {
@@ -54,7 +64,8 @@ if (!isset($_SESSION["mikhmon"])) {
     
       $comment = $usermode.$comment;
     
-    $API->comm("/ip/hotspot/user/add", array(
+    if ($profileError === '') {
+      $API->comm("/ip/hotspot/user/add", array(
       "server" => "$server",
       "name" => "$name",
       "password" => "$password",
@@ -63,12 +74,13 @@ if (!isset($_SESSION["mikhmon"])) {
       "limit-uptime" => "$timelimit",
       "limit-bytes-total" => "$datalimit",
       "comment" => "$comment",
-    ));
-    $getuser = $API->comm("/ip/hotspot/user/print", array(
+      ));
+      $getuser = $API->comm("/ip/hotspot/user/print", array(
       "?name" => "$name",
-    ));
-    $uid = $getuser[0]['.id'];
-    echo "<script>window.location='./?hotspot-user=" . $uid . "&session=" . $session . "'</script>";
+      ));
+      $uid = $getuser[0]['.id'];
+      echo "<script>window.location='./?hotspot-user=" . $uid . "&session=" . $session . "'</script>";
+    }
   }
 }
 ?>
@@ -88,7 +100,8 @@ if (!isset($_SESSION["mikhmon"])) {
   <h3><i class="fa fa-user-plus"></i> <?= $_add_user ?> <small id="loader" style="display: none;" ><i><i class='fa fa-circle-o-notch fa-spin'></i> <?= $_processing ?> </i></small></h3> 
   </div>
   <div class="card-body">
-<form autocomplete="off" method="post" action="">  
+<?php if ($profileError !== ''): ?><div class="box bg-danger"><i class="fa fa-warning"></i> <?= htmlspecialchars($profileError, ENT_QUOTES); ?></div><?php endif; ?>
+<form autocomplete="off" method="post" action="">
   <div>
   <?php if ($_SESSION['ubp'] != "") {
     echo "    <a class='btn bg-warning' href='./?hotspot=users&profile=" . $_SESSION['ubp'] . "&session=" . $session . "'> <i class='fa fa-close'></i> ".$_close."</a>";
@@ -133,7 +146,7 @@ if (!isset($_SESSION["mikhmon"])) {
   <tr>
     <td class="align-middle"><?= $_profile ?></td><td>
 			<select class="form-control" onchange="GetVP();"  id="uprof" name="profile" required="1">
-				<?php $TotalReg = count($getprofile);
+				<?php $TotalReg = count($getprofile); if (!$TotalReg) echo '<option value="">Tidak ada profile non-None</option>';
     for ($i = 0; $i < $TotalReg; $i++) {
       echo "<option>" . $getprofile[$i]['name'] . "</option>";
     }
