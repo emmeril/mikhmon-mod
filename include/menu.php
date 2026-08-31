@@ -386,7 +386,6 @@ include('./info.php');
   </div>
   <div class="dropdown-btn <?= $sactive . $susersbp; ?>"><i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $hamenu . $hotspotmenu; ?>">
-    <a href="./?hotspot=users-by-profile&session=<?= $session; ?>" class="<?= $susersbp; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-ticket"></i> <?= $_vouchers ?></a>
     <a href="./?hotspot=active&session=<?= $session; ?>" class="<?= $sactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi"></i> <?= $_hotspot_active ?></a>
   </div>
   <div class="dropdown-btn <?= $mppp; ?>"><i class="fa fa-exchange"></i> PPPoE <i class="fa fa-caret-down"></i></div>
@@ -462,7 +461,6 @@ include('./info.php');
   <!--quick print-->
   <a href="./?hotspot=print-center&session=<?= $session; ?>" class="menu <?= $sprintcenter; ?>"><i class="fa fa-print"></i> Print Center</a>
   <!--vouchers-->
-  <a href="./?hotspot=users-by-profile&session=<?= $session; ?>" class="menu <?= $susersbp; ?>"> <i class="fa fa-ticket"></i> <?= $_vouchers ?> </a>
    <!--log-->
   <div class="dropdown-btn <?= $log; ?>"><i class=" fa fa-align-justify"></i> <?= $_log ?>
     <i class="fa fa-caret-down"></i>
