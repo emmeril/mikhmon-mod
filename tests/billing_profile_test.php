@@ -10,7 +10,7 @@ function billingProfileTestAssert($condition, $message) {
   }
 }
 
-$hotspotNone = array('name' => 'monthly', 'on-login' => ':put (",,100000,,,noexp,,")');
+$hotspotNone = array('name' => 'monthly', 'on-login' => ':put (",,100000,30d,120000,noexp,Disable,")');
 $hotspotExpired = array('name' => 'voucher', 'on-login' => ':put (",ntfc,10000,1d,12000,,Disable,")');
 $hotspotEmpty = array('name' => 'manual', 'on-login' => '');
 $pppoeNone = array('name' => 'ppp-monthly', 'comment' => '[MIKHMON-PPPOE price=50000 selling=75000 expmode=none validity=30d]');

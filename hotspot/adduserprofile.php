@@ -72,7 +72,7 @@ if (!isset($_SESSION["mikhmon"])) {
       $onlogin = $onlogin . $record . $lock . "}}";
       $mode = "set limit-uptime=1s";
     } elseif ($expmode == "0" && $price != "") {
-      $onlogin = ':put (",,' . $price . ',,,noexp,' . $getlock . ',")' . $lock;
+      $onlogin = ':put (",,' . $price . ',' . $validity . ',' . $sprice . ',noexp,' . $getlock . ',")' . $lock;
     } else {
       $onlogin = "";
     }
