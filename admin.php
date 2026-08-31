@@ -107,12 +107,34 @@ if ($id == "login" || substr($url, -1) == "p") {
 } elseif (substr($url, -1) == "/" || substr($url, -4) == ".php") {
   echo "<script>window.location=" . json_encode(mikhmonAdminLandingUrl($data)) . "</script>";
 
+} elseif ($id == "admin-settings" && !empty($session)) {
+  $legacyTarget = './?admin=settings&session=' . rawurlencode($session);
+  echo '<script>window.location=' . json_encode($legacyTarget) . '</script>';
 } elseif ($id == "admin-settings") {
   include_once('./include/menu.php');
   include_once('./settings/adminsettings.php');
 } elseif ($id == "fonnte") {
-  include_once('./include/menu.php');
-  include_once('./settings/fonnte.php');
+  // Keep gateway settings in the router dashboard when a router session is selected.
+  if (!empty($session)) {
+    $fonnteTarget = './?admin=fonnte&session=' . rawurlencode($session);
+    echo '<script>window.location=' . json_encode($fonnteTarget) . '</script>';
+  } else {
+    include_once('./include/menu.php');
+    include_once('./settings/fonnte.php');
+  }
+} elseif ($id == "database" && !empty($session)) {
+  $legacyTarget = './?admin=database&session=' . rawurlencode($session);
+  echo '<script>window.location=' . json_encode($legacyTarget) . '</script>';
+} elseif ($id == "settings" && !empty($session)) {
+  $legacyTarget = './?admin=session-settings&session=' . rawurlencode($session);
+  echo '<script>window.location=' . json_encode($legacyTarget) . '</script>';
+} elseif ($id == "uplogo" && !empty($session)) {
+  $legacyTarget = './?hotspot=uplogo&session=' . rawurlencode($session);
+  echo '<script>window.location=' . json_encode($legacyTarget) . '</script>';
+} elseif ($id == "editor" && !empty($session)) {
+  $template = isset($_GET['template']) ? (string) $_GET['template'] : 'default';
+  $legacyTarget = './?hotspot=template-editor&template=' . rawurlencode($template) . '&session=' . rawurlencode($session);
+  echo '<script>window.location=' . json_encode($legacyTarget) . '</script>';
 } elseif ($id == "sessions") {
   $_SESSION["connect"] = "";
   include_once('./include/menu.php');

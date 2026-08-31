@@ -165,6 +165,26 @@ if (!isset($_SESSION["mikhmon"])) {
     $mpage = $_admin_settings;
     $settmenu = "menu-open";
     $ssett = "active";
+  } elseif ($admin == "fonnte") {
+    $sfonnte = "active";
+    $mpage = "WhatsApp Gateway Fonnte";
+    $settmenu = "menu-open";
+    $ssett = "active";
+  } elseif ($admin == "router-add") {
+    $snsettings = "active";
+    $mpage = $_add_router;
+    $settmenu = "menu-open";
+    $ssett = "active";
+  } elseif ($admin == "session-settings") {
+    $ssettings = "active";
+    $mpage = $_session_settings;
+    $settmenu = "menu-open";
+    $ssett = "active";
+  } elseif ($admin == "database") {
+    $sdatabase = "active";
+    $mpage = "Database Backup";
+    $settmenu = "menu-open";
+    $ssett = "active";
   } elseif ($id == "fonnte") {
     $sfonnte = "active";
     $mpage = "WhatsApp Gateway Fonnte";
@@ -469,13 +489,13 @@ include('./info.php');
   </div>
   <div class="dropdown-container <?= $settmenu; ?>">
   <a href="./?admin=settings&session=<?= rawurlencode($session); ?>" class="menu <?= $sadminsettings; ?>"> <i class="fa fa-user-circle"></i> <?= $_admin_settings ?> </a>
-  <a href="./admin.php?id=fonnte" class="menu <?= $sfonnte; ?>"> <i class="fa fa-whatsapp"></i> WhatsApp Gateway </a>
+  <a href="./?admin=fonnte&session=<?= rawurlencode($session); ?>" class="menu <?= $sfonnte; ?>"> <i class="fa fa-whatsapp"></i> WhatsApp Gateway </a>
   <a href="./?admin=routers&session=<?= rawurlencode($session); ?>" class="menu <?= $srouterlist; ?>"> <i class="fa fa-server"></i> <?= $_router_list ?> </a>
-  <a href="./admin.php?id=settings&router=new-<?= rand(1111, 9999); ?>&return=routers" class="menu"> <i class="fa fa-plus"></i> <?= $_add_router ?> </a>
+  <a href="./?admin=router-add&router=new-<?= rand(1111, 9999); ?>&return=routers&session=<?= rawurlencode($session); ?>" class="menu <?= $snsettings; ?>"> <i class="fa fa-plus"></i> <?= $_add_router ?> </a>
   <a href="./?admin=users&session=<?= rawurlencode($session); ?>" class="menu <?= $sroleusers; ?>"> <i class="fa fa-users"></i> Manajemen User </a>
-  <a href="./admin.php?id=settings&session=<?= rawurlencode($session); ?>" class="menu"> <i class="fa fa-gear"></i> <?= $_session_settings ?> </a>
+  <a href="./?admin=session-settings&session=<?= rawurlencode($session); ?>" class="menu <?= $ssettings; ?>"> <i class="fa fa-gear"></i> <?= $_session_settings ?> </a>
   <a href="./?hotspot=uplogo&session=<?= $session; ?>" class="menu <?= $uplogo; ?>"> <i class="fa fa-upload "></i> <?= $_upload_logo ?> </a>
-  <a href="./admin.php?id=database&session=<?= $session; ?>" class="menu <?= $sdatabase; ?>"><i class="fa fa-database"></i> Database Backup</a>
+  <a href="./?admin=database&session=<?= rawurlencode($session); ?>" class="menu <?= $sdatabase; ?>"><i class="fa fa-database"></i> Database Backup</a>
   <a href="./?hotspot=template-editor&template=default&session=<?= $session; ?>" class="menu <?= $teditor; ?>"> <i class="fa fa-edit "></i> <?= $_template_editor ?> </a>          
   </div>
 <?php endif; ?>

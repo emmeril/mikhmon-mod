@@ -23,8 +23,14 @@ if (!isset($_SESSION["mikhmon"])) {
   header("Location:../admin.php?id=login");
 } else {
 
-  $isNewRouter = $id == "settings" && !empty($router) && explode("-", $router, 2)[0] == "new" && empty($session);
+  $isNewRouter = ($id == "settings" || $admin == "router-add") && !empty($router) && explode("-", $router, 2)[0] == "new";
   if ($isNewRouter) {
+    // The current session only authenticates the dashboard; new routers start blank.
+    $iphost = '';
+    $userhost = '';
+    $passwdhost = '';
+    $hotspotname = '';
+    $dnsname = '';
     $currency = 'Rp';
     $areload = 10;
     $iface = 1;
@@ -156,7 +162,7 @@ if (!isset($_SESSION["mikhmon"])) {
                   <table class="table">
                     <tr>
                       <td><?= $_session_name ?></td>
-                      <td><input class="form-control" id="sessname" type="text" name="sessname" title="Session Name" value="<?php if (explode("-",$session)[0] == "new") {
+                      <td><input class="form-control" id="sessname" type="text" name="sessname" title="Session Name" value="<?php if ($isNewRouter || explode("-",$session)[0] == "new") {
                                                                                                                               echo "";
                                                                                                                             } else {
                                                                                                                               echo $session;

@@ -148,6 +148,7 @@ if (!isset($_SESSION["mikhmon"])) {
   $billing = $_GET['billing'];
   $commission = $_GET['commission'];
   $admin = $_GET['admin'];
+  $router = $_GET['router'];
 
   $requestedRoute = 'other';
   if ($hotspot == 'logout') $requestedRoute = 'logout';
@@ -164,6 +165,10 @@ if (!isset($_SESSION["mikhmon"])) {
   elseif ($admin == 'settings') $requestedRoute = 'admin-settings';
   elseif ($admin == 'routers') $requestedRoute = 'admin-routers';
   elseif ($admin == 'users') $requestedRoute = 'admin-users';
+  elseif ($admin == 'fonnte') $requestedRoute = 'admin-fonnte';
+  elseif ($admin == 'router-add') $requestedRoute = 'admin-router-add';
+  elseif ($admin == 'session-settings') $requestedRoute = 'admin-session-settings';
+  elseif ($admin == 'database') $requestedRoute = 'admin-database';
   elseif ($hotspotuser == 'generate') $requestedRoute = 'hotspot-generate';
   elseif ($hotspot == 'print-center') $requestedRoute = 'hotspot-print-center';
   elseif ($hotspot == 'active') $requestedRoute = 'hotspot-active';
@@ -240,6 +245,28 @@ if (!isset($_SESSION["mikhmon"])) {
 // user and role management inside the router dashboard
   elseif ($admin == "users" && mikhmonIsAdmin()) {
     include_once('./settings/users.php');
+  }
+
+// WhatsApp Gateway settings inside the router dashboard
+  elseif ($admin == "fonnte" && mikhmonIsAdmin()) {
+    include_once('./settings/fonnte.php');
+  }
+
+// Add router inside the router dashboard
+  elseif ($admin == "router-add" && mikhmonIsAdmin()) {
+    $id = "settings";
+    include_once('./settings/settings.php');
+  }
+
+// Router session settings inside the router dashboard
+  elseif ($admin == "session-settings" && mikhmonIsAdmin()) {
+    $id = "settings";
+    include_once('./settings/settings.php');
+  }
+
+// Database backup inside the router dashboard
+  elseif ($admin == "database" && mikhmonIsAdmin()) {
+    include_once('./settings/database.php');
   }
 
 // customer database
