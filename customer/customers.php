@@ -6,6 +6,7 @@ if (!isset($_SESSION["mikhmon"])) {
 }
 
 include_once('./include/database.php');
+include_once('./lib/fonnte.php');
 
 $customerMessage = '';
 $customerError = '';
@@ -16,6 +17,31 @@ function customerListApiError($response) {
     if (isset($response[$type][0]['message'])) return $response[$type][0]['message'];
   }
   return '';
+}
+
+function customerListDueTimestamp($value) {
+  $value = strtolower(trim((string) $value));
+  if ($value === '') return 0;
+  $months = array('jan'=>1,'feb'=>2,'mar'=>3,'apr'=>4,'may'=>5,'jun'=>6,'jul'=>7,'aug'=>8,'sep'=>9,'oct'=>10,'nov'=>11,'dec'=>12);
+  if (preg_match('/^([a-z]{3})\/(\d{1,2})(?:\/(\d{4}))?(?:\s+(\d{1,2}:\d{2}:\d{2}))?$/', $value, $matches) && isset($months[$matches[1]])) {
+    $year = !empty($matches[3]) ? (int) $matches[3] : (int) date('Y');
+    $time = !empty($matches[4]) ? $matches[4] : '00:00:00';
+    $timestamp = strtotime(sprintf('%04d-%02d-%02d %s', $year, $months[$matches[1]], (int) $matches[2], $time));
+    if (empty($matches[3]) && $timestamp < time() - 86400) $timestamp = strtotime('+1 year', $timestamp);
+    return $timestamp ?: 0;
+  }
+  $timestamp = strtotime($value);
+  return $timestamp ?: 0;
+}
+
+function customerListServiceIsIsolated($service, $routerUsers) {
+  $type = ($service['service'] ?? '') === 'pppoe' ? 'pppoe' : 'hotspot';
+  $username = (string) ($service['username'] ?? '');
+  if ($username === '' || !isset($routerUsers[$type][$username])) return null;
+  $user = $routerUsers[$type][$username];
+  $disabled = isset($user['disabled']) && in_array($user['disabled'], array('true', 'yes'), true);
+  $limited = $type === 'hotspot' && isset($user['limit-uptime']) && $user['limit-uptime'] === '1s';
+  return $disabled || $limited;
 }
 
 if (isset($_GET['created']) && $_GET['created'] === '1') {
@@ -89,6 +115,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $customers = array_values(array_filter(mikhmonVisibleCustomers($session), function ($customer) { return count(mikhmonCustomerServices($customer)) > 0; }));
 $mitras = mikhmonIsAdmin() ? mikhmonGetUsers('mitra', $session) : array();
+$customerInvoices = array();
+foreach (mikhmonGetInvoices($session) as $invoice) {
+  if (($invoice['status'] ?? '') !== 'unpaid' || empty($invoice['customer_id'])) continue;
+  $customerId = (string) $invoice['customer_id'];
+  if (!isset($customerInvoices[$customerId]) || (int) ($invoice['created_at'] ?? 0) >= (int) ($customerInvoices[$customerId]['created_at'] ?? 0)) $customerInvoices[$customerId] = $invoice;
+}
+$customerFonnteConfig = mikhmonFonnteReadConfig();
+$customerRouterUsers = array('hotspot' => array(), 'pppoe' => array());
+if (!empty($routerConnected)) {
+  foreach (array('hotspot' => '/ip/hotspot/user/print', 'pppoe' => '/ppp/secret/print') as $serviceType => $command) {
+    $rows = $API->comm($command);
+    if (is_array($rows) && customerListApiError($rows) === '') foreach ($rows as $row) {
+      if (is_array($row) && isset($row['name'])) $customerRouterUsers[$serviceType][(string) $row['name']] = $row;
+    }
+  }
+}
 ?>
 <div class="row"><div class="col-12"><div class="card">
   <div class="card-header"><h3><i class="fa fa-list"></i> Daftar Pelanggan <span style="font-size:14px">&nbsp;|&nbsp; <span id="customerVisibleCount"><?= count($customers); ?></span> pelanggan</span></h3></div>
@@ -107,21 +149,43 @@ $mitras = mikhmonIsAdmin() ? mikhmonGetUsers('mitra', $session) : array();
       #dataTable .customer-service-total { text-align:center; font-weight:bold; }
       #dataTable .customer-username-cell { min-width:145px; font-weight:bold; }
       #dataTable .customer-profile-cell { min-width:180px; color:#888; font-size:12px; white-space:normal; }
+      #dataTable .customer-isolation-date { min-width:135px; text-align:center; }
+      #dataTable .customer-status { min-width:85px; text-align:center; font-weight:bold; }
     </style>
     <div class="overflow box-bordered" style="max-height:65vh"><table id="dataTable" class="table table-bordered table-hover text-nowrap">
-      <thead><tr><th>No</th><th>Nama Pelanggan</th><th>Nomor HP</th><th>Alamat</th><th>Jumlah Layanan</th><th>Layanan</th><th>Username</th><th>Profile</th><th>Mitra</th><th>Aksi</th></tr></thead><tbody>
+      <thead><tr><th>No</th><th>Nama Pelanggan</th><th>Nomor HP</th><th>Alamat</th><th>Jumlah Layanan</th><th>Layanan</th><th>Username</th><th>Profile</th><th>Tanggal Isolir</th><th>Status</th><th>Mitra</th><th>Aksi</th></tr></thead><tbody>
       <?php foreach ($customers as $customerIndex => $customerRow): ?>
         <?php
           $customerServices = mikhmonCustomerServices($customerRow);
           $customerUsername = implode(', ', array_map(function ($item) { return $item['username']; }, $customerServices));
           $customerSearchData = implode(' ', array_map(function ($item) { return $item['username'] . ' ' . $item['profile']; }, $customerServices));
           $firstCustomerService = isset($customerServices[0]) ? $customerServices[0] : array('username' => '', 'profile' => '');
+          $customerId = (string) ($customerRow['id'] ?? '');
+          $customerInvoice = isset($customerInvoices[$customerId]) ? $customerInvoices[$customerId] : array();
+          $isolatedAt = (int) ($customerInvoice['automation']['isolated_at'] ?? 0);
+          $isolationTimestamp = $isolatedAt;
+          if ($isolationTimestamp <= 0) {
+            $dueTimestamp = customerListDueTimestamp($customerInvoice['due_date'] ?? ($customerRow['due_date'] ?? ''));
+            if ($dueTimestamp > 0 && (empty($customerFonnteConfig['automation_enabled']) || !empty($customerFonnteConfig['isolation_enabled']))) {
+              $graceDays = !empty($customerFonnteConfig['automation_enabled']) ? (int) ($customerFonnteConfig['grace_days'] ?? 0) : 0;
+              $isolationTimestamp = $dueTimestamp + ($graceDays * 86400);
+            }
+          }
+          $customerIsIsolated = $isolatedAt > 0;
+          if (!empty($routerConnected)) foreach ($customerServices as $customerService) {
+            $serviceIsIsolated = customerListServiceIsIsolated($customerService, $customerRouterUsers);
+            if ($serviceIsIsolated === null) continue;
+            if ($serviceIsIsolated) { $customerIsIsolated = true; break; }
+            $customerIsIsolated = false;
+          }
+          $customerStatusText = $customerIsIsolated ? 'Isolir' : 'Aktif';
+          $customerStatusClass = $customerIsIsolated ? 'text-danger' : 'text-success';
         ?>
-        <tr class="customer-row" data-search="<?= htmlspecialchars(strtolower($customerSearchData), ENT_QUOTES); ?>" data-service="<?= htmlspecialchars(strtolower(implode(',', array_map(function ($item) { return $item['service']; }, $customerServices))), ENT_QUOTES); ?>"><td><?= $customerIndex + 1; ?></td><td><?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['phone']) ? $customerRow['phone'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['address']) ? $customerRow['address'] : '', ENT_QUOTES); ?></td><td class="customer-service-total"><?= count($customerServices); ?></td><td><select class="form-control customer-service-select"><?php foreach ($customerServices as $serviceIndex => $customerService): ?><option value="<?= $serviceIndex; ?>" data-type="<?= htmlspecialchars($customerService['service'], ENT_QUOTES); ?>" data-username="<?= htmlspecialchars($customerService['username'], ENT_QUOTES); ?>" data-profile="<?= htmlspecialchars($customerService['profile'], ENT_QUOTES); ?>"><?= strtoupper(htmlspecialchars($customerService['service'], ENT_QUOTES)); ?></option><?php endforeach; ?></select></td><td class="customer-username-cell"><?= htmlspecialchars($firstCustomerService['username'], ENT_QUOTES); ?></td><td class="customer-profile-cell"><?= htmlspecialchars($firstCustomerService['profile'] !== '' ? $firstCustomerService['profile'] : 'Profile belum diatur', ENT_QUOTES); ?></td><td><?php if (mikhmonIsAdmin()): ?><form method="post" style="min-width:160px"><input type="hidden" name="customer_action" value="assign_mitra"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>"><select class="form-control" name="mitra_id" onchange="this.form.submit()"><option value="">Belum ditetapkan</option><?php foreach ($mitras as $mitra): ?><option value="<?= htmlspecialchars($mitra['id'], ENT_QUOTES); ?>"<?= isset($customerRow['mitra_id']) && $customerRow['mitra_id'] === $mitra['id'] ? ' selected' : ''; ?>><?= htmlspecialchars($mitra['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select></form><?php else: ?><?= htmlspecialchars(mikhmonUserName(), ENT_QUOTES); ?><?php endif; ?></td>
+        <tr class="customer-row" data-search="<?= htmlspecialchars(strtolower($customerSearchData), ENT_QUOTES); ?>" data-service="<?= htmlspecialchars(strtolower(implode(',', array_map(function ($item) { return $item['service']; }, $customerServices))), ENT_QUOTES); ?>"><td><?= $customerIndex + 1; ?></td><td><?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['phone']) ? $customerRow['phone'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['address']) ? $customerRow['address'] : '', ENT_QUOTES); ?></td><td class="customer-service-total"><?= count($customerServices); ?></td><td><select class="form-control customer-service-select"><?php foreach ($customerServices as $serviceIndex => $customerService): ?><option value="<?= $serviceIndex; ?>" data-type="<?= htmlspecialchars($customerService['service'], ENT_QUOTES); ?>" data-username="<?= htmlspecialchars($customerService['username'], ENT_QUOTES); ?>" data-profile="<?= htmlspecialchars($customerService['profile'], ENT_QUOTES); ?>"><?= strtoupper(htmlspecialchars($customerService['service'], ENT_QUOTES)); ?></option><?php endforeach; ?></select></td><td class="customer-username-cell"><?= htmlspecialchars($firstCustomerService['username'], ENT_QUOTES); ?></td><td class="customer-profile-cell"><?= htmlspecialchars($firstCustomerService['profile'] !== '' ? $firstCustomerService['profile'] : 'Profile belum diatur', ENT_QUOTES); ?></td><td class="customer-isolation-date"><?= $isolationTimestamp > 0 ? htmlspecialchars(date('d-m-Y H:i', $isolationTimestamp), ENT_QUOTES) : '-'; ?></td><td class="customer-status <?= $customerStatusClass; ?>"><i class="fa <?= $customerIsIsolated ? 'fa-ban' : 'fa-check-circle'; ?>"></i> <?= $customerStatusText; ?></td><td><?php if (mikhmonIsAdmin()): ?><form method="post" style="min-width:160px"><input type="hidden" name="customer_action" value="assign_mitra"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>"><select class="form-control" name="mitra_id" onchange="this.form.submit()"><option value="">Belum ditetapkan</option><?php foreach ($mitras as $mitra): ?><option value="<?= htmlspecialchars($mitra['id'], ENT_QUOTES); ?>"<?= isset($customerRow['mitra_id']) && $customerRow['mitra_id'] === $mitra['id'] ? ' selected' : ''; ?>><?= htmlspecialchars($mitra['name'], ENT_QUOTES); ?></option><?php endforeach; ?></select></form><?php else: ?><?= htmlspecialchars(mikhmonUserName(), ENT_QUOTES); ?><?php endif; ?></td>
         <td><a class="btn bg-primary" href="./?customer=identity-edit&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-edit"></i> Edit Identitas</a> <a class="btn bg-secondary" href="./?customer=service-add&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-plus"></i> Layanan</a> <button type="button" class="btn bg-danger customer-delete-button" data-customer-id="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>" data-customer-name="<?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?>" data-customer-username="<?= htmlspecialchars($customerUsername, ENT_QUOTES); ?>"><i class="fa fa-trash"></i> Hapus</button></td>
       </tr><?php endforeach; ?>
-      <?php if (!$customers): ?><tr class="customer-info-row"><td colspan="10" class="text-center"><?= mikhmonIsMitra() ? 'Belum ada pelanggan yang ditetapkan kepada Anda.' : 'Belum ada data pelanggan.'; ?></td></tr><?php endif; ?>
-      <tr id="customerNoResults" style="display:none"><td colspan="10" class="text-center">Data pelanggan tidak ditemukan.</td></tr>
+      <?php if (!$customers): ?><tr class="customer-info-row"><td colspan="12" class="text-center"><?= mikhmonIsMitra() ? 'Belum ada pelanggan yang ditetapkan kepada Anda.' : 'Belum ada data pelanggan.'; ?></td></tr><?php endif; ?>
+      <tr id="customerNoResults" style="display:none"><td colspan="12" class="text-center">Data pelanggan tidak ditemukan.</td></tr>
       </tbody></table></div>
   </div>
 </div></div></div>
