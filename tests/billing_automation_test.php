@@ -40,6 +40,9 @@ mikhmonFonnteWriteConfig(array('enabled' => false, 'automation_enabled' => true,
 $novemberDue = strtotime('2026-11-05 00:00:00');
 $latePayment = strtotime('2027-02-01 12:00:00');
 billingAutomationTestAssert(date('Y-m-d H:i:s', mikhmonBillingAutomationNextDueTimestamp($novemberDue, $latePayment)) === '2026-12-05 00:00:00', 'late payment advances exactly one monthly billing cycle');
+$futureDue = strtotime('2026-10-05 00:00:00');
+billingAutomationTestAssert(!mikhmonBillingAutomationPaymentWindowOpen($futureDue, 7, strtotime('2026-09-20 12:00:00')), 'future invoice stays outside the payment window');
+billingAutomationTestAssert(mikhmonBillingAutomationPaymentWindowOpen($futureDue, 7, strtotime('2026-09-28 00:00:00')), 'payment window opens on the reminder date');
 
 $bootstrapCustomerId = mikhmonSaveCustomer('router-a', '', 'Bootstrap Customer', '', '', 'hotspot', 'bootstrap-user', 'basic');
 $bootstrapCustomer = mikhmonFindCustomer('router-a', $bootstrapCustomerId);

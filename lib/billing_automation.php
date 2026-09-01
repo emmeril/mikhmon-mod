@@ -47,6 +47,13 @@ function mikhmonBillingAutomationIsWorkHour($timestamp = null) {
   return $hour >= 8 && $hour < 17;
 }
 
+function mikhmonBillingAutomationPaymentWindowOpen($dueAt, $reminderDays, $now = null) {
+  $now = $now === null ? time() : (int) $now;
+  $dueAt = (int) $dueAt;
+  if ($dueAt <= 0) return false;
+  return $now >= $dueAt - (max(1, (int) $reminderDays) * 86400);
+}
+
 function mikhmonBillingAutomationApiError($response) {
   if (!is_array($response)) return 'Respons router tidak valid.';
   foreach (array('!trap', '!fatal') as $type) if (isset($response[$type][0]['message'])) return (string) $response[$type][0]['message'];
@@ -346,17 +353,17 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
       }
     }
     if (!$invoice) continue;
-    if (!empty($fonnteConfig['payment_link_enabled'])) {
+    $dueAt = mikhmonBillingAutomationDueTimestamp($invoice['due_date'] ?? ($customer['due_date'] ?? ''));
+    if ($dueAt <= 0) continue;
+    $reminderAt = $dueAt - ((int) ($fonnteConfig['reminder_days'] ?? 7) * 86400);
+    if (!empty($fonnteConfig['payment_link_enabled']) && mikhmonBillingAutomationPaymentWindowOpen($dueAt, $fonnteConfig['reminder_days'] ?? 7, $now)) {
       $linkResult = mikhmonBillingAutomationEnsurePaymentLink($session, $invoice, $customer, $currency, $brand, $fonnteConfig, $paymentGatewayConfig, $now);
       if (!empty($linkResult['sent'])) $result['payment_links']++;
       if (!empty($linkResult['error'])) $result['errors']++;
       foreach ($invoices as $index => $row) if (($row['id'] ?? '') === ($invoice['id'] ?? '')) { $invoices[$index] = $invoice; break; }
     }
-    $dueAt = mikhmonBillingAutomationDueTimestamp($invoice['due_date'] ?? ($customer['due_date'] ?? ''));
-    if ($dueAt <= 0) continue;
     $automation = isset($invoice['automation']) && is_array($invoice['automation']) ? $invoice['automation'] : array();
-    $reminderAt = $dueAt - ((int) ($fonnteConfig['reminder_days'] ?? 7) * 86400);
-    if ($workHours && !empty($fonnteConfig['automation_enabled']) && !empty($fonnteConfig['reminder_enabled']) && empty($automation['reminder_sent_at']) && $now >= $reminderAt && $now < $dueAt) {
+    if ($workHours && !empty($fonnteConfig['automation_enabled']) && !empty($fonnteConfig['reminder_enabled']) && empty($automation['reminder_sent_at']) && empty($automation['payment_link_sent_at']) && $now >= $reminderAt && $now < $dueAt) {
       $message = mikhmonBillingAutomationMessage($fonnteConfig['templates']['reminder'] ?? '', $customer, $invoice, $currency, $brand, date('Y-m-d H:i:s', $dueAt));
       $send = mikhmonFonnteSend($customer['phone'] ?? '', $message, $fonnteConfig);
       if (!empty($send['status'])) { $invoice['automation']['reminder_sent_at'] = $now; mikhmonBillingAutomationClearFailure($invoice, 'reminder'); $result['reminders']++; }
