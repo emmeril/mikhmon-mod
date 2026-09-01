@@ -93,6 +93,19 @@ $maskedToken = $fonnteConfig['token'] !== '' ? str_repeat('*', max(4, min(20, st
 .fonnte-automation-check input {
   margin: 0;
 }
+.fonnte-test-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.fonnte-test-group .form-control {
+  flex: 1 1 auto;
+  width: auto;
+}
+.fonnte-test-group .btn {
+  flex: 0 0 auto;
+  margin: 5px 0 5px 0;
+}
 @media screen and (max-width: 750px) {
   .fonnte-settings-table td:first-child {
     width: 115px;
@@ -100,6 +113,10 @@ $maskedToken = $fonnteConfig['token'] !== '' ? str_repeat('*', max(4, min(20, st
   .fonnte-automation-check {
     min-width: 0;
     width: 100%;
+  }
+  .fonnte-payment-note {
+    display: block;
+    margin-top: 4px;
   }
 }
 </style>
@@ -140,7 +157,7 @@ $maskedToken = $fonnteConfig['token'] !== '' ? str_repeat('*', max(4, min(20, st
                   </td>
                 </tr>
                 <tr><td class="align-middle">Notifikasi Bayar</td><td><label><input type="checkbox" name="payment_enabled" value="1" <?= !empty($fonnteConfig['payment_enabled']) ? 'checked' : ''; ?>> Kirim setelah pembayaran</label></td></tr>
-                <tr><td class="align-middle">Link Pembayaran</td><td><label><input type="checkbox" name="payment_link_enabled" value="1" <?= !empty($fonnteConfig['payment_link_enabled']) ? 'checked' : ''; ?>> Kirim link otomatis</label><small class="payment-secret-note">Perlu Payment Gateway dan Fonnte aktif.</small></td></tr>
+                <tr><td class="align-middle">Link Pembayaran</td><td><label><input type="checkbox" name="payment_link_enabled" value="1" <?= !empty($fonnteConfig['payment_link_enabled']) ? 'checked' : ''; ?>> Kirim link otomatis</label><small class="payment-secret-note fonnte-payment-note">Perlu Payment Gateway dan Fonnte aktif.</small></td></tr>
                 <tr>
                   <td class="align-middle">Jeda Pesan</td>
                   <td>
@@ -168,7 +185,7 @@ $maskedToken = $fonnteConfig['token'] !== '' ? str_repeat('*', max(4, min(20, st
             <form autocomplete="off" method="post">
               <input type="hidden" name="fonnte_action" value="test">
               <input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>">
-              <div class="input-group"><input class="form-control" type="text" name="test_target" inputmode="tel" placeholder="08123456789" required><button class="btn bg-green" type="submit"><i class="fa fa-send"></i> Kirim</button></div>
+              <div class="input-group fonnte-test-group"><input class="form-control" type="text" name="test_target" inputmode="tel" placeholder="08123456789" required><button class="btn bg-green" type="submit"><i class="fa fa-send"></i> Kirim</button></div>
             </form>
           </div>
         </div>
