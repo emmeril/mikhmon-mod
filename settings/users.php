@@ -1,6 +1,7 @@
 <?php
 
 error_reporting(0);
+include_once(__DIR__ . '/../include/systemlog.php');
 if (!isset($_SESSION['mikhmon']) || !mikhmonIsAdmin()) {
   header('Location:../admin.php?id=login');
   exit;
@@ -38,14 +39,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $userError = 'Pengguna gagal disimpan. Pastikan semua data lengkap, username unik, dan password diisi untuk akun baru.';
     } else {
       $userMessage = $userId === '' ? 'Akun pengguna berhasil dibuat.' : 'Akun pengguna berhasil diperbarui.';
+      mikhmonSystemLog('success', 'Manajemen User', ($userId === '' ? 'Membuat' : 'Memperbarui') . ' akun ' . $username . ' dengan role ' . strtoupper($role) . '.', mikhmonSystemLogCurrentUser(array('session' => $role === 'admin' ? '' : $routerSession)));
     }
   } elseif ($action === 'delete') {
     $userId = isset($_POST['user_id']) ? (string) $_POST['user_id'] : '';
+    $deletedUser = mikhmonFindUser($userId);
     $assigned = mikhmonAssignedCustomerCount($userId);
     if ($assigned > 0) {
       $userError = 'Akun mitra masih memiliki ' . $assigned . ' pelanggan. Pindahkan assignment pelanggan sebelum menghapus akun.';
     } elseif (mikhmonDeleteUser($userId)) {
       $userMessage = 'Akun pengguna berhasil dihapus.';
+      mikhmonSystemLog('warning', 'Manajemen User', 'Menghapus akun ' . ($deletedUser['username'] ?? $userId) . ' dengan role ' . strtoupper((string) ($deletedUser['role'] ?? '')) . '.', mikhmonSystemLogCurrentUser(array('session' => $deletedUser['session'] ?? '')));
     } else {
       $userError = 'Akun pengguna tidak ditemukan.';
     }

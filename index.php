@@ -65,6 +65,7 @@ if (!isset($_SESSION["mikhmon"])) {
 // load config
   include('./include/config.php');
   include_once('./include/access.php');
+  include_once('./include/systemlog.php');
   if (!mikhmonRefreshStaffSession()) {
     session_destroy();
     header('Location:./admin.php?id=login');
@@ -217,6 +218,7 @@ if (!isset($_SESSION["mikhmon"])) {
   if ($hotspot == "logout") {
     echo "<b class='cl-w'><i class='fa fa-circle-o-notch fa-spin' style='font-size:24px'></i> Logout...</b>";
 
+    mikhmonSystemLog('info', 'Autentikasi', 'Pengguna keluar dari aplikasi.', mikhmonSystemLogCurrentUser(array('session' => $session)));
     session_destroy();
     echo "<script>sessionStorage.clear();</script>";
     echo "<script>window.location='./admin.php?id=login'</script>";

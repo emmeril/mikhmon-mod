@@ -299,6 +299,7 @@ include('../lang/'.$langid.'.php');
                     </div>
                   </div>
                 </div>
+                <?php include(__DIR__ . '/systemlogs.php'); ?>
                 </div>
 
 <?php 

@@ -475,6 +475,7 @@ if (!isset($_SESSION["mikhmon"])) {
                   </div>
                 </div>
               </div>
+              <?php include(__DIR__ . '/systemlogs.php'); ?>
               </div>
             </div>
 </div>

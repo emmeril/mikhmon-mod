@@ -1,5 +1,6 @@
 <?php
 error_reporting(0);
+include_once(__DIR__ . '/../include/systemlog.php');
 
 if (!isset($_SESSION['mikhmon']) || !mikhmonIsAdmin()) {
   header('Location:../admin.php?id=login');
@@ -13,6 +14,7 @@ if (isset($_POST['save'])) {
 
   file_put_contents('./include/quickbt.php', '<?php $qrbt=' . var_export($qrbt, true) . ';?>');
   file_put_contents('./include/brand.php', "<?php\n\$brandname = " . var_export($sbrandname, true) . ";\n?>\n");
+  mikhmonSystemLog('success', 'Pengaturan', 'Brand Name dan Quick Print QR berhasil diperbarui.', mikhmonSystemLogCurrentUser());
 
   $target = !empty($session)
     ? './?admin=settings&session=' . rawurlencode($session) . '&saved=1'

@@ -14,6 +14,7 @@ require_once dirname(__DIR__) . '/lib/routeros_api.class.php';
 require_once dirname(__DIR__) . '/lib/fonnte.php';
 require_once dirname(__DIR__) . '/lib/payment_gateway.php';
 require_once dirname(__DIR__) . '/lib/billing_automation.php';
+require_once dirname(__DIR__) . '/include/systemlog.php';
 
 $lockPath = dirname(__DIR__) . '/data/billing-cron.lock';
 $lock = @fopen($lockPath, 'c');
@@ -37,6 +38,7 @@ foreach ((array) $data as $session => $routerConfig) {
   $password = explode('#|#', (string) ($routerConfig[3] ?? ''), 2)[1] ?? '';
   if ($iphost === '' || $userhost === '' || $password === '') {
     echo $session . ": invalid configuration\n";
+    mikhmonSystemLog('error', 'Billing Automation', 'Konfigurasi router tidak valid.', array('session' => $session));
     continue;
   }
   $api = new RouterosAPI();
@@ -44,10 +46,17 @@ foreach ((array) $data as $session => $routerConfig) {
   if (!$api->connect($iphost, $userhost, decrypt($password))) {
     $result = mikhmonBillingAutomationProcessSession(null, $session, $routerConfig, $fonnteConfig);
     echo $session . ': router connection failed; ' . $result['invoices'] . ' invoice(s), ' . ($result['payment_links'] ?? 0) . ' payment link(s), ' . $result['reminders'] . ' reminder(s), 0 isolated, ' . $result['payments'] . ' payment notice(s), ' . $result['errors'] . " error(s)\n";
+    mikhmonSystemLog('error', 'Billing Automation', 'Koneksi router gagal; ' . $result['errors'] . ' error proses.', array('session' => $session));
     continue;
   }
   $result = mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $fonnteConfig);
   echo $session . ': ' . $result['invoices'] . ' invoice(s), ' . ($result['payment_links'] ?? 0) . ' payment link(s), ' . $result['reminders'] . ' reminder(s), ' . $result['isolated'] . ' isolated, ' . $result['payments'] . ' payment notice(s), ' . $result['errors'] . " error(s)\n";
+  $activityCount = (int) $result['invoices'] + (int) ($result['payment_links'] ?? 0) + (int) $result['reminders'] + (int) $result['isolated'] + (int) $result['payments'];
+  if ((int) $result['errors'] > 0 || $activityCount > 0) {
+    $billingLevel = (int) $result['errors'] > 0 ? 'warning' : 'success';
+    $billingMessage = $result['invoices'] . ' invoice, ' . ($result['payment_links'] ?? 0) . ' link pembayaran, ' . $result['reminders'] . ' pengingat, ' . $result['isolated'] . ' isolasi, ' . $result['payments'] . ' notifikasi bayar, ' . $result['errors'] . ' error.';
+    mikhmonSystemLog($billingLevel, 'Billing Automation', $billingMessage, array('session' => $session));
+  }
   $api->disconnect();
   $sessions++;
 }

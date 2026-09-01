@@ -67,6 +67,7 @@ include_once('./include/headhtml.php');
 include('./include/config.php');
 include('./include/readcfg.php');
 include_once('./include/access.php');
+include_once('./include/systemlog.php');
 
 include_once('./lib/routeros_api.class.php');
 include_once('./lib/formatbytesbites.php');
@@ -80,11 +81,13 @@ if ($id == "login" || substr($url, -1) == "p") {
     $pass = (string) $_POST['pass'];
     if ($user == $useradm && $pass == decrypt($passadm)) {
       mikhmonSetLoginSession(array('username' => $user, 'name' => 'Administrator'), 'admin');
+      mikhmonSystemLog('success', 'Autentikasi', 'Administrator berhasil login.', mikhmonSystemLogCurrentUser());
       echo "<script>window.location=" . json_encode(mikhmonAdminLandingUrl($data)) . "</script>";
     } else {
       $staff = mikhmonLoginStaff($user, $pass);
       if ($staff) {
         mikhmonSetLoginSession($staff);
+        mikhmonSystemLog('success', 'Autentikasi', 'Pengguna berhasil login.', mikhmonSystemLogCurrentUser(array('session' => $staff['session'])));
         if ($staff['role'] === 'admin') {
           $target = mikhmonAdminLandingUrl($data);
         } else {
@@ -93,6 +96,11 @@ if ($id == "login" || substr($url, -1) == "p") {
         }
         echo "<script>window.location=" . json_encode($target) . "</script>";
       } else {
+        mikhmonSystemLog('warning', 'Autentikasi', 'Percobaan login gagal untuk username ' . $user . '.', array(
+          'user' => $user !== '' ? $user : 'Tidak diketahui',
+          'role' => 'guest',
+          'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
+        ));
         $error = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-danger"><i class="fa fa-ban"></i> Alert!<br>Invalid username or password.</div>';
       }
     }
@@ -227,6 +235,7 @@ if ($id == "login" || substr($url, -1) == "p") {
 } elseif ($id == "logout") {
   include_once('./include/menu.php');
   echo "<b class='cl-w'><i class='fa fa-circle-o-notch fa-spin' style='font-size:24px'></i> Logout...</b>";
+  mikhmonSystemLog('info', 'Autentikasi', 'Pengguna keluar dari aplikasi.', mikhmonSystemLogCurrentUser());
   session_destroy();
   echo "<script>window.location='./admin.php?id=login'</script>";
 } elseif ($id == "remove-logo" && $logo != ""  && !empty($session)) {
