@@ -284,6 +284,7 @@ function mikhmonPaymentGatewayGetMidtransStatus($orderId, $config = null) {
     'amount' => (float) ($data['gross_amount'] ?? 0),
     'status' => (string) ($data['transaction_status'] ?? 'unknown'),
     'reference' => (string) ($data['transaction_id'] ?? ''),
+    'paid_at' => mikhmonPaymentGatewayMidtransPaidAt($data),
     'response' => $data,
   );
 }
@@ -307,6 +308,7 @@ function mikhmonPaymentGatewayGetMidtransSnapStatus($token, $config = null) {
     'status' => (string) ($data['transaction_status'] ?? 'unknown'),
     'reference' => (string) ($data['transaction_id'] ?? ''),
     'order_id' => (string) ($data['order_id'] ?? ''),
+    'paid_at' => mikhmonPaymentGatewayMidtransPaidAt($data),
     'response' => $data,
   );
 }
@@ -372,6 +374,20 @@ function mikhmonPaymentGatewayMidtransPaid($notification) {
   $status = strtolower((string) ($notification['transaction_status'] ?? ''));
   if ($status === 'settlement') return true;
   return $status === 'capture' && strtolower((string) ($notification['fraud_status'] ?? 'accept')) === 'accept';
+}
+
+function mikhmonPaymentGatewayMidtransPaidAt($notification) {
+  foreach (array('settlement_time', 'transaction_time') as $field) {
+    $value = trim((string) ($notification[$field] ?? ''));
+    if ($value === '') continue;
+    try {
+      $date = new DateTimeImmutable($value, new DateTimeZone('Asia/Jakarta'));
+      return $date->getTimestamp();
+    } catch (Exception $exception) {
+      continue;
+    }
+  }
+  return 0;
 }
 
 function mikhmonPaymentGatewayValidXenditCallback($headerToken, $configuredToken) {

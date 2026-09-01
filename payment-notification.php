@@ -74,7 +74,8 @@ $invoice['gateway_updated_at'] = time();
 if ($paid) {
   // Billing performs the router activation transaction before changing invoice status.
   $invoice['gateway_payment_received'] = true;
-  $invoice['gateway_paid_at'] = time();
+  $midtransPaidAt = $provider === 'midtrans' ? mikhmonPaymentGatewayMidtransPaidAt($payload) : 0;
+  $invoice['gateway_paid_at'] = $midtransPaidAt > 0 ? $midtransPaidAt : time();
 }
 if (mikhmonSaveInvoice($match['session'], $invoice) === false) paymentNotificationRespond(500, array('success' => false, 'message' => 'Invoice update failed.'));
 

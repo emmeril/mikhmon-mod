@@ -353,7 +353,7 @@ if (!empty($paymentGatewayConfig['enabled']) && !empty($paymentGatewayConfig['mi
     if (!empty($gatewayStatus['reference']) && ($invoiceRow['payment_transaction_id'] ?? '') !== $gatewayStatus['reference']) { $invoiceRow['payment_transaction_id'] = $gatewayStatus['reference']; $changed = true; }
     if (!empty($gatewayStatus['paid'])) {
       $invoiceRow['gateway_payment_received'] = true;
-      $invoiceRow['gateway_paid_at'] = $invoiceRow['gateway_paid_at'] ?? time();
+      $invoiceRow['gateway_paid_at'] = !empty($gatewayStatus['paid_at']) ? (int) $gatewayStatus['paid_at'] : ($invoiceRow['gateway_paid_at'] ?? time());
       $changed = true;
     }
     if ($changed && mikhmonSaveInvoice($session, $invoiceRow) !== false) $allInvoices[$invoiceIndex] = $invoiceRow;

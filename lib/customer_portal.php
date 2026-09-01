@@ -119,7 +119,7 @@ function mikhmonCustomerPortalSyncPayments($session, $customer, $api = null) {
       continue;
     }
     $invoice['gateway_payment_received'] = true;
-    $invoice['gateway_paid_at'] = time();
+    $invoice['gateway_paid_at'] = !empty($status['paid_at']) ? (int) $status['paid_at'] : time();
     $invoice['gateway_updated_at'] = time();
     if (mikhmonSaveInvoice($session, $invoice) === false) { $result['errors'][] = 'Status invoice gagal disimpan.'; continue; }
     $result['paid']++;
@@ -218,7 +218,7 @@ function mikhmonCustomerPortalFulfillVoucher($session, $invoiceId, $api = null) 
   $code = strtoupper(substr(bin2hex(random_bytes(5)), 0, 10));
   $response = $api->comm('/ip/hotspot/user/add', array('server' => 'all', 'name' => $code, 'password' => $code, 'profile' => $invoice['voucher_profile'], 'comment' => 'vc-portal-' . ($customer['name'] ?? 'Pelanggan')));
   if (mikhmonPaymentActivationApiError($response) !== '') return array('success' => false, 'message' => 'Voucher gagal dibuat di router.');
-  $invoice['status'] = 'paid'; $invoice['paid_at'] = time(); $invoice['voucher_username'] = $code; $invoice['voucher_password'] = $code; $invoice['activation_status'] = 'success'; $invoice['gateway_payment_received'] = true;
+  $invoice['status'] = 'paid'; $invoice['paid_at'] = (int) ($invoice['gateway_paid_at'] ?? time()); $invoice['voucher_username'] = $code; $invoice['voucher_password'] = $code; $invoice['activation_status'] = 'success'; $invoice['gateway_payment_received'] = true;
   mikhmonSaveInvoice($session, $invoice);
   return array('success' => true, 'invoice' => $invoice, 'voucher_username' => $code, 'voucher_password' => $code);
 }
