@@ -30,6 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       'reminder_enabled' => isset($_POST['reminder_enabled']) && $_POST['reminder_enabled'] === '1',
       'isolation_enabled' => isset($_POST['isolation_enabled']) && $_POST['isolation_enabled'] === '1',
       'payment_enabled' => isset($_POST['payment_enabled']) && $_POST['payment_enabled'] === '1',
+      'payment_link_enabled' => isset($_POST['payment_link_enabled']) && $_POST['payment_link_enabled'] === '1',
       'reminder_days' => max(1, min(30, (int) ($_POST['reminder_days'] ?? 7))),
       'grace_days' => max(0, min(30, (int) ($_POST['grace_days'] ?? 0))),
       'templates' => array(
@@ -137,6 +138,7 @@ $maskedToken = $fonnteConfig['token'] !== '' ? str_repeat('*', max(4, min(20, st
                   </td>
                 </tr>
                 <tr><td class="align-middle">Notifikasi Bayar</td><td><label><input type="checkbox" name="payment_enabled" value="1" <?= !empty($fonnteConfig['payment_enabled']) ? 'checked' : ''; ?>> Kirim setelah pembayaran</label></td></tr>
+                <tr><td class="align-middle">Link Pembayaran</td><td><label><input type="checkbox" name="payment_link_enabled" value="1" <?= !empty($fonnteConfig['payment_link_enabled']) ? 'checked' : ''; ?>> Buat dan kirim otomatis ke WhatsApp</label><small class="payment-secret-note">Membutuhkan Payment Gateway dan Fonnte aktif. Link dikirim satu kali per invoice.</small></td></tr>
               </table>
             </div>
           </div>

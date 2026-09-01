@@ -12,6 +12,7 @@ require_once dirname(__DIR__) . '/include/config.php';
 require_once dirname(__DIR__) . '/include/database.php';
 require_once dirname(__DIR__) . '/lib/routeros_api.class.php';
 require_once dirname(__DIR__) . '/lib/fonnte.php';
+require_once dirname(__DIR__) . '/lib/payment_gateway.php';
 require_once dirname(__DIR__) . '/lib/billing_automation.php';
 
 $lockPath = dirname(__DIR__) . '/data/billing-cron.lock';
@@ -23,7 +24,7 @@ if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) {
 @chmod($lockPath, 0600);
 
 $fonnteConfig = mikhmonFonnteReadConfig();
-if (empty($fonnteConfig['automation_enabled']) && empty($fonnteConfig['payment_enabled'])) {
+if (empty($fonnteConfig['automation_enabled']) && empty($fonnteConfig['payment_enabled']) && empty($fonnteConfig['payment_link_enabled'])) {
   echo "Billing automation and payment notifications are disabled.\n";
   exit;
 }
@@ -42,11 +43,11 @@ foreach ((array) $data as $session => $routerConfig) {
   $api->debug = false;
   if (!$api->connect($iphost, $userhost, decrypt($password))) {
     $result = mikhmonBillingAutomationProcessSession(null, $session, $routerConfig, $fonnteConfig);
-    echo $session . ': router connection failed; ' . $result['invoices'] . ' invoice(s), ' . $result['reminders'] . ' reminder(s), 0 isolated, ' . $result['payments'] . ' payment notice(s), ' . $result['errors'] . " error(s)\n";
+    echo $session . ': router connection failed; ' . $result['invoices'] . ' invoice(s), ' . ($result['payment_links'] ?? 0) . ' payment link(s), ' . $result['reminders'] . ' reminder(s), 0 isolated, ' . $result['payments'] . ' payment notice(s), ' . $result['errors'] . " error(s)\n";
     continue;
   }
   $result = mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $fonnteConfig);
-  echo $session . ': ' . $result['invoices'] . ' invoice(s), ' . $result['reminders'] . ' reminder(s), ' . $result['isolated'] . ' isolated, ' . $result['payments'] . ' payment notice(s), ' . $result['errors'] . " error(s)\n";
+  echo $session . ': ' . $result['invoices'] . ' invoice(s), ' . ($result['payment_links'] ?? 0) . ' payment link(s), ' . $result['reminders'] . ' reminder(s), ' . $result['isolated'] . ' isolated, ' . $result['payments'] . ' payment notice(s), ' . $result['errors'] . " error(s)\n";
   $api->disconnect();
   $sessions++;
 }

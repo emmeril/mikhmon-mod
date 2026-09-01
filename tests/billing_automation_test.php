@@ -81,6 +81,9 @@ billingAutomationTestAssert(!$secondSetSeen, 'duplicate run does not disable the
 
 $rendered = mikhmonBillingAutomationMessage('Halo {{nama_pelanggan}} {{total_tagihan}} {{detail_layanan}}', mikhmonFindCustomer('router-a', $customerId), $savedInvoice, 'Rp', 'Mikhmon', $savedInvoice['due_date']);
 billingAutomationTestAssert(strpos($rendered, 'Pelanggan A') !== false && strpos($rendered, 'Rp 10.000') !== false, 'template variables are rendered');
+$savedInvoice['payment_url'] = 'https://app.midtrans.com/snap/v2/vtweb/test-token';
+$renderedWithLink = mikhmonBillingAutomationMessage('Tagihan {{nomor_invoice}}', mikhmonFindCustomer('router-a', $customerId), $savedInvoice, 'Rp', 'Mikhmon', $savedInvoice['due_date']);
+billingAutomationTestAssert(strpos($renderedWithLink, $savedInvoice['payment_url']) !== false, 'payment link is included in WhatsApp message');
 
 @unlink($databasePath);
 @unlink($fonntePath);

@@ -5,6 +5,7 @@
 
 require_once dirname(__DIR__) . '/ppp/profilemeta.php';
 require_once dirname(__DIR__) . '/lib/billing_profile.php';
+require_once dirname(__DIR__) . '/lib/payment_gateway.php';
 
 function mikhmonBillingAutomationDueTimestamp($value) {
   $value = trim((string) $value);
@@ -72,7 +73,7 @@ function mikhmonBillingAutomationMessage($template, $customer, $invoice, $curren
   foreach (mikhmonBillingAutomationInvoiceServices($invoice, $customer) as $service) {
     $services[] = '- ' . strtoupper((string) ($service['service'] ?? 'hotspot')) . ' / ' . (string) ($service['username'] ?? '') . ' / ' . (string) ($service['profile'] ?? '') . ' / ' . mikhmonBillingAutomationAmount($service['amount'] ?? 0, $currency);
   }
-  return mikhmonFonnteRenderTemplate($template, array(
+  $message = mikhmonFonnteRenderTemplate($template, array(
     'nama_pelanggan' => $customer['name'] ?? '',
     'nama_brand' => $brand,
     'nomor_invoice' => $invoice['number'] ?? '',
@@ -81,7 +82,66 @@ function mikhmonBillingAutomationMessage($template, $customer, $invoice, $curren
     'detail_layanan' => implode("\n", $services),
     'tanggal_bayar' => !empty($invoice['paid_at']) ? date('Y-m-d H:i:s', (int) $invoice['paid_at']) : date('Y-m-d H:i:s'),
     'jatuh_tempo_berikutnya' => $nextDueDate,
+    'link_pembayaran' => $invoice['payment_url'] ?? '',
   ));
+  $paymentUrl = trim((string) ($invoice['payment_url'] ?? ''));
+  if ($paymentUrl !== '' && strpos($message, $paymentUrl) === false) $message .= "\n\nLink Pembayaran: " . $paymentUrl;
+  return $message;
+}
+
+/** Create and deliver one payment link for an automated unpaid invoice. */
+function mikhmonBillingAutomationEnsurePaymentLink($session, &$invoice, $customer, $currency, $brand, $fonnteConfig, $paymentGatewayConfig, $now = null) {
+  $now = $now === null ? time() : (int) $now;
+  $result = array('created' => false, 'sent' => false, 'error' => '');
+  if (($invoice['status'] ?? '') !== 'unpaid' || !empty($invoice['gateway_payment_received'])) return $result;
+  if (empty($fonnteConfig['payment_link_enabled']) || empty($paymentGatewayConfig['enabled'])) return $result;
+
+  $provider = (string) ($invoice['payment_gateway'] ?? '');
+  $storedEnvironment = (string) ($invoice['payment_environment'] ?? '');
+  if ($provider === 'midtrans' && $storedEnvironment === '') $storedEnvironment = mikhmonPaymentGatewayMidtransUrlEnvironment($invoice['payment_url'] ?? '');
+  $environmentChanged = $provider === 'midtrans' && $storedEnvironment !== '' && $storedEnvironment !== (string) ($paymentGatewayConfig['midtrans']['environment'] ?? 'sandbox');
+  $expired = !empty($invoice['payment_created_at']) && (int) $invoice['payment_created_at'] + (int) ($paymentGatewayConfig['invoice_duration'] ?? 86400) <= $now;
+  $hasUsableLink = !empty($invoice['payment_url']) && !$environmentChanged && !$expired;
+  if (!$hasUsableLink) {
+    $orderId = ($invoice['number'] ?? $invoice['id'] ?? 'invoice') . '-' . strtoupper(substr(uniqid(), -6));
+    $payment = mikhmonPaymentGatewayCreatePayment('', array(
+      'order_id' => $orderId,
+      'amount' => $invoice['amount'] ?? 0,
+      'description' => 'Invoice ' . ($invoice['number'] ?? $invoice['id'] ?? ''),
+      'customer_name' => $customer['name'] ?? 'Pelanggan',
+      'phone' => $customer['phone'] ?? '',
+    ), $paymentGatewayConfig);
+    if (empty($payment['success'])) {
+      $result['error'] = (string) ($payment['message'] ?? 'Link pembayaran gagal dibuat.');
+      $invoice['automation']['payment_link_last_error'] = substr($result['error'], 0, 500);
+      $invoice['automation']['payment_link_last_attempt_at'] = $now;
+      return $result;
+    }
+    $invoice['payment_gateway'] = $payment['provider'];
+    $invoice['payment_environment'] = $payment['environment'] ?? '';
+    $invoice['payment_order_id'] = $orderId;
+    $invoice['payment_url'] = (string) $payment['payment_url'];
+    $invoice['payment_reference'] = $payment['reference'] ?? '';
+    $invoice['payment_created_at'] = $now;
+    unset($invoice['automation']['payment_link_last_error']);
+    $result['created'] = true;
+  }
+
+  if (empty($invoice['automation']['payment_link_sent_at']) && !empty($fonnteConfig['enabled']) && !empty($fonnteConfig['token'])) {
+    $message = mikhmonBillingAutomationMessage($fonnteConfig['templates']['reminder'] ?? '', $customer, $invoice, $currency, $brand, $invoice['due_date'] ?? '');
+    $send = mikhmonFonnteSend($customer['phone'] ?? '', $message, $fonnteConfig);
+    if (!empty($send['status'])) {
+      $invoice['automation']['payment_link_sent_at'] = $now;
+      unset($invoice['automation']['payment_link_last_error'], $invoice['automation']['payment_link_last_attempt_at']);
+      $result['sent'] = true;
+    } else {
+      $result['error'] = (string) ($send['reason'] ?? 'Link pembayaran gagal dikirim melalui Fonnte.');
+      $invoice['automation']['payment_link_last_error'] = substr($result['error'], 0, 500);
+      $invoice['automation']['payment_link_last_attempt_at'] = $now;
+    }
+  }
+  if (!mikhmonSaveInvoice($session, $invoice)) $result['error'] = 'Link pembayaran dibuat, tetapi invoice gagal disimpan.';
+  return $result;
 }
 
 function mikhmonBillingAutomationSetServices($api, $customer, $disabled) {
@@ -263,9 +323,10 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
   include dirname(__DIR__) . '/include/brand.php';
   $brand = trim((string) ($brandname ?? 'MIKHMON')) ?: 'MIKHMON';
   $currency = explode('&', $routerConfig[6] ?? '&Rp', 2)[1] ?? 'Rp';
+  $paymentGatewayConfig = mikhmonPaymentGatewayReadConfig();
   $now = time();
   $workHours = mikhmonBillingAutomationIsWorkHour($now);
-  $result = array('invoices' => 0, 'reminders' => 0, 'isolated' => 0, 'payments' => 0, 'errors' => 0);
+  $result = array('invoices' => 0, 'payment_links' => 0, 'reminders' => 0, 'isolated' => 0, 'payments' => 0, 'errors' => 0);
   $customersById = array();
   foreach ($customers as $customer) {
     $customersById[(string) ($customer['id'] ?? '')] = $customer;
@@ -285,6 +346,12 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
       }
     }
     if (!$invoice) continue;
+    if (!empty($fonnteConfig['payment_link_enabled'])) {
+      $linkResult = mikhmonBillingAutomationEnsurePaymentLink($session, $invoice, $customer, $currency, $brand, $fonnteConfig, $paymentGatewayConfig, $now);
+      if (!empty($linkResult['sent'])) $result['payment_links']++;
+      if (!empty($linkResult['error'])) $result['errors']++;
+      foreach ($invoices as $index => $row) if (($row['id'] ?? '') === ($invoice['id'] ?? '')) { $invoices[$index] = $invoice; break; }
+    }
     $dueAt = mikhmonBillingAutomationDueTimestamp($invoice['due_date'] ?? ($customer['due_date'] ?? ''));
     if ($dueAt <= 0) continue;
     $automation = isset($invoice['automation']) && is_array($invoice['automation']) ? $invoice['automation'] : array();

@@ -80,7 +80,10 @@ function billingInvoiceMessage($customer, $invoice, $dueDate, $currency, $brand)
     $services[] = '- ' . strtoupper($row['service'] ?? '') . ' / ' . ($row['username'] ?? '') . ' / ' . ($row['profile'] ?? '') . ' / ' . billingMessageAmount($row['amount'] ?? 0, $currency);
   }
   $amount = isset($invoice['amount']) ? (float) $invoice['amount'] : 0;
-  return "Yth. Bapak/Ibu " . $customerName . ",\n\nDETAIL TAGIHAN " . $brand . "\nNo. Invoice: " . ($invoice['number'] ?? 'baru') . "\nNama Pelanggan: " . $customerName . "\nLayanan:\n" . implode("\n", $services) . "\n\nTotal Tagihan: " . billingMessageAmount($amount, $currency) . "\nJatuh Tempo: " . ($invoice['due_date'] ?? $dueDate ?: '-') . "\n\nMohon melakukan pembayaran sebelum jatuh tempo. Terima kasih.";
+  $message = "Yth. Bapak/Ibu " . $customerName . ",\n\nDETAIL TAGIHAN " . $brand . "\nNo. Invoice: " . ($invoice['number'] ?? 'baru') . "\nNama Pelanggan: " . $customerName . "\nLayanan:\n" . implode("\n", $services) . "\n\nTotal Tagihan: " . billingMessageAmount($amount, $currency) . "\nJatuh Tempo: " . ($invoice['due_date'] ?? $dueDate ?: '-') . "\n\nMohon melakukan pembayaran sebelum jatuh tempo. Terima kasih.";
+  $paymentUrl = trim((string) ($invoice['payment_url'] ?? ''));
+  if ($paymentUrl !== '') $message .= "\n\nLink Pembayaran: " . $paymentUrl;
+  return $message;
 }
 
 function billingDueTimestamp($value) {

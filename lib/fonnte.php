@@ -21,6 +21,7 @@ function mikhmonFonnteDefaults() {
     'reminder_enabled' => true,
     'isolation_enabled' => true,
     'payment_enabled' => true,
+    'payment_link_enabled' => false,
     'reminder_days' => 7,
     'grace_days' => 0,
     'templates' => array(
@@ -59,6 +60,7 @@ function mikhmonFonnteReadStoredConfig() {
   $config['reminder_enabled'] = !empty($config['reminder_enabled']);
   $config['isolation_enabled'] = !empty($config['isolation_enabled']);
   $config['payment_enabled'] = !empty($config['payment_enabled']);
+  $config['payment_link_enabled'] = !empty($config['payment_link_enabled']);
   $config['reminder_days'] = max(1, min(30, (int) ($config['reminder_days'] ?? 7)));
   $config['grace_days'] = max(0, min(30, (int) ($config['grace_days'] ?? 0)));
   $config['token'] = mikhmonFonnteNormalizeToken($config['token'] ?? '');
@@ -88,6 +90,7 @@ function mikhmonFonnteWriteConfig($config) {
   $config['reminder_enabled'] = !empty($config['reminder_enabled']);
   $config['isolation_enabled'] = !empty($config['isolation_enabled']);
   $config['payment_enabled'] = !empty($config['payment_enabled']);
+  $config['payment_link_enabled'] = !empty($config['payment_link_enabled']);
   $config['reminder_days'] = max(1, min(30, (int) ($config['reminder_days'] ?? 7)));
   $config['grace_days'] = max(0, min(30, (int) ($config['grace_days'] ?? 0)));
   $defaultTemplates = mikhmonFonnteDefaults()['templates'];
