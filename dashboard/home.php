@@ -455,7 +455,7 @@ if (!isset($_SESSION["mikhmon"])) {
               <div class="card-header">
                 <h3><a onclick="cancelPage()" href="./?hotspot=log&session=<?= $session; ?>" title="Open Hotspot Log" ><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></a></h3></div>
                   <div class="card-body">
-                    <div style="padding: 5px; height: <?= $logh; ?> ;" class="mr-t-10 overflow">
+                    <div style="padding: 5px; max-height: 320px;" class="mr-t-10 overflow">
                       <table class="table table-sm table-bordered table-hover" style="font-size: 12px; td.padding:2px;">
                         <thead>
                           <tr>

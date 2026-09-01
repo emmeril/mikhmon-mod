@@ -170,7 +170,7 @@ $pppoeCustomers = count($pppoeCustomerNames);
   }
   .mitra-dashboard-right .mitra-hotspot-log .overflow {
     flex: 1;
-    max-height: none !important;
+    max-height: 320px !important;
     width: 100%;
   }
 }
@@ -265,7 +265,7 @@ $pppoeCustomers = count($pppoeCustomerNames);
     <div class="col-4 mitra-dashboard-column mitra-dashboard-right">
       <div id="r_4" class="row"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-money"></i></div><div class="box-group-area"><span><b><?= $_income ?></b><br><?= $_today ?> <?= $reportTotals['today']['count']; ?> trx : <?= htmlspecialchars(mitraDashboardMoney($reportTotals['today']['income'], $currency), ENT_QUOTES); ?><br><?= $_this_month ?> <?= $reportTotals['all']['count']; ?> trx : <?= htmlspecialchars(mitraDashboardMoney($reportTotals['all']['income'], $currency), ENT_QUOTES); ?><hr style="margin:5px 0;border:0;border-top:1px solid currentColor;opacity:.35"><b>Net Profit Mitra</b><br><?= $_today ?>: <?= htmlspecialchars(mitraDashboardMoney($reportTotals['today']['profit'], $currency), ENT_QUOTES); ?><br><?= $_this_month ?>: <?= htmlspecialchars(mitraDashboardMoney($reportTotals['all']['profit'], $currency), ENT_QUOTES); ?></span></div></div></div></div>
 
-      <div class="row mitra-hotspot-log"><div class="card"><div class="card-header"><h3><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></h3></div><div class="card-body"><div style="padding: 5px; max-height: 430px;" class="mr-t-10 overflow">
+      <div class="row mitra-hotspot-log"><div class="card"><div class="card-header"><h3><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></h3></div><div class="card-body"><div style="padding: 5px; max-height: 320px;" class="mr-t-10 overflow">
         <table class="table table-sm table-bordered table-hover" style="font-size: 12px;">
           <thead><tr><th><?= $_time ?></th><th><?= $_users ?> (IP)</th><th><?= $_messages ?></th></tr></thead>
           <tbody>
