@@ -85,8 +85,12 @@ if ($id == "login" || substr($url, -1) == "p") {
       $staff = mikhmonLoginStaff($user, $pass);
       if ($staff) {
         mikhmonSetLoginSession($staff);
-        $staffSession = rawurlencode($staff['session']);
-        $target = $staff['role'] === 'biller' ? './?billing=1&session=' . $staffSession : './?session=' . $staffSession;
+        if ($staff['role'] === 'admin') {
+          $target = mikhmonAdminLandingUrl($data);
+        } else {
+          $staffSession = rawurlencode($staff['session']);
+          $target = $staff['role'] === 'biller' ? './?billing=1&session=' . $staffSession : './?session=' . $staffSession;
+        }
         echo "<script>window.location=" . json_encode($target) . "</script>";
       } else {
         $error = '<div style="width: 100%; padding:5px 0px 5px 0px; border-radius:5px;" class="bg-danger"><i class="fa fa-ban"></i> Alert!<br>Invalid username or password.</div>';

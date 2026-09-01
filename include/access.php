@@ -107,7 +107,16 @@ function mikhmonSetLoginSession($user, $role = '') {
 }
 
 function mikhmonRefreshStaffSession() {
-  if (mikhmonIsAdmin()) return true;
+  // The built-in administrator is stored in config.php; database-backed admins
+  // must still be checked so deactivated accounts lose access immediately.
+  if (mikhmonIsAdmin()) {
+    $userId = mikhmonUserId();
+    if ($userId === '') return true;
+    $admin = mikhmonFindUser($userId);
+    if (!$admin || empty($admin['active']) || ($admin['role'] ?? '') !== 'admin') return false;
+    mikhmonSetLoginSession($admin);
+    return true;
+  }
   $user = mikhmonFindUser(mikhmonUserId());
   if (!$user || empty($user['active']) || !in_array($user['role'], array('mitra', 'biller'), true)) return false;
   mikhmonSetLoginSession($user);

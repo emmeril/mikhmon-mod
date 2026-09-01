@@ -236,11 +236,13 @@ function mikhmonFindUser($value, $field = 'id') {
 
 function mikhmonSaveUser($id, $name, $username, $role, $session, $password = '', $active = true) {
   $database = mikhmonReadDatabase();
-  $role = in_array($role, array('mitra', 'biller'), true) ? $role : '';
+  $role = in_array($role, array('admin', 'mitra', 'biller'), true) ? $role : '';
   $username = trim(strip_tags($username));
   $name = trim(strip_tags($name));
   $session = trim(strip_tags($session));
-  if ($role === '' || $username === '' || $name === '' || $session === '') return false;
+  // Admin accounts are global and do not need to be tied to a router.
+  if ($role === 'admin') $session = 'mikhmon';
+  if ($role === '' || $username === '' || $name === '' || ($role !== 'admin' && $session === '')) return false;
 
   foreach ($database['users'] as $existing) {
     if (isset($existing['username']) && strtolower($existing['username']) === strtolower($username)

@@ -21,7 +21,10 @@ roleTestAssert(strpos($routerConfigLine, "\$data['router-a'] = array (") !== fal
 
 $mitraId = mikhmonSaveUser('', 'Mitra Satu', 'mitra1', 'mitra', 'router-a', 'secret', true);
 $billerId = mikhmonSaveUser('', 'Biller Satu', 'biller1', 'biller', 'router-a', 'secret', true);
-roleTestAssert($mitraId !== false && $billerId !== false, 'roles can be saved');
+$adminId = mikhmonSaveUser('', 'Admin Baru', 'adminbaru', 'admin', '', 'secret', true);
+roleTestAssert($mitraId !== false && $billerId !== false && $adminId !== false, 'roles can be saved');
+roleTestAssert(mikhmonFindUser($adminId)['session'] === 'mikhmon', 'admin accounts receive access to all routers');
+roleTestAssert(mikhmonLoginStaff('ADMINBARU', 'secret')['role'] === 'admin', 'additional admins can log in');
 roleTestAssert(mikhmonLoginStaff('MITRA1', 'secret')['role'] === 'mitra', 'staff password login is case-insensitive');
 roleTestAssert(mikhmonSaveUser($mitraId, 'Mitra Satu Update', 'mitra1', 'mitra', 'router-a', '', true) === $mitraId, 'editing keeps the existing password');
 roleTestAssert(mikhmonSaveUser('', 'Duplikat', 'MITRA1', 'mitra', 'router-a', 'secret', true) === false, 'staff usernames stay unique');
@@ -79,6 +82,11 @@ mikhmonSetLoginSession(mikhmonFindUser($billerId));
 roleTestAssert(mikhmonCanOpenMainRoute('billing'), 'biller can open billing');
 roleTestAssert(mikhmonCanOpenMainRoute('commission'), 'biller can open commission details');
 roleTestAssert(!mikhmonCanOpenMainRoute('customer-list'), 'biller cannot open customer management');
+
+mikhmonSetLoginSession(mikhmonFindUser($adminId));
+roleTestAssert(mikhmonRefreshStaffSession(), 'active additional admin session remains valid');
+roleTestAssert(mikhmonCanOpenMainRoute('admin-users'), 'additional admins can manage users');
+roleTestAssert(mikhmonCanOpenMainRoute('admin-settings'), 'additional admins can manage application settings');
 
 $invoice = array(
   'id' => 'invoice-test',
