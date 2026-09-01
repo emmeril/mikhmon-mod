@@ -25,51 +25,34 @@ ini_set('max_execution_time', 300);
 if (!isset($_SESSION["mikhmon"])) {
   header("Location:../admin.php?id=login");
 } else {
-
   if ($prof == "all") {
-    $getuser = $API->comm("/ip/hotspot/user/print");
+    $getuser = $API->comm("/ip/hotspot/user/print", array('.proplist' => 'server,name,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total'));
     $TotalReg = count($getuser);
-
-    $counttuser = $API->comm("/ip/hotspot/user/print", array(
-      "count-only" => ""
-    ));
 
   } elseif ($prof != "all") {
     $getuser = $API->comm("/ip/hotspot/user/print", array(
+      '.proplist' => 'server,name,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total',
       "?profile" => "$prof",
     ));
     $TotalReg = count($getuser);
-
-    $counttuser = $API->comm("/ip/hotspot/user/print", array(
-      "count-only" => "",
-      "?profile" => "$prof",
-    ));
 
   }
   if ($comm != "") {
     $getuser = $API->comm("/ip/hotspot/user/print", array(
+      '.proplist' => 'server,name,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total',
       "?comment" => "$comm",
     //"?uptime" => "00:00:00"
     ));
     $TotalReg = count($getuser);
 
-    $counttuser = $API->comm("/ip/hotspot/user/print", array(
-      "count-only" => "",
-      "?comment" => "$comm",
-    ));
-    
   }
   $exp = $_GET['exp'];
   if ($exp != "") {
     $getuser = $API->comm("/ip/hotspot/user/print", array(
+      '.proplist' => 'server,name,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total',
       "?limit-uptime" => "1s",
     ));
     
-    $counttuser = $API->comm("/ip/hotspot/user/print", array(
-      "count-only" => "",
-      "?limit-uptime" => "1s",
-    ));
-
   }
   $allProfiles = $API->comm("/ip/hotspot/user/profile/print");
   $getprofile = array_values(array_filter((array) $allProfiles, function ($profileRow) {

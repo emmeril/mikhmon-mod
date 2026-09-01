@@ -54,13 +54,13 @@ if (!isset($_SESSION["mikhmon"])) {
 */
 // Count only voucher users; Billing-managed profiles (Expired Mode = None) are excluded.
   $voucherProfiles = array();
-  foreach ((array) $API->comm("/ip/hotspot/user/profile/print") as $profileRow) {
+  foreach ((array) $API->comm("/ip/hotspot/user/profile/print", array('.proplist' => 'name,on-login')) as $profileRow) {
     if (isset($profileRow['name']) && mikhmonBillingProfileExpiredMode('hotspot', $profileRow) !== 'none') {
       $voucherProfiles[(string) $profileRow['name']] = true;
     }
   }
   $countallusers = 0;
-  foreach ((array) $API->comm("/ip/hotspot/user/print") as $hotspotUser) {
+  foreach ((array) $API->comm("/ip/hotspot/user/print", array('.proplist' => 'profile')) as $hotspotUser) {
     if (isset($hotspotUser['profile']) && isset($voucherProfiles[(string) $hotspotUser['profile']])) $countallusers++;
   }
   if ($countallusers < 2) {

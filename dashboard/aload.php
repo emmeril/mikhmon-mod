@@ -120,27 +120,29 @@ include('../lang/'.$langid.'.php');
 
 <?php
 } else if ($load == "hotspot") {
-
-  $API->connect($iphost, $userhost, decrypt($passwdhost));
+  $cache = isset($_SESSION['dashboard_hotspot_cache'][$session]) ? $_SESSION['dashboard_hotspot_cache'][$session] : array();
+  $cacheFresh = is_array($cache) && !empty($cache['at']) && (time() - (int) $cache['at']) < 30;
+  if ($cacheFresh) {
+    $countallusers = (int) ($cache['users'] ?? 0);
+    $counthotspotactive = (int) ($cache['active'] ?? 0);
+  } else {
+    $API->connect($iphost, $userhost, decrypt($passwdhost));
 // Count only voucher users so periodic dashboard refresh matches the initial view.
   $voucherProfiles = array();
-  foreach ((array) $API->comm("/ip/hotspot/user/profile/print") as $profileRow) {
+  foreach ((array) $API->comm("/ip/hotspot/user/profile/print", array('.proplist' => 'name,on-login')) as $profileRow) {
     if (isset($profileRow['name']) && mikhmonBillingProfileExpiredMode('hotspot', $profileRow) !== 'none') {
       $voucherProfiles[(string) $profileRow['name']] = true;
     }
   }
   $countallusers = 0;
-  foreach ((array) $API->comm("/ip/hotspot/user/print") as $hotspotUser) {
+  foreach ((array) $API->comm("/ip/hotspot/user/print", array('.proplist' => 'profile')) as $hotspotUser) {
     if (isset($hotspotUser['profile']) && isset($voucherProfiles[(string) $hotspotUser['profile']])) $countallusers++;
   }
-  if ($countallusers < 2) {
-    $uunit = "item";
-  } elseif ($countallusers > 1) {
-    $uunit = "items";
-  }
-
 // get & counting hotspot active
   $counthotspotactive = $API->comm("/ip/hotspot/active/print", array("count-only" => ""));
+    $_SESSION['dashboard_hotspot_cache'][$session] = array('at' => time(), 'users' => $countallusers, 'active' => (int) $counthotspotactive);
+  }
+  $uunit = ($countallusers == 1) ? "item" : "items";
   if ($counthotspotactive < 2) {
     $hunit = "item";
   } elseif ($counthotspotactive > 1) {
@@ -212,20 +214,27 @@ include('../lang/'.$langid.'.php');
 
 <?php 
 } else if ($load == "logs") {
-
-  $API->connect($iphost, $userhost, decrypt($passwdhost));
-
-  // move hotspot log to disk
-  $getlogging = $API->comm("/system/logging/print", array("?prefix" => "->", ));
-  $logging = $getlogging[0];
-  if ($logging['prefix'] == "->") {
+  $cache = isset($_SESSION['dashboard_logs_cache'][$session]) ? $_SESSION['dashboard_logs_cache'][$session] : array();
+  $cacheFresh = is_array($cache) && !empty($cache['at']) && (time() - (int) $cache['at']) < 30;
+  if ($cacheFresh) {
+    $log = isset($cache['log']) && is_array($cache['log']) ? $cache['log'] : array();
   } else {
-    $API->comm("/system/logging/add", array("action" => "disk", "prefix" => "->", "topics" => "hotspot,info,debug", ));
+    $API->connect($iphost, $userhost, decrypt($passwdhost));
+
+  // Configure persistent hotspot logging once per login session.
+  if (empty($_SESSION['dashboard_logging_checked'][$session])) {
+    $getlogging = $API->comm("/system/logging/print", array("?prefix" => "->", '.proplist' => 'prefix'));
+    if (!isset($getlogging[0]['prefix']) || $getlogging[0]['prefix'] !== "->") {
+      $API->comm("/system/logging/add", array("action" => "disk", "prefix" => "->", "topics" => "hotspot,info,debug"));
+    }
+    $_SESSION['dashboard_logging_checked'][$session] = true;
   }
   
   // get hotspot log
-  $getlog = $API->comm("/log/print", array("?topics" => "hotspot,info,debug", ));
-  $log = array_reverse($getlog);
+  $getlog = $API->comm("/log/print", array("?topics" => "hotspot,info,debug", '.proplist' => 'time,message'));
+  $log = array_slice(array_reverse((array) $getlog), 0, 20);
+    $_SESSION['dashboard_logs_cache'][$session] = array('at' => time(), 'log' => $log);
+  }
   //$THotspotLog = count($getlog);
 
   if ($livereport == "disable") {
@@ -259,7 +268,7 @@ include('../lang/'.$langid.'.php');
   <?php
 
 
-  for ($i = 0; $i < 20; $i++) {
+  for ($i = 0, $logCount = count($log); $i < $logCount; $i++) {
     $mess = explode(":", $log[$i]['message']);
     $time = $log[$i]['time'];
     echo "<tr>";

@@ -6,6 +6,7 @@
 Thumbs.db
 *.log
 /data/*.json
+/data/*.index
 /data/*.tmp.*
 /data/*.lock
 .idea/

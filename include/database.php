@@ -16,6 +16,32 @@ function mikhmonBackupPath() {
   return $directory . '/mikhmon-backup.json';
 }
 
+// Router snapshots are large and change independently from transactional data.
+// Keep them in a separate file so normal customer/invoice requests do not parse
+// the complete router history.
+function mikhmonRouterBackupPath() {
+  $override = getenv('MIKHMON_DATABASE_PATH');
+  if ($override !== false && trim($override) !== '') {
+    return dirname($override) . '/' . basename($override) . '.routers';
+  }
+  $directory = dirname(__DIR__) . '/data';
+  if (!is_dir($directory)) @mkdir($directory, 0700, true);
+  @chmod($directory, 0700);
+  return $directory . '/mikhmon-router-backups.json';
+}
+
+function mikhmonRouterBackupIndexPath() {
+  return mikhmonRouterBackupPath() . '.index';
+}
+
+function mikhmonLegacyDatabasePath() {
+  $override = getenv('MIKHMON_DATABASE_PATH');
+  if ($override !== false && trim($override) !== '') {
+    return dirname($override) . '/' . basename($override) . '.legacy';
+  }
+  return dirname(__DIR__) . '/data/mikhmon-legacy-data.json';
+}
+
 function mikhmonDefaultSyncSettings() {
   return array(
     'interval' => 86400,
@@ -24,15 +50,36 @@ function mikhmonDefaultSyncSettings() {
 
 function mikhmonReadDatabase() {
   $path = mikhmonBackupPath();
+  if (isset($GLOBALS['_mikhmon_database_cache'], $GLOBALS['_mikhmon_database_cache_path'])
+    && is_array($GLOBALS['_mikhmon_database_cache']) && $GLOBALS['_mikhmon_database_cache_path'] === $path) {
+    return $GLOBALS['_mikhmon_database_cache'];
+  }
   if (!is_file($path)) {
-    return array('version' => 5, 'routers' => array(), 'customers' => array(), 'invoices' => array(), 'users' => array());
+    $empty = array('version' => 5, 'customers' => array(), 'invoices' => array(), 'users' => array());
+    $GLOBALS['_mikhmon_database_cache'] = $empty;
+    $GLOBALS['_mikhmon_database_cache_path'] = $path;
+    return $empty;
   }
   $data = json_decode((string) @file_get_contents($path), true);
   if (!is_array($data)) {
-    return array('version' => 5, 'routers' => array(), 'customers' => array(), 'invoices' => array(), 'users' => array());
+    $empty = array('version' => 5, 'customers' => array(), 'invoices' => array(), 'users' => array());
+    $GLOBALS['_mikhmon_database_cache'] = $empty;
+    $GLOBALS['_mikhmon_database_cache_path'] = $path;
+    return $empty;
   }
-  if (!isset($data['routers']) || !is_array($data['routers'])) {
-    $data['routers'] = array();
+  // Migrate the legacy embedded snapshots once, then keep the hot path small.
+  if (isset($data['routers']) && is_array($data['routers']) && $data['routers']) {
+    $routerData = array('version' => 5, 'routers' => $data['routers']);
+    if (mikhmonWriteRouterDatabase($routerData)) {
+      unset($data['routers']);
+      mikhmonWriteDatabase($data);
+    }
+  }
+  if (isset($data['sales']) && is_array($data['sales']) && $data['sales']) {
+    if (mikhmonWriteLegacyDatabase(array('version' => 1, 'sales' => $data['sales']))) {
+      unset($data['sales']);
+      mikhmonWriteDatabase($data);
+    }
   }
   if (!isset($data['customers']) || !is_array($data['customers'])) {
     $data['customers'] = array();
@@ -64,6 +111,22 @@ function mikhmonReadDatabase() {
     $data['version'] = 5;
     mikhmonWriteDatabase($data);
   }
+  $GLOBALS['_mikhmon_database_cache'] = $data;
+  $GLOBALS['_mikhmon_database_cache_path'] = $path;
+  return $data;
+}
+
+function mikhmonReadRouterDatabase() {
+  $path = mikhmonRouterBackupPath();
+  if (isset($GLOBALS['_mikhmon_router_database_cache'], $GLOBALS['_mikhmon_router_database_cache_path'])
+    && is_array($GLOBALS['_mikhmon_router_database_cache']) && $GLOBALS['_mikhmon_router_database_cache_path'] === $path) {
+    return $GLOBALS['_mikhmon_router_database_cache'];
+  }
+  $data = is_file($path) ? json_decode((string) @file_get_contents($path), true) : array();
+  if (!is_array($data)) $data = array();
+  if (!isset($data['routers']) || !is_array($data['routers'])) $data['routers'] = array();
+  $GLOBALS['_mikhmon_router_database_cache'] = $data;
+  $GLOBALS['_mikhmon_router_database_cache_path'] = $path;
   return $data;
 }
 
@@ -490,12 +553,73 @@ function mikhmonWriteDatabase($data) {
   $path = mikhmonBackupPath();
   $tmp = $path . '.tmp.' . getmypid();
   $data['version'] = 5;
-  $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+  $json = json_encode($data, JSON_UNESCAPED_SLASHES);
   if ($json === false || @file_put_contents($tmp, $json, LOCK_EX) === false) {
     return false;
   }
   @chmod($tmp, 0600);
+  $written = @rename($tmp, $path);
+  if ($written) {
+    $GLOBALS['_mikhmon_database_cache'] = $data;
+    $GLOBALS['_mikhmon_database_cache_path'] = $path;
+  }
+  return $written;
+}
+
+function mikhmonWriteRouterDatabase($data) {
+  $path = mikhmonRouterBackupPath();
+  $tmp = $path . '.tmp.' . getmypid();
+  $data['version'] = 5;
+  $json = json_encode($data, JSON_UNESCAPED_SLASHES);
+  if ($json === false || @file_put_contents($tmp, $json, LOCK_EX) === false) return false;
+  @chmod($tmp, 0600);
+  $written = @rename($tmp, $path);
+  if ($written) {
+    $GLOBALS['_mikhmon_router_database_cache'] = $data;
+    $GLOBALS['_mikhmon_router_database_cache_path'] = $path;
+    mikhmonWriteRouterIndex($data);
+  }
+  return $written;
+}
+
+function mikhmonWriteRouterIndex($data) {
+  $index = array('version' => 1, 'routers' => array());
+  foreach ((array) ($data['routers'] ?? array()) as $session => $record) {
+    $normalized = mikhmonNormalizeRouterRecord($record, $session);
+    $index['routers'][$session] = array(
+      'last_checked_at' => (int) $normalized['last_checked_at'],
+      'interval' => (int) $normalized['settings']['interval'],
+    );
+  }
+  $indexPath = mikhmonRouterBackupIndexPath();
+  $indexTmp = $indexPath . '.tmp.' . getmypid();
+  $indexJson = json_encode($index, JSON_UNESCAPED_SLASHES);
+  if ($indexJson === false || @file_put_contents($indexTmp, $indexJson, LOCK_EX) === false) return false;
+  @chmod($indexTmp, 0600);
+  return @rename($indexTmp, $indexPath);
+}
+
+function mikhmonWriteLegacyDatabase($data) {
+  $path = mikhmonLegacyDatabasePath();
+  $tmp = $path . '.tmp.' . getmypid();
+  $json = json_encode($data, JSON_UNESCAPED_SLASHES);
+  if ($json === false || @file_put_contents($tmp, $json, LOCK_EX) === false) return false;
+  @chmod($tmp, 0600);
   return @rename($tmp, $path);
+}
+
+function mikhmonRouterSyncDue($session, $force = false) {
+  if ($force) return true;
+  $indexPath = mikhmonRouterBackupIndexPath();
+  if (!is_file($indexPath)) {
+    $routerDatabase = mikhmonReadRouterDatabase();
+    mikhmonWriteRouterIndex($routerDatabase);
+  }
+  $index = is_file($indexPath) ? json_decode((string) @file_get_contents($indexPath), true) : array();
+  $row = isset($index['routers'][$session]) && is_array($index['routers'][$session]) ? $index['routers'][$session] : array();
+  $lastCheckedAt = (int) ($row['last_checked_at'] ?? 0);
+  $interval = max(30, (int) ($row['interval'] ?? mikhmonDefaultSyncSettings()['interval']));
+  return $lastCheckedAt <= 0 || (time() - $lastCheckedAt) >= $interval;
 }
 
 function mikhmonSnapshotRows($rows) {
@@ -549,7 +673,8 @@ function mikhmonNormalizeRouterRecord($record, $session) {
 }
 
 function mikhmonGetRouterRecord($database, $session) {
-  $record = isset($database['routers'][$session]) ? $database['routers'][$session] : array();
+  $routerDatabase = mikhmonReadRouterDatabase();
+  $record = isset($routerDatabase['routers'][$session]) ? $routerDatabase['routers'][$session] : array();
   return mikhmonNormalizeRouterRecord($record, $session);
 }
 
@@ -588,8 +713,7 @@ function mikhmonStoreSnapshot(&$record, $snapshot) {
 }
 
 function mikhmonBackupRouterData($API, $session, $force = false) {
-  $database = mikhmonReadDatabase();
-  $record = mikhmonGetRouterRecord($database, $session);
+  $record = mikhmonGetRouterRecord(array(), $session);
   $interval = max(30, (int) $record['settings']['interval']);
   if (!$force && $record['last_checked_at'] > 0 && (time() - $record['last_checked_at']) < $interval) {
     return $record['latest'];
@@ -599,8 +723,9 @@ function mikhmonBackupRouterData($API, $session, $force = false) {
     return $record['latest'];
   }
   mikhmonStoreSnapshot($record, $snapshot);
-  $database['routers'][$session] = $record;
-  mikhmonWriteDatabase($database);
+  $routerDatabase = mikhmonReadRouterDatabase();
+  $routerDatabase['routers'][$session] = $record;
+  mikhmonWriteRouterDatabase($routerDatabase);
   return $record['latest'];
 }
 
@@ -654,8 +779,10 @@ function mikhmonRestoreSnapshot($API, $snapshot, $type = 'all') {
 }
 
 function mikhmonSynchronizeRouterData($API, $session, $force = false) {
-  $database = mikhmonReadDatabase();
-  $record = mikhmonGetRouterRecord($database, $session);
+  if (!mikhmonRouterSyncDue($session, $force)) {
+    return array('status' => 'throttled', 'record' => array());
+  }
+  $record = mikhmonGetRouterRecord(array(), $session);
   $interval = max(30, (int) $record['settings']['interval']);
   if (!$force && $record['last_checked_at'] > 0 && (time() - $record['last_checked_at']) < $interval) {
     return array('status' => 'throttled', 'record' => $record);
@@ -665,8 +792,9 @@ function mikhmonSynchronizeRouterData($API, $session, $force = false) {
     return array('status' => 'router-error', 'record' => $record);
   }
   mikhmonStoreSnapshot($record, $current);
-  $database['routers'][$session] = $record;
-  mikhmonWriteDatabase($database);
+  $routerDatabase = mikhmonReadRouterDatabase();
+  $routerDatabase['routers'][$session] = $record;
+  mikhmonWriteRouterDatabase($routerDatabase);
   return array('status' => 'backed-up', 'record' => $record);
 }
 

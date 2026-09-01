@@ -89,17 +89,10 @@ if (!isset($_SESSION["mikhmon"])) {
     $themecolor = $_SESSION['themecolor'];
   }
 
-// routeros api
+// Router access is initialized after routing so local admin pages stay usable
+// when a configured MikroTik is offline.
   include_once('./lib/routeros_api.class.php');
   include_once('./lib/formatbytesbites.php');
-  $API = new RouterosAPI();
-  $API->debug = false;
-  $routerConnected = $API->connect($iphost, $userhost, decrypt($passwdhost));
-  $getidentity = $API->comm("/system/identity/print");
-  $identity = $getidentity[0]['name'];
-  if ($routerConnected) {
-    mikhmonSynchronizeRouterData($API, $session);
-  }
   
 
 // get variable
@@ -184,6 +177,21 @@ if (!isset($_SESSION["mikhmon"])) {
       : './?session=' . rawurlencode($session);
     header('Location: ' . $roleTarget);
     exit;
+  }
+
+  $localRoutes = array('logout', 'admin-settings', 'admin-routers', 'admin-users', 'admin-fonnte', 'admin-router-add', 'admin-session-settings');
+  $routerConnected = false;
+  $API = null;
+  $identity = isset($hotspotname) ? $hotspotname : $session;
+  if (!in_array($requestedRoute, $localRoutes, true)) {
+    $API = new RouterosAPI();
+    $API->debug = false;
+    $routerConnected = $API->connect($iphost, $userhost, decrypt($passwdhost));
+    if ($routerConnected) {
+      $getidentity = $API->comm("/system/identity/print");
+      $identity = isset($getidentity[0]['name']) ? $getidentity[0]['name'] : '';
+      mikhmonSynchronizeRouterData($API, $session);
+    }
   }
 
 
@@ -647,12 +655,12 @@ elseif ($ppp == "edit-profile") {
 if (mikhmonIsAdmin() && ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?session")) {
   echo '<script>
     $("#r_3").load("./dashboard/aload.php?session=' . $session . '&load=logs #r_3");  
-    var interval1 = "' . ($areload * 1000) . '";
+    var interval1 = Math.max(30000, ' . ((int) $areload * 1000) . ');
     var dashboard = setInterval(function() {
-      
-    $("#r_1").load("./dashboard/aload.php?session=' . $session . '&load=sysresource #r_1"); 
-    $("#r_2").load("./dashboard/aload.php?session=' . $session . '&load=hotspot #r_2"); 
-    $("#r_3").load("./dashboard/aload.php?session=' . $session . '&load=logs #r_3"); 
+    if (document.hidden) return;
+    $("#r_1").load("./dashboard/aload.php?session=' . $session . '&load=sysresource #r_1");
+    $("#r_2").load("./dashboard/aload.php?session=' . $session . '&load=hotspot #r_2");
+    $("#r_3").load("./dashboard/aload.php?session=' . $session . '&load=logs #r_3");
     
   }, interval1);
 

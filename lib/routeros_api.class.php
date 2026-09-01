@@ -132,7 +132,7 @@ class RouterosAPI
                 }
                 fclose($this->socket);
             }
-            sleep($this->delay);
+            if ($ATTEMPT < $this->attempts) sleep($this->delay);
         }
 
         if ($this->connected) {

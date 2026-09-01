@@ -54,21 +54,27 @@ $users = mikhmonGetUsers();
 $commissionCurrency = isset($currency) && trim((string) $currency) !== '' ? (string) $currency : 'Rp';
 $monthlySummaries = array();
 $currentMonth = date('Ym');
+$databaseForSummaries = mikhmonReadDatabase();
+$customersBySession = isset($databaseForSummaries['customers']) ? $databaseForSummaries['customers'] : array();
+$invoicesBySession = isset($databaseForSummaries['invoices']) ? $databaseForSummaries['invoices'] : array();
 foreach ($users as $staff) {
   if ($staff['role'] === 'biller') {
-    $stats = mikhmonBillerCommissionStats($staff['session'], $staff['id']);
-    $monthlySummaries[$staff['id']] = array('label' => 'Komisi', 'count' => (int) $stats['month_count'], 'amount' => (float) $stats['month_amount']);
+    $count = 0;
+    foreach ((array) ($invoicesBySession[$staff['session']] ?? array()) as $invoice) {
+      if (($invoice['status'] ?? '') === 'paid' && (string) ($invoice['paid_by_user_id'] ?? '') === (string) $staff['id'] && !empty($invoice['paid_at']) && date('Ym', (int) $invoice['paid_at']) === $currentMonth) $count++;
+    }
+    $monthlySummaries[$staff['id']] = array('label' => 'Komisi', 'count' => $count, 'amount' => $count * mikhmonBillerCommissionAmount());
     continue;
   }
   $customerIds = array();
-  foreach (mikhmonGetCustomers($staff['session']) as $customer) {
+  foreach ((array) ($customersBySession[$staff['session']] ?? array()) as $customer) {
     if (isset($customer['mitra_id']) && (string) $customer['mitra_id'] === (string) $staff['id'] && isset($customer['id'])) {
       $customerIds[(string) $customer['id']] = true;
     }
   }
   $count = 0;
   $amount = 0;
-  foreach (mikhmonGetInvoices($staff['session']) as $invoice) {
+  foreach ((array) ($invoicesBySession[$staff['session']] ?? array()) as $invoice) {
     if (!isset($invoice['customer_id'], $customerIds[(string) $invoice['customer_id']]) || ($invoice['status'] ?? '') !== 'paid') continue;
     if (empty($invoice['paid_at']) || date('Ym', (int) $invoice['paid_at']) !== $currentMonth) continue;
     $count++;
