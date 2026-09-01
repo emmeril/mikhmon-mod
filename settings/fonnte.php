@@ -140,7 +140,7 @@ $maskedToken = $fonnteConfig['token'] !== '' ? str_repeat('*', max(4, min(20, st
                   </td>
                 </tr>
                 <tr><td class="align-middle">Notifikasi Bayar</td><td><label><input type="checkbox" name="payment_enabled" value="1" <?= !empty($fonnteConfig['payment_enabled']) ? 'checked' : ''; ?>> Kirim setelah pembayaran</label></td></tr>
-                <tr><td class="align-middle">Link Pembayaran</td><td><label><input type="checkbox" name="payment_link_enabled" value="1" <?= !empty($fonnteConfig['payment_link_enabled']) ? 'checked' : ''; ?>> Buat dan kirim otomatis ke WhatsApp</label><small class="payment-secret-note">Membutuhkan Payment Gateway dan Fonnte aktif. Link dikirim satu kali per invoice.</small></td></tr>
+                <tr><td class="align-middle">Link Pembayaran</td><td><label><input type="checkbox" name="payment_link_enabled" value="1" <?= !empty($fonnteConfig['payment_link_enabled']) ? 'checked' : ''; ?>> Kirim link otomatis</label><small class="payment-secret-note">Perlu Payment Gateway dan Fonnte aktif.</small></td></tr>
                 <tr>
                   <td class="align-middle">Jeda Pesan</td>
                   <td>
@@ -148,7 +148,6 @@ $maskedToken = $fonnteConfig['token'] !== '' ? str_repeat('*', max(4, min(20, st
                       <div class="fonnte-day-control"><input class="form-control" type="number" min="1" max="120" name="queue_min_delay_minutes" value="<?= (int) ($fonnteConfig['queue_min_delay_minutes'] ?? 5); ?>"> <span>sampai</span></div>
                       <div class="fonnte-day-control"><input class="form-control" type="number" min="1" max="240" name="queue_max_delay_minutes" value="<?= (int) ($fonnteConfig['queue_max_delay_minutes'] ?? 20); ?>"> <span>menit (acak)</span></div>
                     </div>
-                    <small class="payment-secret-note">Pesan otomatis dikirim satu per satu pada jam 07.00-17.00.</small>
                   </td>
                 </tr>
               </table>
