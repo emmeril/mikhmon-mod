@@ -81,19 +81,22 @@ if ($id == "login" || substr($url, -1) == "p") {
     $pass = (string) $_POST['pass'];
     if ($user == $useradm && $pass == decrypt($passadm)) {
       mikhmonSetLoginSession(array('username' => $user, 'name' => 'Administrator'), 'admin');
-      mikhmonSystemLog('success', 'Autentikasi', 'Administrator berhasil login.', mikhmonSystemLogCurrentUser());
-      echo "<script>window.location=" . json_encode(mikhmonAdminLandingUrl($data)) . "</script>";
+      $target = mikhmonAdminLandingUrl($data);
+      mikhmonSystemLog('success', 'Autentikasi', 'Administrator berhasil login.', mikhmonSystemLogCurrentUser(array('session' => mikhmonDefaultRouterSession($data))));
+      echo "<script>window.location=" . json_encode($target) . "</script>";
     } else {
       $staff = mikhmonLoginStaff($user, $pass);
       if ($staff) {
         mikhmonSetLoginSession($staff);
-        mikhmonSystemLog('success', 'Autentikasi', 'Pengguna berhasil login.', mikhmonSystemLogCurrentUser(array('session' => $staff['session'])));
         if ($staff['role'] === 'admin') {
           $target = mikhmonAdminLandingUrl($data);
+          $loginSession = mikhmonDefaultRouterSession($data);
         } else {
           $staffSession = rawurlencode($staff['session']);
           $target = $staff['role'] === 'biller' ? './?billing=1&session=' . $staffSession : './?session=' . $staffSession;
+          $loginSession = $staff['session'];
         }
+        mikhmonSystemLog('success', 'Autentikasi', 'Pengguna berhasil login.', mikhmonSystemLogCurrentUser(array('session' => $loginSession)));
         echo "<script>window.location=" . json_encode($target) . "</script>";
       } else {
         mikhmonSystemLog('warning', 'Autentikasi', 'Percobaan login gagal untuk username ' . $user . '.', array(
