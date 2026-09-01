@@ -522,6 +522,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       ), $paymentGatewayConfig);
       if (!empty($paymentResult['success'])) {
         $invoices[$invoiceIndex]['payment_gateway'] = $paymentResult['provider'];
+        $invoices[$invoiceIndex]['payment_environment'] = $paymentResult['environment'] ?? '';
         $invoices[$invoiceIndex]['payment_order_id'] = $paymentOrderId;
         $invoices[$invoiceIndex]['payment_url'] = $paymentResult['payment_url'];
         $invoices[$invoiceIndex]['payment_reference'] = $paymentResult['reference'] ?? '';
@@ -585,7 +586,12 @@ foreach ($invoiceCandidates as $key => $candidates) {
       $waUrl = $phone !== '' && $invoiceStatus !== 'none' ? 'https://wa.me/' . $phone . '?text=' . rawurlencode($invoiceText) : '';
       $canSendFonnte = !empty($fonnteConfig['enabled']) && $fonnteConfig['token'] !== '' && $phone !== '' && $invoiceStatus !== 'none';
       $gatewayPaymentReceived = !empty($invoice['gateway_payment_received']) && $invoiceStatus === 'unpaid';
-      $paymentExpired = !empty($invoice['payment_created_at']) && (int) $invoice['payment_created_at'] + (int) $paymentGatewayConfig['invoice_duration'] <= time();
+      $storedPaymentEnvironment = (string) ($invoice['payment_environment'] ?? '');
+      if ($storedPaymentEnvironment === '' && ($invoice['payment_gateway'] ?? '') === 'midtrans') $storedPaymentEnvironment = mikhmonPaymentGatewayMidtransUrlEnvironment($invoice['payment_url'] ?? '');
+      $paymentEnvironmentChanged = ($invoice['payment_gateway'] ?? '') === 'midtrans'
+        && $storedPaymentEnvironment !== ''
+        && $storedPaymentEnvironment !== $paymentGatewayConfig['midtrans']['environment'];
+      $paymentExpired = $paymentEnvironmentChanged || (!empty($invoice['payment_created_at']) && (int) $invoice['payment_created_at'] + (int) $paymentGatewayConfig['invoice_duration'] <= time());
       $canCreatePayment = !empty($paymentGatewayConfig['enabled']) && $invoiceStatus === 'unpaid' && !$gatewayPaymentReceived;
       $paymentUrl = !$paymentExpired && !empty($invoice['payment_url']) ? (string) $invoice['payment_url'] : '';
     ?>

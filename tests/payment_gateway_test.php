@@ -36,6 +36,8 @@ paymentGatewayTestAssert(!isset($midtransPayload['customer_details']['email']), 
 paymentGatewayTestAssert($midtransPayload['customer_details']['phone'] === '08123456789', 'available Midtrans phone is included');
 $midtransError = mikhmonPaymentGatewayErrorMessage(array('data' => array('error_messages' => array('invalid email'))), 'fallback');
 paymentGatewayTestAssert($midtransError === 'invalid email', 'Midtrans error messages are exposed');
+paymentGatewayTestAssert(mikhmonPaymentGatewayMidtransUrlEnvironment('https://app.sandbox.midtrans.com/snap/v4/redirection/token') === 'sandbox', 'sandbox payment URL is detected');
+paymentGatewayTestAssert(mikhmonPaymentGatewayMidtransUrlEnvironment('https://app.midtrans.com/snap/v4/redirection/token') === 'production', 'production payment URL is detected');
 paymentGatewayTestAssert(!mikhmonPaymentGatewayCreatePayment('midtrans', array('order_id' => 'INV-1', 'amount' => 1000), array('enabled' => false))['success'], 'disabled gateway does not create payments');
 paymentGatewayTestAssert(mikhmonPaymentGatewayValidMidtransNotification(array(
   'order_id' => 'INV-1', 'status_code' => '200', 'gross_amount' => '1000',

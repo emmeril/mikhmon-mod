@@ -222,6 +222,12 @@ function mikhmonPaymentGatewayMidtransPayload($payment, $config) {
   );
 }
 
+function mikhmonPaymentGatewayMidtransUrlEnvironment($url) {
+  $host = strtolower((string) parse_url((string) $url, PHP_URL_HOST));
+  if ($host === '') return '';
+  return strpos($host, 'sandbox.midtrans.com') !== false ? 'sandbox' : 'production';
+}
+
 function mikhmonPaymentGatewayTestConnection($provider, $config = null) {
   $config = $config === null ? mikhmonPaymentGatewayReadConfig() : mikhmonPaymentGatewayNormalizeConfig($config);
   if ($provider === 'midtrans') {
@@ -278,7 +284,7 @@ function mikhmonPaymentGatewayCreatePayment($provider, $payment, $config = null)
     if (!$response['success'] || empty($response['data']['redirect_url'])) {
       return array('success' => false, 'message' => 'Transaksi Midtrans gagal: ' . mikhmonPaymentGatewayErrorMessage($response, 'respons tidak valid'), 'response' => $response);
     }
-    return array('success' => true, 'provider' => 'midtrans', 'payment_url' => $response['data']['redirect_url'], 'reference' => $response['data']['token'] ?? '', 'response' => $response['data']);
+    return array('success' => true, 'provider' => 'midtrans', 'environment' => $config['midtrans']['environment'], 'payment_url' => $response['data']['redirect_url'], 'reference' => $response['data']['token'] ?? '', 'response' => $response['data']);
   }
 
   if ($provider === 'xendit') {
