@@ -8,6 +8,7 @@ include_once('./ppp/profilemeta.php');
 include_once('./lib/fonnte.php');
 include_once('./lib/payment_gateway.php');
 include_once('./lib/payment_activation.php');
+include_once('./lib/customer_portal.php');
 include_once('./lib/billing_automation.php');
 include_once('./lib/billing_profile.php');
 
@@ -20,6 +21,12 @@ function billingApiError($response) {
 function billingFindCustomer($customers, $id) {
   foreach ($customers as $customer) if (isset($customer['id']) && (string) $customer['id'] === (string) $id) return $customer;
   return array();
+}
+
+function billingMonthlyInvoicesOnly($invoices) {
+  return array_values(array_filter((array) $invoices, function ($invoice) {
+    return ($invoice['kind'] ?? 'monthly') !== 'voucher';
+  }));
 }
 
 function billingLatestInvoice($invoices, $customerId) {
@@ -317,7 +324,8 @@ function billingSyncUnpaidInvoice($session, &$invoices, $customer, $customerUser
 }
 
 $customers = array_values(array_filter(mikhmonVisibleCustomers($session), function ($customer) { return count(mikhmonCustomerServices($customer)) > 0; }));
-$invoices = mikhmonVisibleInvoices($session);
+$allInvoices = mikhmonVisibleInvoices($session);
+$invoices = billingMonthlyInvoicesOnly($allInvoices);
 $hotspotProfiles = array(); $pppoeProfiles = array();
 $customerUsers = array('hotspot' => array(), 'pppoe' => array());
 $customerSchedulers = array(); $customerError = ''; $customerMessage = '';
@@ -328,7 +336,7 @@ $paymentGatewayConfig = mikhmonPaymentGatewayReadConfig();
 // invoices directly so a successful payment is still visible to the operator.
 if (!empty($paymentGatewayConfig['enabled']) && !empty($paymentGatewayConfig['midtrans']['enabled'])) {
   $midtransReconciled = 0;
-  foreach ($invoices as $invoiceIndex => $invoiceRow) {
+  foreach ($allInvoices as $invoiceIndex => $invoiceRow) {
     if ($midtransReconciled >= 20) break;
     if (($invoiceRow['status'] ?? '') !== 'unpaid' || !empty($invoiceRow['gateway_payment_received']) || ($invoiceRow['payment_gateway'] ?? '') !== 'midtrans' || empty($invoiceRow['payment_order_id'])) continue;
     if (!empty($invoiceRow['payment_environment']) && $invoiceRow['payment_environment'] !== $paymentGatewayConfig['midtrans']['environment']) continue;
@@ -336,34 +344,42 @@ if (!empty($paymentGatewayConfig['enabled']) && !empty($paymentGatewayConfig['mi
     // complete payment after the local invoice-link expiry window.
     $gatewayStatus = mikhmonPaymentGatewayGetMidtransStatus($invoiceRow['payment_order_id'], $paymentGatewayConfig);
     if (empty($gatewayStatus['success']) && !empty($invoiceRow['payment_transaction_id'])) $gatewayStatus = mikhmonPaymentGatewayGetMidtransStatus($invoiceRow['payment_transaction_id'], $paymentGatewayConfig);
+    if (empty($gatewayStatus['success']) && !empty($invoiceRow['payment_reference'])) $gatewayStatus = mikhmonPaymentGatewayGetMidtransSnapStatus($invoiceRow['payment_reference'], $paymentGatewayConfig);
     if (empty($gatewayStatus['success'])) continue;
     if (!empty($gatewayStatus['paid']) && (int) round((float) $gatewayStatus['amount']) !== (int) round((float) ($invoiceRow['amount'] ?? 0))) continue;
     $midtransReconciled++;
     $changed = false;
     if (($invoiceRow['gateway_status'] ?? '') !== $gatewayStatus['status']) { $invoiceRow['gateway_status'] = $gatewayStatus['status']; $changed = true; }
-    if (!empty($gatewayStatus['reference']) && ($invoiceRow['payment_reference'] ?? '') !== $gatewayStatus['reference']) { $invoiceRow['payment_reference'] = $gatewayStatus['reference']; $changed = true; }
+    if (!empty($gatewayStatus['reference']) && ($invoiceRow['payment_transaction_id'] ?? '') !== $gatewayStatus['reference']) { $invoiceRow['payment_transaction_id'] = $gatewayStatus['reference']; $changed = true; }
     if (!empty($gatewayStatus['paid'])) {
       $invoiceRow['gateway_payment_received'] = true;
       $invoiceRow['gateway_paid_at'] = $invoiceRow['gateway_paid_at'] ?? time();
       $changed = true;
     }
-    if ($changed && mikhmonSaveInvoice($session, $invoiceRow) !== false) $invoices[$invoiceIndex] = $invoiceRow;
+    if ($changed && mikhmonSaveInvoice($session, $invoiceRow) !== false) $allInvoices[$invoiceIndex] = $invoiceRow;
   }
 }
+$invoices = billingMonthlyInvoicesOnly($allInvoices);
 
 // Try activation once when a valid gateway payment is first observed. Failed
 // attempts remain visible and are retried only when the operator presses the
 // activation button, preventing repeated router writes on every page load.
-foreach ($invoices as $invoiceRow) {
+foreach ($allInvoices as $invoiceRow) {
   if (($invoiceRow['status'] ?? '') !== 'unpaid' || empty($invoiceRow['gateway_payment_received']) || !empty($invoiceRow['activation_status'])) continue;
-  $automaticActivation = mikhmonPaymentActivationProcess($session, $invoiceRow['id'] ?? '', !empty($routerConnected) ? $API : null, array(
-    'actor_name' => 'Otomatis ' . strtoupper((string) ($invoiceRow['payment_gateway'] ?? 'Gateway')),
-  ));
-  if (!empty($automaticActivation['success'])) $customerMessage = $automaticActivation['message'] ?? 'Pembayaran dan aktivasi otomatis berhasil.';
+  if (($invoiceRow['kind'] ?? 'monthly') === 'voucher') {
+    $automaticActivation = mikhmonCustomerPortalFulfillVoucher($session, $invoiceRow['id'] ?? '', !empty($routerConnected) ? $API : null);
+    if (!empty($automaticActivation['success'])) $customerMessage = 'Pembayaran voucher dikonfirmasi dan kode voucher berhasil dibuat.';
+  } else {
+    $automaticActivation = mikhmonPaymentActivationProcess($session, $invoiceRow['id'] ?? '', !empty($routerConnected) ? $API : null, array(
+      'actor_name' => 'Otomatis ' . strtoupper((string) ($invoiceRow['payment_gateway'] ?? 'Gateway')),
+    ));
+    if (!empty($automaticActivation['success'])) $customerMessage = $automaticActivation['message'] ?? 'Pembayaran dan aktivasi otomatis berhasil.';
+  }
   break;
 }
 if (isset($automaticActivation)) {
-  $invoices = mikhmonVisibleInvoices($session);
+  $allInvoices = mikhmonVisibleInvoices($session);
+  $invoices = billingMonthlyInvoicesOnly($allInvoices);
   $customers = array_values(array_filter(mikhmonVisibleCustomers($session), function ($customer) { return count(mikhmonCustomerServices($customer)) > 0; }));
 }
 
@@ -446,7 +462,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           }
           $customerMessage = 'Invoice ' . $invoice['number'] . ' untuk ' . count($invoiceServices) . ' layanan berhasil dibuat.';
         }
-        $invoices = mikhmonGetInvoices($session);
+        $invoices = billingMonthlyInvoicesOnly(mikhmonGetInvoices($session));
       }
     }
   } elseif ($action === 'mark_paid') {
@@ -471,7 +487,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       else {
         $customerMessage = ($activationResult['message'] ?? 'Layanan berhasil diaktifkan.') . ' Jatuh tempo berikutnya: ' . ($activationResult['invoice']['next_due_date'] ?? '-') . '.';
         if (empty($activationResult['scheduler_installed'])) $customerMessage .= ' Scheduler jatuh tempo gagal dipasang.';
-        $invoices = mikhmonGetInvoices($session);
+        $invoices = billingMonthlyInvoicesOnly(mikhmonGetInvoices($session));
         foreach (mikhmonPaymentActivationInvoiceServices($activationResult['invoice'] ?? array(), $customer) as $serviceRow) {
           $service = ($serviceRow['service'] ?? '') === 'pppoe' ? 'pppoe' : 'hotspot';
           $username = (string) ($serviceRow['username'] ?? '');

@@ -101,7 +101,7 @@ function mikhmonCustomerPortalActiveGateway($config = null) {
 
 function mikhmonCustomerPortalSyncPayments($session, $customer, $api = null) {
   $config = mikhmonPaymentGatewayReadConfig();
-  $result = array('checked' => 0, 'paid' => 0, 'activated' => 0, 'errors' => array());
+  $result = array('checked' => 0, 'paid' => 0, 'activated' => 0, 'vouchers_created' => 0, 'errors' => array());
   foreach (mikhmonGetInvoices($session) as $invoice) {
     if ((string) ($invoice['customer_id'] ?? '') !== (string) ($customer['id'] ?? '') || ($invoice['status'] ?? '') !== 'unpaid') continue;
     if (($invoice['payment_gateway'] ?? '') !== 'midtrans' || empty($invoice['payment_order_id'])) continue;
@@ -109,9 +109,10 @@ function mikhmonCustomerPortalSyncPayments($session, $customer, $api = null) {
     $result['checked']++;
     $status = mikhmonPaymentGatewayGetMidtransStatus($invoice['payment_order_id'], $config);
     if (empty($status['success']) && !empty($invoice['payment_transaction_id'])) $status = mikhmonPaymentGatewayGetMidtransStatus($invoice['payment_transaction_id'], $config);
+    if (empty($status['success']) && !empty($invoice['payment_reference'])) $status = mikhmonPaymentGatewayGetMidtransSnapStatus($invoice['payment_reference'], $config);
     if (empty($status['success'])) { $result['errors'][] = $status['message'] ?? 'Status Midtrans gagal diperiksa.'; continue; }
     if (($status['status'] ?? '') !== 'unknown') $invoice['gateway_status'] = $status['status'];
-    if (!empty($status['reference'])) $invoice['payment_reference'] = $status['reference'];
+    if (!empty($status['reference'])) $invoice['payment_transaction_id'] = $status['reference'];
     if (empty($status['paid'])) { mikhmonSaveInvoice($session, $invoice); continue; }
     if ((int) round((float) ($status['amount'] ?? 0)) !== (int) round((float) ($invoice['amount'] ?? 0))) {
       $result['errors'][] = 'Nominal pembayaran ' . ($invoice['number'] ?? '') . ' tidak sesuai invoice.';
@@ -125,7 +126,10 @@ function mikhmonCustomerPortalSyncPayments($session, $customer, $api = null) {
     $activation = ($invoice['kind'] ?? 'monthly') === 'voucher'
       ? mikhmonCustomerPortalFulfillVoucher($session, $invoice['id'], $api)
       : mikhmonPaymentActivationProcess($session, $invoice['id'], $api, array('actor_name' => 'Otomatis MIDTRANS'));
-    if (!empty($activation['success'])) $result['activated']++;
+    if (!empty($activation['success'])) {
+      $result['activated']++;
+      if (($invoice['kind'] ?? 'monthly') === 'voucher') $result['vouchers_created']++;
+    }
     else $result['errors'][] = $activation['message'] ?? 'Aktivasi pembayaran gagal.';
   }
   return $result;
@@ -139,6 +143,11 @@ function mikhmonCustomerPortalReturnUrl() {
 function mikhmonCustomerPortalCreateVoucherInvoice($session, $customer, $profile, $provider = '') {
   $details = is_array($profile) ? mikhmonCustomerPortalProfileDetails($profile) : array();
   if (!$details || $details['expired_mode'] === 'none' || $details['selling_price'] < 1) return array('success' => false, 'message' => 'Profile voucher tidak valid atau Expired Mode = None.');
+  foreach (mikhmonGetInvoices($session) as $existing) {
+    if (($existing['kind'] ?? '') !== 'voucher' || ($existing['status'] ?? '') !== 'unpaid') continue;
+    if ((string) ($existing['customer_id'] ?? '') !== (string) ($customer['id'] ?? '') || (string) ($existing['voucher_profile'] ?? '') !== $details['name']) continue;
+    if (!empty($existing['payment_url'])) return array('success' => true, 'invoice' => $existing, 'payment_url' => $existing['payment_url']);
+  }
   $suffix = strtoupper(substr(bin2hex(random_bytes(5)), 0, 8));
   $number = 'VCR-' . date('YmdHis') . '-' . $suffix;
   $invoice = array(

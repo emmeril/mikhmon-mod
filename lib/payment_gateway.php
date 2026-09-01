@@ -288,6 +288,29 @@ function mikhmonPaymentGatewayGetMidtransStatus($orderId, $config = null) {
   );
 }
 
+function mikhmonPaymentGatewayGetMidtransSnapStatus($token, $config = null) {
+  $config = $config === null ? mikhmonPaymentGatewayReadConfig() : mikhmonPaymentGatewayNormalizeConfig($config);
+  $token = trim((string) $token);
+  if ($token === '' || $config['midtrans']['server_key'] === '') return array('success' => false, 'message' => 'Token Snap atau Server Key Midtrans belum tersedia.');
+  $baseUrl = $config['midtrans']['environment'] === 'production' ? 'https://app.midtrans.com' : 'https://app.sandbox.midtrans.com';
+  $response = mikhmonPaymentGatewayHttpRequest('GET', $baseUrl . '/snap/v1/transactions/' . rawurlencode($token) . '/status', array(
+    'Accept: application/json',
+    'Authorization: Basic ' . base64_encode($config['midtrans']['server_key'] . ':'),
+  ));
+  if (!$response['success']) return array('success' => false, 'message' => mikhmonPaymentGatewayErrorMessage($response, 'HTTP ' . $response['http_code']), 'response' => $response);
+  $data = $response['data'];
+  if (isset($data['status_code']) && (string) $data['status_code'] !== '200') return array('success' => false, 'message' => (string) ($data['status_message'] ?? 'Transaksi Snap tidak ditemukan.'), 'response' => $data);
+  return array(
+    'success' => true,
+    'paid' => mikhmonPaymentGatewayMidtransPaid($data),
+    'amount' => (float) ($data['gross_amount'] ?? 0),
+    'status' => (string) ($data['transaction_status'] ?? 'unknown'),
+    'reference' => (string) ($data['transaction_id'] ?? ''),
+    'order_id' => (string) ($data['order_id'] ?? ''),
+    'response' => $data,
+  );
+}
+
 function mikhmonPaymentGatewayCreatePayment($provider, $payment, $config = null) {
   $config = $config === null ? mikhmonPaymentGatewayReadConfig() : mikhmonPaymentGatewayNormalizeConfig($config);
   if (empty($config['enabled'])) return array('success' => false, 'message' => 'Payment gateway belum diaktifkan.');

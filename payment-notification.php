@@ -67,8 +67,8 @@ $invoice = $match['invoice'];
 $notifiedAmount = $provider === 'midtrans' ? (float) ($payload['gross_amount'] ?? 0) : (float) ($payload['paid_amount'] ?? ($payload['amount'] ?? 0));
 if ($paid && (int) round($notifiedAmount) !== (int) round((float) ($invoice['amount'] ?? 0))) paymentNotificationRespond(422, array('success' => false, 'message' => 'Payment amount does not match invoice.'));
 $invoice['payment_gateway'] = $provider;
-$invoice['payment_reference'] = $reference !== '' ? $reference : ($invoice['payment_reference'] ?? '');
 if ($provider === 'midtrans' && $reference !== '') $invoice['payment_transaction_id'] = $reference;
+elseif ($reference !== '') $invoice['payment_reference'] = $reference;
 $invoice['gateway_status'] = $status;
 $invoice['gateway_updated_at'] = time();
 if ($paid) {
