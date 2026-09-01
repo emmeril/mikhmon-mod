@@ -302,3 +302,14 @@ Panduan, https://laksa19.github.io/printBT.html
 2. Penambahan Parent Queue di Add dan Edit User Profile (Bagaimana cara penggunaannya? silakan pelajari Simple Queue Mikrotik).
 3. Penyesuaian format Data Limit user menjadi Byte Binary ([base 2](https://www.gbmb.org/gigabytes)).
 4. Reformat Uptime.
+
+# Portal Pelanggan (OTP Fonnte)
+
+Pelanggan dapat masuk melalui `pelanggan.php` menggunakan nomor handphone yang tersimpan pada identitas pelanggan. Kode OTP dikirim oleh Fonnte; akun pelanggan tidak memerlukan akun staf di menu Users.
+
+- Aktifkan Fonnte pada menu Admin dan pastikan token/device siap digunakan.
+- Aktifkan Payment Gateway (Midtrans atau Xendit). Status Midtrans akan diperiksa langsung dari API saat Billing admin atau portal pelanggan dibuka; callback `payment-notification.php` bersifat opsional.
+- Pembelian voucher hanya menampilkan profile hotspot dengan `Expired Mode` selain `None`; setelah pembayaran final webhook membuat username dan password voucher yang sama secara otomatis.
+- Pembayaran langganan bulanan memakai layanan hotspot/PPPoE dengan `Expired Mode = None`; webhook menjalankan aktivasi ulang layanan yang terisolir melalui MikroTik.
+- Riwayat pembayaran dan link invoice tersedia di dashboard pelanggan. Perubahan password hotspot berlaku untuk seluruh layanan hotspot milik pelanggan.
+- Sesi login pelanggan bertahan 1 hari dan diperpanjang saat portal digunakan; logout akan langsung menghapus sesi sehingga OTP diperlukan lagi pada login berikutnya.

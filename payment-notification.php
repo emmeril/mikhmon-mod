@@ -4,6 +4,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/lib/payment_gateway.php';
 require_once __DIR__ . '/lib/payment_activation.php';
+require_once __DIR__ . '/lib/customer_portal.php';
 require_once __DIR__ . '/include/database.php';
 
 function paymentNotificationRespond($httpCode, $payload) {
@@ -67,6 +68,7 @@ $notifiedAmount = $provider === 'midtrans' ? (float) ($payload['gross_amount'] ?
 if ($paid && (int) round($notifiedAmount) !== (int) round((float) ($invoice['amount'] ?? 0))) paymentNotificationRespond(422, array('success' => false, 'message' => 'Payment amount does not match invoice.'));
 $invoice['payment_gateway'] = $provider;
 $invoice['payment_reference'] = $reference !== '' ? $reference : ($invoice['payment_reference'] ?? '');
+if ($provider === 'midtrans' && $reference !== '') $invoice['payment_transaction_id'] = $reference;
 $invoice['gateway_status'] = $status;
 $invoice['gateway_updated_at'] = time();
 if ($paid) {
@@ -78,7 +80,11 @@ if (mikhmonSaveInvoice($match['session'], $invoice) === false) paymentNotificati
 
 $activation = array('success' => false, 'message' => 'Pembayaran belum berstatus final.');
 if ($paid) {
-  $activation = mikhmonPaymentActivationProcess($match['session'], $invoice['id'], null, array('actor_name' => 'Otomatis ' . strtoupper($provider)));
+  if (($invoice['kind'] ?? 'monthly') === 'voucher') {
+    $activation = mikhmonCustomerPortalFulfillVoucher($match['session'], $invoice['id']);
+  } else {
+    $activation = mikhmonPaymentActivationProcess($match['session'], $invoice['id'], null, array('actor_name' => 'Otomatis ' . strtoupper($provider)));
+  }
 }
 
 // Always acknowledge a valid gateway notification. A router outage must not

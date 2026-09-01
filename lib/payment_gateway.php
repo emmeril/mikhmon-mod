@@ -273,6 +273,11 @@ function mikhmonPaymentGatewayGetMidtransStatus($orderId, $config = null) {
   ));
   if (!$response['success']) return array('success' => false, 'message' => mikhmonPaymentGatewayErrorMessage($response, 'HTTP ' . $response['http_code']), 'response' => $response);
   $data = $response['data'];
+  // Midtrans can return HTTP 200 while reporting an application-level 404
+  // (for example when an order belongs to another environment).
+  if (isset($data['status_code']) && (string) $data['status_code'] !== '200') {
+    return array('success' => false, 'message' => (string) ($data['status_message'] ?? 'Transaksi Midtrans tidak ditemukan.'), 'response' => $data);
+  }
   return array(
     'success' => true,
     'paid' => mikhmonPaymentGatewayMidtransPaid($data),

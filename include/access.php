@@ -26,6 +26,36 @@ function mikhmonIsBiller() {
   return mikhmonRole() === 'biller';
 }
 
+function mikhmonIsCustomer() {
+  return mikhmonRole() === 'pelanggan';
+}
+
+function mikhmonCustomerSessionTtl() {
+  return 86400;
+}
+
+function mikhmonSetCustomerSession($customer, $session = '') {
+  $_SESSION['mikhmon'] = 'pelanggan:' . (string) ($customer['id'] ?? '');
+  $_SESSION['mikhmon_role'] = 'pelanggan';
+  $_SESSION['mikhmon_user_id'] = (string) ($customer['id'] ?? '');
+  $_SESSION['mikhmon_name'] = (string) ($customer['name'] ?? 'Pelanggan');
+  $_SESSION['mikhmon_customer_id'] = (string) ($customer['id'] ?? '');
+  $_SESSION['mikhmon_customer_session'] = (string) ($session !== '' ? $session : ($customer['_session'] ?? ''));
+  $_SESSION['mikhmon_customer_expires_at'] = time() + mikhmonCustomerSessionTtl();
+}
+
+function mikhmonRefreshCustomerSession() {
+  if (!mikhmonIsCustomer()) return false;
+  $session = (string) ($_SESSION['mikhmon_customer_session'] ?? '');
+  $id = (string) ($_SESSION['mikhmon_customer_id'] ?? $_SESSION['mikhmon_user_id'] ?? '');
+  if ($session === '' || $id === '') return false;
+  if (!empty($_SESSION['mikhmon_customer_expires_at']) && (int) $_SESSION['mikhmon_customer_expires_at'] < time()) return false;
+  $customer = mikhmonFindCustomer($session, $id);
+  if (!$customer) return false;
+  mikhmonSetCustomerSession($customer, $session);
+  return true;
+}
+
 function mikhmonAssignedSession() {
   return isset($_SESSION['mikhmon_router_session']) ? (string) $_SESSION['mikhmon_router_session'] : '';
 }
@@ -142,6 +172,7 @@ function mikhmonRowBelongsToCurrentMitra($row) {
 
 function mikhmonCanOpenMainRoute($route) {
   if (mikhmonIsAdmin()) return true;
+  if (mikhmonIsCustomer()) return in_array($route, array('customer-portal', 'logout'), true);
   if (mikhmonIsBiller()) return in_array($route, array('billing', 'commission', 'logout'), true);
   if (mikhmonIsMitra()) return in_array($route, array('home', 'billing', 'customer-list', 'customer-identity-list', 'customer-identity-add', 'customer-identity-edit', 'customer-service-add', 'report-selling', 'report-resume', 'hotspot-generate', 'hotspot-active', 'hotspot-vouchers', 'hotspot-users', 'hotspot-print-center', 'pppoe-users', 'pppoe-active', 'logout'), true);
   return false;

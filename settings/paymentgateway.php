@@ -162,7 +162,7 @@ $xenditWebhookUrl = $paymentBaseUrl !== '' ? $paymentBaseUrl . '/payment-notific
                 <tr><td class="align-middle">Server Key</td><td><input class="form-control" type="password" name="midtrans_server_key" placeholder="<?= $paymentConfig['midtrans']['server_key'] !== '' ? htmlspecialchars('Tersimpan: ' . mikhmonPaymentGatewayMask($paymentConfig['midtrans']['server_key']), ENT_QUOTES) : 'SB-Mid-server-...'; ?>"><small class="payment-secret-note">Kosongkan untuk mempertahankan key yang tersimpan.</small></td></tr>
                 <tr><td class="align-middle">Client Key</td><td><input class="form-control" type="password" name="midtrans_client_key" placeholder="<?= $paymentConfig['midtrans']['client_key'] !== '' ? htmlspecialchars('Tersimpan: ' . mikhmonPaymentGatewayMask($paymentConfig['midtrans']['client_key']), ENT_QUOTES) : 'SB-Mid-client-...'; ?>"><small class="payment-secret-note">Digunakan saat Snap ditampilkan di browser.</small></td></tr>
               </table>
-              <div class="payment-webhook-box"><b>Payment Notification URL</b><br><code><?= htmlspecialchars($midtransWebhookUrl, ENT_QUOTES); ?></code></div>
+              <div class="payment-webhook-box"><b>Payment Notification URL (opsional)</b><br><code><?= htmlspecialchars($midtransWebhookUrl, ENT_QUOTES); ?></code><br><small>Status pembayaran juga diperiksa langsung ke API Midtrans saat Billing admin atau portal pelanggan dibuka.</small></div>
             </div>
           </div>
         </div>
@@ -180,7 +180,7 @@ $xenditWebhookUrl = $paymentBaseUrl !== '' ? $paymentBaseUrl . '/payment-notific
                 <tr><td class="align-middle">Public API Key</td><td><input class="form-control" type="password" name="xendit_public_key" placeholder="<?= $paymentConfig['xendit']['public_key'] !== '' ? htmlspecialchars('Tersimpan: ' . mikhmonPaymentGatewayMask($paymentConfig['xendit']['public_key']), ENT_QUOTES) : 'xnd_public_development_...'; ?>"></td></tr>
                 <tr><td class="align-middle">Webhook Token</td><td><input class="form-control" type="password" name="xendit_webhook_token" placeholder="<?= $paymentConfig['xendit']['webhook_token'] !== '' ? htmlspecialchars('Tersimpan: ' . mikhmonPaymentGatewayMask($paymentConfig['xendit']['webhook_token']), ENT_QUOTES) : 'Verification token dari Xendit'; ?>"><small class="payment-secret-note">Verification token wajib untuk memvalidasi callback.</small></td></tr>
               </table>
-              <div class="payment-webhook-box"><b>Invoice Callback URL</b><br><code><?= htmlspecialchars($xenditWebhookUrl, ENT_QUOTES); ?></code></div>
+              <div class="payment-webhook-box"><b>Invoice Callback URL (opsional)</b><br><code><?= htmlspecialchars($xenditWebhookUrl, ENT_QUOTES); ?></code><br><small>Untuk portal saat ini gateway aktif dipilih otomatis; callback dapat dipakai sebagai notifikasi tambahan.</small></div>
             </div>
           </div>
         </div>

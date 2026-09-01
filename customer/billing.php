@@ -332,8 +332,10 @@ if (!empty($paymentGatewayConfig['enabled']) && !empty($paymentGatewayConfig['mi
     if ($midtransReconciled >= 20) break;
     if (($invoiceRow['status'] ?? '') !== 'unpaid' || !empty($invoiceRow['gateway_payment_received']) || ($invoiceRow['payment_gateway'] ?? '') !== 'midtrans' || empty($invoiceRow['payment_order_id'])) continue;
     if (!empty($invoiceRow['payment_environment']) && $invoiceRow['payment_environment'] !== $paymentGatewayConfig['midtrans']['environment']) continue;
-    if (!empty($invoiceRow['payment_created_at']) && (int) $invoiceRow['payment_created_at'] + (int) $paymentGatewayConfig['invoice_duration'] < time()) continue;
+    // Query Midtrans directly whenever an order ID exists. A customer may
+    // complete payment after the local invoice-link expiry window.
     $gatewayStatus = mikhmonPaymentGatewayGetMidtransStatus($invoiceRow['payment_order_id'], $paymentGatewayConfig);
+    if (empty($gatewayStatus['success']) && !empty($invoiceRow['payment_transaction_id'])) $gatewayStatus = mikhmonPaymentGatewayGetMidtransStatus($invoiceRow['payment_transaction_id'], $paymentGatewayConfig);
     if (empty($gatewayStatus['success'])) continue;
     if (!empty($gatewayStatus['paid']) && (int) round((float) $gatewayStatus['amount']) !== (int) round((float) ($invoiceRow['amount'] ?? 0))) continue;
     $midtransReconciled++;

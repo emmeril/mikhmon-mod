@@ -55,14 +55,14 @@ function mikhmonReadDatabase() {
     return $GLOBALS['_mikhmon_database_cache'];
   }
   if (!is_file($path)) {
-    $empty = array('version' => 5, 'customers' => array(), 'invoices' => array(), 'users' => array());
+    $empty = array('version' => 5, 'customers' => array(), 'invoices' => array(), 'users' => array(), 'customer_auth' => array());
     $GLOBALS['_mikhmon_database_cache'] = $empty;
     $GLOBALS['_mikhmon_database_cache_path'] = $path;
     return $empty;
   }
   $data = json_decode((string) @file_get_contents($path), true);
   if (!is_array($data)) {
-    $empty = array('version' => 5, 'customers' => array(), 'invoices' => array(), 'users' => array());
+    $empty = array('version' => 5, 'customers' => array(), 'invoices' => array(), 'users' => array(), 'customer_auth' => array());
     $GLOBALS['_mikhmon_database_cache'] = $empty;
     $GLOBALS['_mikhmon_database_cache_path'] = $path;
     return $empty;
@@ -89,6 +89,9 @@ function mikhmonReadDatabase() {
   }
   if (!isset($data['users']) || !is_array($data['users'])) {
     $data['users'] = array();
+  }
+  if (!isset($data['customer_auth']) || !is_array($data['customer_auth'])) {
+    $data['customer_auth'] = array();
   }
   $changed = false;
   foreach ($data['customers'] as $session => $customers) {
@@ -306,6 +309,75 @@ function mikhmonFindCustomer($session, $id) {
     if (isset($customer['id']) && (string) $customer['id'] === (string) $id) return $customer;
   }
   return false;
+}
+
+function mikhmonCustomerPhone($phone) {
+  $phone = preg_replace('/[^0-9]/', '', (string) $phone);
+  if (substr($phone, 0, 1) === '0') $phone = '62' . substr($phone, 1);
+  return $phone;
+}
+
+function mikhmonFindCustomerByPhone($phone) {
+  $phone = mikhmonCustomerPhone($phone);
+  if ($phone === '') return array();
+  $database = mikhmonReadDatabase();
+  foreach ((array) ($database['customers'] ?? array()) as $session => $customers) {
+    foreach ((array) $customers as $customer) {
+      if (mikhmonCustomerPhone($customer['phone'] ?? '') === $phone) {
+        $customer = mikhmonNormalizeCustomer($customer);
+        $customer['_session'] = (string) $session;
+        return $customer;
+      }
+    }
+  }
+  return array();
+}
+
+function mikhmonSaveCustomerPortalPassword($session, $customerId, $password) {
+  $password = (string) $password;
+  if (strlen($password) < 6) return false;
+  $database = mikhmonReadDatabase();
+  foreach ((array) ($database['customers'][$session] ?? array()) as $index => $customer) {
+    if ((string) ($customer['id'] ?? '') !== (string) $customerId) continue;
+    $database['customers'][$session][$index]['portal_password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+    $database['customers'][$session][$index]['portal_enabled'] = true;
+    $database['customers'][$session][$index]['updated_at'] = time();
+    return mikhmonWriteDatabase($database);
+  }
+  return false;
+}
+
+function mikhmonCustomerPortalPasswordValid($customer, $password) {
+  return is_array($customer) && !empty($customer['portal_password_hash']) && password_verify((string) $password, (string) $customer['portal_password_hash']);
+}
+
+function mikhmonSaveCustomerOtp($phone, $otp, $expiresAt) {
+  $phone = mikhmonCustomerPhone($phone);
+  if ($phone === '' || !preg_match('/^[0-9]{6}$/', (string) $otp)) return false;
+  $database = mikhmonReadDatabase();
+  if (!empty($database['customer_auth'][$phone]['created_at']) && (int) $database['customer_auth'][$phone]['created_at'] > time() - 60) return false;
+  $database['customer_auth'][$phone] = array(
+    'otp_hash' => password_hash((string) $otp, PASSWORD_DEFAULT),
+    'expires_at' => (int) $expiresAt,
+    'attempts' => 0,
+    'created_at' => time(),
+  );
+  return mikhmonWriteDatabase($database);
+}
+
+function mikhmonVerifyCustomerOtp($phone, $otp) {
+  $phone = mikhmonCustomerPhone($phone);
+  $database = mikhmonReadDatabase();
+  $auth = $database['customer_auth'][$phone] ?? array();
+  if (!$auth || empty($auth['otp_hash']) || (int) ($auth['expires_at'] ?? 0) < time() || (int) ($auth['attempts'] ?? 0) >= 5) return false;
+  if (!password_verify((string) $otp, (string) $auth['otp_hash'])) {
+    $database['customer_auth'][$phone]['attempts'] = (int) ($auth['attempts'] ?? 0) + 1;
+    mikhmonWriteDatabase($database);
+    return false;
+  }
+  unset($database['customer_auth'][$phone]);
+  mikhmonWriteDatabase($database);
+  return true;
 }
 
 function mikhmonAssignCustomer($session, $customerId, $mitraId) {

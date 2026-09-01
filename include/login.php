@@ -62,6 +62,7 @@ $loginLogo .= '?v=' . (is_file('./img/login-logo.png') ? filemtime('./img/login-
         </tr>
       </table>
       </form>
+      <p style="margin-top:12px"><a href="./pelanggan.php"><i class="fa fa-mobile"></i> Login Pelanggan dengan OTP</a></p>
       </center>
     </div>
   </div>
