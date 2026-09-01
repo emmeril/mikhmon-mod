@@ -73,6 +73,13 @@ credentials or Xendit API keys, then save and test the connection. An unpaid
 invoice in `Billing` can then generate a hosted payment link and stores its
 provider/reference on the invoice.
 
+After a verified Midtrans/Xendit payment, Mikhmon automatically attempts to
+activate every customer service and completes the invoice. If the router is
+offline, a user is missing, or one activation fails, the invoice remains in the
+gateway-confirmed state and Billing shows `Coba Lagi Aktivasi`. Successful
+activation is locked per invoice so duplicate callbacks cannot create duplicate
+billing cycles.
+
 Secrets can be supplied through environment variables instead of the settings
 file: `MIKHMON_MIDTRANS_MERCHANT_ID`, `MIKHMON_MIDTRANS_SERVER_KEY`,
 `MIKHMON_MIDTRANS_CLIENT_KEY`, `MIKHMON_XENDIT_SECRET_KEY`,

@@ -3,6 +3,7 @@ error_reporting(0);
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/lib/payment_gateway.php';
+require_once __DIR__ . '/lib/payment_activation.php';
 require_once __DIR__ . '/include/database.php';
 
 function paymentNotificationRespond($httpCode, $payload) {
@@ -75,4 +76,17 @@ if ($paid) {
 }
 if (mikhmonSaveInvoice($match['session'], $invoice) === false) paymentNotificationRespond(500, array('success' => false, 'message' => 'Invoice update failed.'));
 
-paymentNotificationRespond(200, array('success' => true, 'received' => true, 'paid' => $paid));
+$activation = array('success' => false, 'message' => 'Pembayaran belum berstatus final.');
+if ($paid) {
+  $activation = mikhmonPaymentActivationProcess($match['session'], $invoice['id'], null, array('actor_name' => 'Otomatis ' . strtoupper($provider)));
+}
+
+// Always acknowledge a valid gateway notification. A router outage must not
+// make the provider retry the payment indefinitely; Billing keeps a retry path.
+paymentNotificationRespond(200, array(
+  'success' => true,
+  'received' => true,
+  'paid' => $paid,
+  'activation_success' => !empty($activation['success']),
+  'activation_message' => $activation['message'] ?? '',
+));
