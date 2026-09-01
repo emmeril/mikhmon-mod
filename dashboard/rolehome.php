@@ -106,6 +106,15 @@ if (!empty($routerConnected)) {
   $pppProfiles = $API->comm('/ppp/profile/print');
 }
 
+// Include paid Billing invoices even when the router is temporarily offline.
+$monthReports = mikhmonReportMergeBillingRows($session, $monthReports, '', $monthKey);
+if (mikhmonIsMitra()) {
+  $mitraAllUsernames = mikhmonMitraUsernames($session);
+  $monthReports = array_values(array_filter($monthReports, function ($row) use ($mitraAllUsernames) {
+    $parts = mikhmonReportParts($row);
+    return mikhmonRowBelongsToCurrentMitra($row) || (isset($parts[2]) && isset($mitraAllUsernames[trim($parts[2])]));
+  }));
+}
 $profileCosts = mikhmonReportProfileCosts($hotspotProfiles, $pppProfiles);
 $profileSellingPrices = mikhmonReportProfileSellingPrices($hotspotProfiles, $pppProfiles);
 $reportTotals = array(

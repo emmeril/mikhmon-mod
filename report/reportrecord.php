@@ -53,8 +53,10 @@ if (!function_exists('mikhmonReportBillingPeriodMatch')) {
 	function mikhmonReportBillingPeriodMatch($paidAt, $idhr = '', $idbl = '')
 	{
 		if ($paidAt <= 0) return false;
-		if ($idhr !== '') return strtolower(date('M/d/Y', $paidAt)) === strtolower((string) $idhr);
-		if ($idbl !== '') return strtolower(date('MY', $paidAt)) === strtolower((string) $idbl);
+		$idhr = trim((string) $idhr);
+		$idbl = trim((string) $idbl);
+		if ($idhr !== '') return strtolower(date('M/d/Y', $paidAt)) === strtolower($idhr);
+		if ($idbl !== '') return strtolower(date('MY', $paidAt)) === strtolower($idbl);
 		return true;
 	}
 }
@@ -72,16 +74,19 @@ if (!function_exists('mikhmonReportBillingRows')) {
 			$date = strtolower(date('M/d/Y', $paidAt));
 			$time = date('H:i:s', $paidAt);
 			$invoiceNumber = trim((string) ($invoice['number'] ?? $invoice['id'] ?? 'Billing'));
+			$gateway = strtoupper(trim((string) ($invoice['payment_gateway'] ?? '')));
+			$sourceLabel = 'Billing / ' . $invoiceNumber . ($gateway !== '' ? ' / ' . $gateway : '');
 			foreach (mikhmonReportBillingInvoiceServices($invoice) as $service) {
 				$username = trim((string) ($service['username'] ?? ''));
 				if ($username === '') continue;
 				$type = ($service['service'] ?? '') === 'pppoe' ? 'PPPoE' : 'Hotspot';
 				$profile = trim((string) ($service['profile'] ?? ''));
 				$amount = (float) ($service['amount'] ?? 0);
-				$parts = array($date, $time, $username, $amount, '', $type, '', $profile, 'Billing / ' . $invoiceNumber, strtolower($type), '');
+				$parts = array($date, $time, $username, $amount, '', $type, '', $profile, $sourceLabel, strtolower($type), '');
 				$rows[] = array(
 					'name' => implode('-|-', $parts), 'source' => $date, 'owner' => strtolower(date('MY', $paidAt)),
 					'billing_invoice_id' => (string) ($invoice['id'] ?? ''), 'billing' => true,
+					'billing_payment_gateway' => strtolower($gateway),
 					'billing_owner_tag' => $ownerTag,
 				);
 			}
