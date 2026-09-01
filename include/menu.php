@@ -122,6 +122,11 @@ if (!isset($_SESSION["mikhmon"])) {
     $sulog = "active";
     $mpage = $_user_log;
     $lmenu = "menu-open";
+  } elseif ($report == "systemlog") {
+    $log = "active";
+    $ssystemlog = "active";
+    $mpage = "System Logs";
+    $lmenu = "menu-open";
   } elseif ($ppp == "secrets" || $ppp == "addsecret" || $enablesecr != "" || $disablesecr != "" || $removesecr != "" || $secretbyname != "") {
     $mppp = "active";
     if ($ppp == "addsecret") { $saddsecret = "active"; } else { $ssecrets = "active"; }
@@ -481,6 +486,7 @@ include('./info.php');
   <div class="dropdown-container <?= $lmenu; ?>">
     <a href="./?hotspot=log&session=<?= $session; ?>" class="<?= $slog; ?>"> <i class="fa fa-wifi "></i> <?= $_hotspot_log ?> </a>
     <a href="./?report=userlog&idbl=<?= strtolower(date("M")) . date("Y"); ?>&session=<?= $session; ?>" class=" <?= $sulog; ?>"> <i class="fa fa-users "></i> <?= $_user_log ?> </a>
+    <a href="./?report=systemlog&session=<?= rawurlencode($session); ?>" class=" <?= $ssystemlog; ?>"> <i class="fa fa-history "></i> System Logs </a>
   </div>
   <!--system-->
   <div class="dropdown-btn <?= $sysmenu; ?>"><i class=" fa fa-gear"></i> <?= $_system ?>

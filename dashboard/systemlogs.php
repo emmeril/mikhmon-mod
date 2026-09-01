@@ -1,6 +1,8 @@
 <?php
 include_once(__DIR__ . '/../include/systemlog.php');
-$systemLogs = mikhmonReadSystemLogs(20);
+$isSystemLogPage = isset($report) && $report === 'systemlog';
+$systemLogs = mikhmonReadSystemLogs($isSystemLogPage ? 200 : 20);
+$systemLogMaxHeight = $isSystemLogPage ? '75vh' : '320px';
 $systemLogFormatTime = function ($systemLog) {
   if ((int) ($systemLog['timestamp'] ?? 0) <= 0) return '-';
   try {
@@ -20,11 +22,14 @@ $systemLogLevelClasses = array(
 ?>
 <div class="card">
   <div class="card-header">
-    <h3><i class="fa fa-history"></i> System Logs Aplikasi &nbsp; | &nbsp;&nbsp;<i onclick="location.reload();" class="fa fa-refresh pointer" title="Muat ulang log"></i></h3>
+    <h3><i class=" fa fa-align-justify"></i> System Logs Aplikasi &nbsp; | &nbsp;&nbsp;<i onclick="location.reload();" class="fa fa-refresh pointer" title="Reload data"></i></h3>
   </div>
   <div class="card-body">
-    <div style="padding:5px; max-height:320px;" class="overflow">
-      <table class="table table-sm table-bordered table-hover" style="font-size:12px;">
+    <div style="max-width: 350px;">
+      <input id="filterTable" type="text" class="form-control" placeholder="Search..">
+    </div>
+    <div style="padding: 5px; max-height: <?= $systemLogMaxHeight; ?>;" class="mr-t-10 overflow">
+      <table class="table table-sm table-bordered table-hover" style="font-size: 12px;" id="dataTable">
         <thead>
           <tr><th>Waktu</th><th>Level</th><th>Aktivitas</th><th>Pengguna</th></tr>
         </thead>

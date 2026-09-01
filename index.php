@@ -156,6 +156,7 @@ if (!isset($_SESSION["mikhmon"])) {
   elseif ($customer == 'service-add') $requestedRoute = 'customer-service-add';
   elseif ($report == 'selling') $requestedRoute = 'report-selling';
   elseif ($report == 'resume-report') $requestedRoute = 'report-resume';
+  elseif ($report == 'systemlog') $requestedRoute = 'system-log';
   elseif ($admin == 'settings') $requestedRoute = 'admin-settings';
   elseif ($admin == 'routers') $requestedRoute = 'admin-routers';
   elseif ($admin == 'users') $requestedRoute = 'admin-users';
@@ -181,7 +182,7 @@ if (!isset($_SESSION["mikhmon"])) {
     exit;
   }
 
-  $localRoutes = array('logout', 'admin-settings', 'admin-routers', 'admin-users', 'admin-fonnte', 'admin-payment-gateway', 'admin-router-add', 'admin-session-settings');
+  $localRoutes = array('logout', 'system-log', 'admin-settings', 'admin-routers', 'admin-users', 'admin-fonnte', 'admin-payment-gateway', 'admin-router-add', 'admin-session-settings');
   $routerConnected = false;
   $API = null;
   $identity = isset($hotspotname) ? $hotspotname : $session;
@@ -199,7 +200,7 @@ if (!isset($_SESSION["mikhmon"])) {
 
   $pagehotspot = array('users','hosts','ipbinding','cookies','log','dhcp-leases');
   $pageppp = array('secrets','profiles','active',);
-  $pagereport = array('userlog','selling');
+  $pagereport = array('userlog','selling','systemlog');
 
   include_once('./include/headhtml.php');
 
@@ -311,6 +312,11 @@ if (!isset($_SESSION["mikhmon"])) {
 // hotspot log
   elseif ($report == "userlog") {
     include_once('./report/userlog.php');
+  }
+
+// application system log
+  elseif ($report == "systemlog") {
+    include_once('./dashboard/systemlogs.php');
   }
 
 // about was removed from the navigation; redirect old bookmarks home
