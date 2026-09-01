@@ -52,6 +52,15 @@ function mikhmonCustomerPortalVoucherProfiles($api) {
   return $profiles;
 }
 
+function mikhmonCustomerPortalVoucherAvailable($api, $username) {
+  $username = trim((string) $username);
+  if ($username === '' || !is_object($api) || !method_exists($api, 'comm')) return false;
+  $rows = $api->comm('/ip/hotspot/user/print', array('?name' => $username));
+  if (mikhmonPaymentActivationApiError($rows) !== '' || empty($rows[0])) return false;
+  $disabled = strtolower(trim((string) ($rows[0]['disabled'] ?? 'no')));
+  return !in_array($disabled, array('yes', 'true'), true);
+}
+
 function mikhmonCustomerPortalMonthlyServices($customer, $api) {
   if (!is_object($api) || !method_exists($api, 'comm')) return array();
   $hotspotProfiles = array(); $pppoeProfiles = array();
