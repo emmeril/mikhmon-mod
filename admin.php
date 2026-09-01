@@ -38,6 +38,7 @@ $ids = array(
   "settings",
   "admin-settings",
   "fonnte",
+  "payment-gateway",
 );
 
 // lang
@@ -121,6 +122,15 @@ if ($id == "login" || substr($url, -1) == "p") {
   } else {
     include_once('./include/menu.php');
     include_once('./settings/fonnte.php');
+  }
+} elseif ($id == "payment-gateway") {
+  // Keep gateway settings in the router dashboard when a router session is selected.
+  if (!empty($session)) {
+    $paymentGatewayTarget = './?admin=payment-gateway&session=' . rawurlencode($session);
+    echo '<script>window.location=' . json_encode($paymentGatewayTarget) . '</script>';
+  } else {
+    include_once('./include/menu.php');
+    include_once('./settings/paymentgateway.php');
   }
 } elseif ($id == "database" && !empty($session)) {
   $legacyTarget = './?admin=database&session=' . rawurlencode($session);

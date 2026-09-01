@@ -176,6 +176,11 @@ if (!isset($_SESSION["mikhmon"])) {
     $mpage = "WhatsApp Gateway Fonnte";
     $settmenu = "menu-open";
     $ssett = "active";
+  } elseif ($admin == "payment-gateway") {
+    $spaymentgateway = "active";
+    $mpage = "Payment Gateway";
+    $settmenu = "menu-open";
+    $ssett = "active";
   } elseif ($admin == "router-add") {
     $snsettings = "active";
     $mpage = $_add_router;
@@ -194,6 +199,9 @@ if (!isset($_SESSION["mikhmon"])) {
   } elseif ($id == "fonnte") {
     $sfonnte = "active";
     $mpage = "WhatsApp Gateway Fonnte";
+  } elseif ($id == "payment-gateway") {
+    $spaymentgateway = "active";
+    $mpage = "Payment Gateway";
   } elseif ($admin == "routers") {
     $srouterlist = "active";
     $ssett = "active";
@@ -307,6 +315,7 @@ if($idleto != "disable"){
   <a href="./admin.php?id=admin-settings" class="menu"><i class="fa fa-user-circle"></i> <?= $_admin_settings ?></a>
   <a href="./admin.php?id=users" class="menu <?= $susersadmin; ?>"><i class="fa fa-users"></i> Mitra &amp; Biller</a>
   <a href="./admin.php?id=fonnte" class="menu <?= $sfonnte; ?>"><i class="fa fa-whatsapp"></i> WhatsApp Gateway</a>
+  <a href="./admin.php?id=payment-gateway" class="menu <?= $spaymentgateway; ?>"><i class="fa fa-credit-card"></i> Payment Gateway</a>
   <a href="./admin.php?id=settings&router=new-<?= rand(1111,9999) ?>" class="menu <?= $snsettings ?>"><i class="fa fa-plus"></i> <?= $_add_router ?></a>
 
 </div>
@@ -500,6 +509,7 @@ include('./info.php');
   <div class="dropdown-container <?= $settmenu; ?>">
   <a href="./?admin=settings&session=<?= rawurlencode($session); ?>" class="menu <?= $sadminsettings; ?>"> <i class="fa fa-user-circle"></i> <?= $_admin_settings ?> </a>
   <a href="./?admin=fonnte&session=<?= rawurlencode($session); ?>" class="menu <?= $sfonnte; ?>"> <i class="fa fa-whatsapp"></i> WhatsApp Gateway </a>
+  <a href="./?admin=payment-gateway&session=<?= rawurlencode($session); ?>" class="menu <?= $spaymentgateway; ?>"> <i class="fa fa-credit-card"></i> Payment Gateway </a>
   <a href="./?admin=routers&session=<?= rawurlencode($session); ?>" class="menu <?= $srouterlist; ?>"> <i class="fa fa-server"></i> <?= $_router_list ?> </a>
   <a href="./?admin=router-add&router=new-<?= rand(1111, 9999); ?>&return=routers&session=<?= rawurlencode($session); ?>" class="menu <?= $snsettings; ?>"> <i class="fa fa-plus"></i> <?= $_add_router ?> </a>
   <a href="./?admin=users&session=<?= rawurlencode($session); ?>" class="menu <?= $sroleusers; ?>"> <i class="fa fa-users"></i> Manajemen User </a>

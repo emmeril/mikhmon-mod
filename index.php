@@ -159,6 +159,7 @@ if (!isset($_SESSION["mikhmon"])) {
   elseif ($admin == 'routers') $requestedRoute = 'admin-routers';
   elseif ($admin == 'users') $requestedRoute = 'admin-users';
   elseif ($admin == 'fonnte') $requestedRoute = 'admin-fonnte';
+  elseif ($admin == 'payment-gateway') $requestedRoute = 'admin-payment-gateway';
   elseif ($admin == 'router-add') $requestedRoute = 'admin-router-add';
   elseif ($admin == 'session-settings') $requestedRoute = 'admin-session-settings';
   elseif ($admin == 'database') $requestedRoute = 'admin-database';
@@ -179,7 +180,7 @@ if (!isset($_SESSION["mikhmon"])) {
     exit;
   }
 
-  $localRoutes = array('logout', 'admin-settings', 'admin-routers', 'admin-users', 'admin-fonnte', 'admin-router-add', 'admin-session-settings');
+  $localRoutes = array('logout', 'admin-settings', 'admin-routers', 'admin-users', 'admin-fonnte', 'admin-payment-gateway', 'admin-router-add', 'admin-session-settings');
   $routerConnected = false;
   $API = null;
   $identity = isset($hotspotname) ? $hotspotname : $session;
@@ -258,6 +259,11 @@ if (!isset($_SESSION["mikhmon"])) {
 // WhatsApp Gateway settings inside the router dashboard
   elseif ($admin == "fonnte" && mikhmonIsAdmin()) {
     include_once('./settings/fonnte.php');
+  }
+
+// Payment gateway settings inside the router dashboard
+  elseif ($admin == "payment-gateway" && mikhmonIsAdmin()) {
+    include_once('./settings/paymentgateway.php');
   }
 
 // Add router inside the router dashboard

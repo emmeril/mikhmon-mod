@@ -65,6 +65,21 @@ working hours, from 08:00 to 17:00 in the configured Mikhmon timezone. Messages
 that become pending outside those hours are retried by the billing worker on
 the next working period. Manual invoice sending follows the same restriction.
 
+#### Payment gateway (Midtrans and Xendit)
+
+Open `Settings > Payment Gateway` as an administrator to enable online invoice
+payments. Select the default provider, configure the Midtrans Sandbox/Production
+credentials or Xendit API keys, then save and test the connection. An unpaid
+invoice in `Billing` can then generate a hosted payment link and stores its
+provider/reference on the invoice.
+
+Secrets can be supplied through environment variables instead of the settings
+file: `MIKHMON_MIDTRANS_MERCHANT_ID`, `MIKHMON_MIDTRANS_SERVER_KEY`,
+`MIKHMON_MIDTRANS_CLIENT_KEY`, `MIKHMON_XENDIT_SECRET_KEY`,
+`MIKHMON_XENDIT_PUBLIC_KEY`, and `MIKHMON_XENDIT_WEBHOOK_TOKEN`. Environment
+values take precedence and are never written back to disk. The local config is
+stored in `data/payment-gateway.json` with restrictive permissions.
+
 #### Download update.zip
 [update.zip](https://raw.githubusercontent.com/laksa19/laksa19.github.io/master/download/update.zip){:target="_blank"}
 

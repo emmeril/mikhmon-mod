@@ -1,0 +1,41 @@
+<?php
+session_save_path('/tmp');
+session_start();
+require dirname(__DIR__) . '/lib/payment_gateway.php';
+
+function paymentGatewayTestAssert($condition, $message) {
+  if (!$condition) { fwrite(STDERR, 'FAIL: ' . $message . PHP_EOL); exit(1); }
+}
+
+$configPath = tempnam(sys_get_temp_dir(), 'mikhmon-payment-');
+putenv('MIKHMON_PAYMENT_GATEWAY_CONFIG=' . $configPath);
+
+$config = mikhmonPaymentGatewayNormalizeConfig(array(
+  'enabled' => true,
+  'default_gateway' => 'xendit',
+  'currency' => 'idr',
+  'invoice_duration' => 5,
+  'midtrans' => array('enabled' => true, 'environment' => 'production', 'server_key' => "server\nkey"),
+  'xendit' => array('enabled' => true, 'secret_key' => 'secret-key'),
+));
+paymentGatewayTestAssert($config['enabled'] === true && $config['default_gateway'] === 'xendit', 'general settings are normalized');
+paymentGatewayTestAssert($config['currency'] === 'IDR' && $config['invoice_duration'] === 900, 'currency and duration are bounded');
+paymentGatewayTestAssert($config['midtrans']['server_key'] === 'serverkey', 'secrets remove line breaks');
+paymentGatewayTestAssert(mikhmonPaymentGatewayWriteConfig($config), 'configuration can be written atomically');
+$read = mikhmonPaymentGatewayReadStoredConfig();
+paymentGatewayTestAssert($read['xendit']['secret_key'] === 'secret-key', 'configuration can be read back');
+
+$csrf = mikhmonPaymentGatewayCsrfToken();
+paymentGatewayTestAssert(mikhmonPaymentGatewayValidCsrf($csrf), 'generated csrf is accepted');
+paymentGatewayTestAssert(!mikhmonPaymentGatewayValidCsrf('invalid'), 'invalid csrf is rejected');
+paymentGatewayTestAssert(mikhmonPaymentGatewayMask('abcdefghijkl') === 'abcd****ijkl', 'secrets are masked for display');
+paymentGatewayTestAssert(!mikhmonPaymentGatewayCreatePayment('midtrans', array('order_id' => 'INV-1', 'amount' => 1000), array('enabled' => false))['success'], 'disabled gateway does not create payments');
+paymentGatewayTestAssert(mikhmonPaymentGatewayValidMidtransNotification(array(
+  'order_id' => 'INV-1', 'status_code' => '200', 'gross_amount' => '1000',
+  'signature_key' => hash('sha512', 'INV-12001000server'),
+), 'server'), 'Midtrans signatures validate');
+paymentGatewayTestAssert(mikhmonPaymentGatewayMidtransPaid(array('transaction_status' => 'settlement')), 'Midtrans settlement is paid');
+paymentGatewayTestAssert(mikhmonPaymentGatewayXenditPaid(array('status' => 'PAID')), 'Xendit paid status is recognized');
+
+@unlink($configPath);
+echo 'payment-gateway-tests: OK' . PHP_EOL;
