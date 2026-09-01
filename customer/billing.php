@@ -525,9 +525,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 
-// Keep the last payment visible until the next invoice actually becomes due.
-// A new cycle is generated immediately after payment, so simply selecting the
-// newest invoice would make a successful payment look unpaid in the table.
+// Show the active unpaid invoice when one exists. A paid invoice automatically
+// creates the next billing invoice, which should be the row users act on.
 $latestInvoices = array();
 $invoiceCandidates = array();
 foreach ($invoices as $invoice) if (isset($invoice['customer_id'])) {
@@ -542,11 +541,8 @@ foreach ($invoices as $invoice) if (isset($invoice['customer_id'])) {
 }
 foreach ($invoiceCandidates as $key => $candidates) {
   $paid = $candidates['paid']; $unpaid = $candidates['unpaid'];
-  if (!$unpaid) { if ($paid) $latestInvoices[$key] = $paid; continue; }
-  $unpaidDue = billingDueTimestamp($unpaid['due_date'] ?? '');
-  // Invalid/missing dates retain the old behavior and remain actionable.
-  $unpaidIsDue = $unpaidDue <= 0 || $unpaidDue <= time();
-  $latestInvoices[$key] = $paid && !$unpaidIsDue ? $paid : $unpaid;
+  if ($unpaid) $latestInvoices[$key] = $unpaid;
+  elseif ($paid) $latestInvoices[$key] = $paid;
 }
 ?>
 <div class="row"><div class="col-12"><div class="card">
@@ -562,7 +558,8 @@ foreach ($invoiceCandidates as $key => $candidates) {
       $serviceDetails = billingServiceDetails($customer, $customerUsers, $customerSchedulers, $hotspotProfiles, $pppoeProfiles);
       $firstService = $serviceDetails[0] ?? array('username'=>'','profile'=>'','status_text'=>'-','status'=>'missing');
       $invoice = $latestInvoices[(string) $customer['id']] ?? array();
-      $nextUnpaidInvoice = billingLatestUnpaidInvoice($invoices, $customer['id']);
+      // The selected invoice is already the customer's current unpaid invoice.
+      $nextUnpaidInvoice = array();
       $invoiceStatus = $invoice['status'] ?? 'none';
       $customerDueDate = $invoiceStatus === 'paid' && !empty($invoice['next_due_date'])
         ? (string) $invoice['next_due_date']
@@ -577,9 +574,6 @@ foreach ($invoiceCandidates as $key => $candidates) {
       $invoiceText = billingInvoiceMessage($customer, $invoice, $customerDueDate, $currency, $messageBrand);
       $waUrl = $phone !== '' && $invoiceStatus !== 'none' ? 'https://wa.me/' . $phone . '?text=' . rawurlencode($invoiceText) : '';
       $canSendFonnte = !empty($fonnteConfig['enabled']) && $fonnteConfig['token'] !== '' && $phone !== '' && $invoiceStatus !== 'none';
-      $nextInvoiceText = $nextUnpaidInvoice ? billingInvoiceMessage($customer, $nextUnpaidInvoice, $nextUnpaidInvoice['due_date'] ?? '', $currency, $messageBrand) : '';
-      $nextWaUrl = $phone !== '' && $nextInvoiceText !== '' ? 'https://wa.me/' . $phone . '?text=' . rawurlencode($nextInvoiceText) : '';
-      $canSendNextFonnte = !empty($fonnteConfig['enabled']) && $fonnteConfig['token'] !== '' && $phone !== '' && $nextUnpaidInvoice;
       $gatewayPaymentReceived = !empty($invoice['gateway_payment_received']) && $invoiceStatus === 'unpaid';
       $activationFailed = $gatewayPaymentReceived && ($invoice['activation_status'] ?? '') === 'failed';
       if ($gatewayPaymentReceived) {
@@ -594,33 +588,8 @@ foreach ($invoiceCandidates as $key => $candidates) {
       $paymentExpired = $paymentEnvironmentChanged || (!empty($invoice['payment_created_at']) && (int) $invoice['payment_created_at'] + (int) $paymentGatewayConfig['invoice_duration'] <= time());
       $canCreatePayment = !empty($paymentGatewayConfig['enabled']) && $invoiceStatus === 'unpaid' && !$gatewayPaymentReceived;
       $paymentUrl = !$paymentExpired && !empty($invoice['payment_url']) ? (string) $invoice['payment_url'] : '';
-      $nextPaymentUrl = '';
-      $nextGatewayPaymentReceived = !empty($nextUnpaidInvoice['gateway_payment_received']);
-      $nextActivationFailed = $nextGatewayPaymentReceived && ($nextUnpaidInvoice['activation_status'] ?? '') === 'failed';
-      if ($nextUnpaidInvoice && !empty($nextUnpaidInvoice['payment_url'])) {
-        $nextStoredEnvironment = (string) ($nextUnpaidInvoice['payment_environment'] ?? '');
-        if ($nextStoredEnvironment === '' && ($nextUnpaidInvoice['payment_gateway'] ?? '') === 'midtrans') $nextStoredEnvironment = mikhmonPaymentGatewayMidtransUrlEnvironment($nextUnpaidInvoice['payment_url']);
-        $nextEnvironmentChanged = ($nextUnpaidInvoice['payment_gateway'] ?? '') === 'midtrans' && $nextStoredEnvironment !== '' && $nextStoredEnvironment !== $paymentGatewayConfig['midtrans']['environment'];
-        $nextExpired = !empty($nextUnpaidInvoice['payment_created_at']) && (int) $nextUnpaidInvoice['payment_created_at'] + (int) $paymentGatewayConfig['invoice_duration'] <= time();
-        if (!$nextEnvironmentChanged && !$nextExpired && empty($nextUnpaidInvoice['gateway_payment_received'])) $nextPaymentUrl = (string) $nextUnpaidInvoice['payment_url'];
-      }
     ?>
       <tr class="billing-row" data-search="<?= htmlspecialchars(strtolower($serviceSearch), ENT_QUOTES); ?>" data-status="<?= $invoiceStatus === 'paid' ? 'paid' : 'unpaid'; ?>"><td><?= $index + 1; ?></td><td><?= htmlspecialchars($customerName, ENT_QUOTES); ?></td><td><?= htmlspecialchars($customer['phone'] ?? '', ENT_QUOTES); ?></td><td class="billing-service-count"><?= count($serviceDetails); ?></td><td><select class="form-control billing-service-select"><?php foreach ($serviceDetails as $serviceIndex => $detail): ?><option value="<?= $serviceIndex; ?>" data-username="<?= htmlspecialchars($detail['username'], ENT_QUOTES); ?>" data-profile="<?= htmlspecialchars($detail['profile'], ENT_QUOTES); ?>" data-user-status="<?= htmlspecialchars($detail['status_text'], ENT_QUOTES); ?>" data-status-class="<?= $detail['status'] === 'active' ? 'text-success' : 'text-danger'; ?>"><?= strtoupper(htmlspecialchars($detail['service'], ENT_QUOTES)); ?></option><?php endforeach; ?></select></td><td class="billing-username"><?= htmlspecialchars($firstService['username'], ENT_QUOTES); ?></td><td class="billing-profile"><?= htmlspecialchars($firstService['profile'], ENT_QUOTES); ?></td><td class="billing-user-status <?= $firstService['status'] === 'active' ? 'text-success' : 'text-danger'; ?>"><strong><?= htmlspecialchars($firstService['status_text'], ENT_QUOTES); ?></strong></td><td class="billing-due-date"><?= htmlspecialchars($customerDueDate !== '' ? $customerDueDate : '-', ENT_QUOTES); ?></td><td><?= htmlspecialchars($invoice['number'] ?? '-', ENT_QUOTES); ?><?php if ($invoiceStatus === 'paid' && $nextUnpaidInvoice): ?><br><small class="text-warning">Berikutnya: <?= htmlspecialchars($nextUnpaidInvoice['number'] ?? '-', ENT_QUOTES); ?></small><?php endif; ?></td><td class="<?= $invoiceStatusClass; ?>"><strong><?= htmlspecialchars($invoiceStatusText, ENT_QUOTES); ?></strong></td><td><?= $amount > 0 ? htmlspecialchars($currency . ' ' . number_format($amount, 0, ',', '.'), ENT_QUOTES) : '-'; ?></td><td><?= $invoiceStatus === 'paid' ? htmlspecialchars($invoice['paid_by_name'] ?? 'Data lama', ENT_QUOTES) : '-'; ?></td><td><?php if ($invoiceStatus === 'paid'): ?><span class="text-success"><i class="fa fa-check"></i> Sudah Bayar</span><?php if ($nextUnpaidInvoice): ?> <span class="text-warning"><i class="fa fa-file-text-o"></i> Invoice berikutnya sudah dibuat</span><?php if ($nextPaymentUrl === '' && !empty($paymentGatewayConfig['enabled'])): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_payment"><input type="hidden" name="payment_gateway_csrf" value="<?= htmlspecialchars(mikhmonPaymentGatewayCsrfToken(), ENT_QUOTES); ?>"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($nextUnpaidInvoice['id'], ENT_QUOTES); ?>"><select name="payment_provider" class="btn" title="Pilih payment gateway"><option value="">Gateway utama</option><option value="midtrans">Midtrans</option><option value="xendit">Xendit</option></select><button class="btn bg-primary" type="submit"><i class="fa fa-credit-card"></i> Buat Link Bayar Berikutnya</button></form><?php endif; ?><?php else: ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Invoice Baru</button></form><?php endif; ?><?php else: ?><?php if ($invoiceStatus === 'none'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Buat Invoice</button></form><?php endif; ?><?php if ($paymentUrl !== '' && !$gatewayPaymentReceived): ?><?php elseif ($canCreatePayment): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_payment"><input type="hidden" name="payment_gateway_csrf" value="<?= htmlspecialchars(mikhmonPaymentGatewayCsrfToken(), ENT_QUOTES); ?>"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><select name="payment_provider" class="btn" title="Pilih payment gateway"><option value="">Gateway utama</option><option value="midtrans">Midtrans</option><option value="xendit">Xendit</option></select><button class="btn bg-primary" type="submit"><i class="fa fa-credit-card"></i> Buat Link Bayar</button></form><?php endif; ?><?php if ($waUrl !== ''): ?><a class="btn bg-green" target="_blank" href="<?= htmlspecialchars($waUrl, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Kirim</a><?php endif; ?><?php if ($canSendFonnte): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="send_fonnte"><input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-green" type="submit" title="Kirim melalui Fonnte"><i class="fa fa-send"></i> Fonnte</button></form><?php endif; ?><?php if ($invoiceStatus === 'unpaid'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="mark_paid"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-success" type="submit" onclick="return confirm('Tandai invoice lunas dan aktifkan semua layanan pelanggan?');"><i class="fa fa-check"></i> <?= $gatewayPaymentReceived ? ($activationFailed ? 'Coba Lagi Aktivasi' : 'Aktifkan Layanan') : 'Sudah Bayar'; ?></button></form><?php endif; ?><?php endif; ?></td></tr>
-      <?php if ($invoiceStatus === 'paid' && $nextUnpaidInvoice): ?>
-      <tr class="billing-next-row bg-light">
-        <td></td>
-        <td colspan="8" class="text-right"><strong>Invoice berikutnya</strong> &middot; Jatuh tempo <?= htmlspecialchars($nextUnpaidInvoice['due_date'] ?? '-', ENT_QUOTES); ?></td>
-        <td><strong><?= htmlspecialchars($nextUnpaidInvoice['number'] ?? '-', ENT_QUOTES); ?></strong></td>
-        <td class="<?= $nextGatewayPaymentReceived ? 'text-success' : 'text-danger'; ?>"><strong><?= $nextGatewayPaymentReceived ? 'Diterima ' . strtoupper(htmlspecialchars($nextUnpaidInvoice['payment_gateway'] ?? 'gateway', ENT_QUOTES)) : 'Belum Bayar'; ?></strong></td>
-        <td><?= htmlspecialchars($currency . ' ' . number_format((float) ($nextUnpaidInvoice['amount'] ?? 0), 0, ',', '.'), ENT_QUOTES); ?></td>
-        <td>-</td>
-        <td>
-          <?php if ($nextWaUrl !== ''): ?><a class="btn bg-green" target="_blank" href="<?= htmlspecialchars($nextWaUrl, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Kirim</a><?php endif; ?>
-          <?php if ($canSendNextFonnte): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="send_fonnte"><input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($nextUnpaidInvoice['id'], ENT_QUOTES); ?>"><button class="btn bg-green" type="submit" title="Kirim invoice berikutnya melalui Fonnte"><i class="fa fa-send"></i> Fonnte</button></form><?php endif; ?>
-          <form method="post" style="display:inline"><input type="hidden" name="billing_action" value="mark_paid"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($nextUnpaidInvoice['id'], ENT_QUOTES); ?>"><button class="btn bg-success" type="submit" onclick="return confirm('Tandai invoice berikutnya lunas dan lanjutkan periode billing?');"><i class="fa fa-check"></i> <?= $nextGatewayPaymentReceived ? ($nextActivationFailed ? 'Coba Lagi Aktivasi' : 'Aktifkan Layanan') : 'Sudah Bayar'; ?></button></form>
-        </td>
-      </tr>
-      <?php endif; ?>
     <?php endforeach; ?>
     <?php if (!$customers): ?><tr><td colspan="14" class="text-center">Belum ada data pelanggan.</td></tr><?php endif; ?><tr id="billingNoResults" style="display:none"><td colspan="14" class="text-center">Data billing tidak ditemukan.</td></tr></tbody></table></div>
   </div>
@@ -629,7 +598,7 @@ foreach ($invoiceCandidates as $key => $candidates) {
 $(function(){
   function showBillingService(select){var option=$(select).find('option:selected'),row=$(select).closest('tr'),status=row.find('.billing-user-status');row.find('.billing-username').text(option.data('username')||'-');row.find('.billing-profile').text(option.data('profile')||'-');status.removeClass('text-success text-danger').addClass(option.data('status-class')).find('strong').text(option.data('user-status')||'-');}
   $('.billing-service-select').on('change',function(){showBillingService(this);});
-  function filterBilling(){var search=$('#billingSearch').val().toLowerCase(),status=$('#billingStatus').val(),visible=0;$('.billing-row').each(function(){var row=$(this),text=row.text().toLowerCase()+' '+String(row.data('search')||''),show=text.indexOf(search)>-1&&(status==='all'||row.data('status')===status);row.toggle(show);row.next('.billing-next-row').toggle(show);if(show)visible++;});$('#billingVisibleCount').text(visible);$('#billingNoResults').toggle(visible===0&&$('.billing-row').length>0);}
+  function filterBilling(){var search=$('#billingSearch').val().toLowerCase(),status=$('#billingStatus').val(),visible=0;$('.billing-row').each(function(){var row=$(this),text=row.text().toLowerCase()+' '+String(row.data('search')||''),show=text.indexOf(search)>-1&&(status==='all'||row.data('status')===status);row.toggle(show);if(show)visible++;});$('#billingVisibleCount').text(visible);$('#billingNoResults').toggle(visible===0&&$('.billing-row').length>0);}
   $('#billingSearch').on('input',filterBilling);$('#billingStatus').on('change',filterBilling);filterBilling();
 });
 </script>
