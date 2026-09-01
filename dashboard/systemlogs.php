@@ -1,6 +1,16 @@
 <?php
 include_once(__DIR__ . '/../include/systemlog.php');
 $systemLogs = mikhmonReadSystemLogs(20);
+$systemLogFormatTime = function ($systemLog) {
+  if ((int) ($systemLog['timestamp'] ?? 0) <= 0) return '-';
+  try {
+    return (new DateTime('@' . (int) $systemLog['timestamp']))
+      ->setTimezone(new DateTimeZone($systemLog['timezone'] ?? mikhmonSystemLogTimezone()))
+      ->format('Y-m-d H:i:s');
+  } catch (Exception $exception) {
+    return date('Y-m-d H:i:s', (int) $systemLog['timestamp']);
+  }
+};
 $systemLogLevelClasses = array(
   'success' => 'text-success',
   'warning' => 'text-warning',
@@ -24,9 +34,9 @@ $systemLogLevelClasses = array(
         <?php else: foreach ($systemLogs as $systemLog): ?>
           <?php $levelClass = $systemLogLevelClasses[$systemLog['level']] ?? 'text-info'; ?>
           <tr>
-            <td class="text-nowrap"><?= $systemLog['timestamp'] > 0 ? htmlspecialchars(date('Y-m-d H:i:s', $systemLog['timestamp']), ENT_QUOTES) : '-'; ?></td>
+            <td class="text-nowrap"><?= htmlspecialchars($systemLogFormatTime($systemLog), ENT_QUOTES); ?></td>
             <td class="<?= $levelClass; ?>"><?= strtoupper(htmlspecialchars($systemLog['level'], ENT_QUOTES)); ?></td>
-            <td><b><?= htmlspecialchars($systemLog['category'], ENT_QUOTES); ?></b><br><?= htmlspecialchars($systemLog['message'], ENT_QUOTES); ?><?php if ($systemLog['session'] !== ''): ?><br><small>Router: <?= htmlspecialchars($systemLog['session'], ENT_QUOTES); ?></small><?php endif; ?></td>
+            <td><b><?= htmlspecialchars($systemLog['category'], ENT_QUOTES); ?></b><br><?= htmlspecialchars($systemLog['message'], ENT_QUOTES); ?><?php if ($systemLog['session'] !== ''): ?><br><small>Router: <?= htmlspecialchars($systemLog['session'], ENT_QUOTES); ?></small><?php elseif ($systemLog['role'] === 'admin'): ?><br><small>Router: Semua Router</small><?php endif; ?></td>
             <td><?= htmlspecialchars($systemLog['user'], ENT_QUOTES); ?><br><small><?= strtoupper(htmlspecialchars($systemLog['role'], ENT_QUOTES)); ?><?= $systemLog['ip'] !== '' ? ' &middot; ' . htmlspecialchars($systemLog['ip'], ENT_QUOTES) : ''; ?></small></td>
           </tr>
         <?php endforeach; endif; ?>
