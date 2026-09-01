@@ -25,6 +25,7 @@ fonnteTestAssert($config['enabled'] === true, 'enabled state is preserved');
 fonnteTestAssert($config['token'] === 'demo-token', 'token is normalized safely');
 fonnteTestAssert($config['country_code'] === '62', 'country code contains digits only');
 fonnteTestAssert($config['templates']['reminder'] !== '' && $config['reminder_days'] === 7, 'automation defaults are available');
+fonnteTestAssert($config['queue_min_delay_minutes'] === 5 && $config['queue_max_delay_minutes'] === 20, 'automatic queue delay defaults are available');
 
 $csrfToken = mikhmonFonnteCsrfToken();
 fonnteTestAssert(mikhmonFonnteValidCsrf($csrfToken), 'generated CSRF token is accepted');

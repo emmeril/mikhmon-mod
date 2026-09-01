@@ -25,6 +25,10 @@ function mikhmonFonnteDefaults() {
     'payment_link_enabled' => true,
     'reminder_days' => 7,
     'grace_days' => 0,
+    // Automatic messages are throttled globally so every recipient gets its
+    // own request instead of a broadcast burst.
+    'queue_min_delay_minutes' => 5,
+    'queue_max_delay_minutes' => 20,
     'templates' => array(
       'reminder' => "Yth. Bapak/Ibu {{nama_pelanggan}},\n\nTagihan {{nama_brand}} akan jatuh tempo pada {{jatuh_tempo}}.\nNo. Invoice: {{nomor_invoice}}\nTotal Tagihan: {{total_tagihan}}\n\nDetail layanan:\n{{detail_layanan}}\n\nMohon melakukan pembayaran sebelum jatuh tempo. Terima kasih.",
       'isolation' => "Yth. Bapak/Ibu {{nama_pelanggan}},\n\nLayanan {{nama_brand}} saat ini diisolir karena invoice {{nomor_invoice}} belum dibayar.\nJatuh tempo: {{jatuh_tempo}}\nTotal Tagihan: {{total_tagihan}}\n\nSilakan melakukan pembayaran agar layanan dapat diaktifkan kembali.",
@@ -64,6 +68,8 @@ function mikhmonFonnteReadStoredConfig() {
   $config['payment_link_enabled'] = !empty($config['payment_link_enabled']);
   $config['reminder_days'] = max(1, min(30, (int) ($config['reminder_days'] ?? 7)));
   $config['grace_days'] = max(0, min(30, (int) ($config['grace_days'] ?? 0)));
+  $config['queue_min_delay_minutes'] = max(1, min(120, (int) ($config['queue_min_delay_minutes'] ?? 5)));
+  $config['queue_max_delay_minutes'] = max($config['queue_min_delay_minutes'], min(240, (int) ($config['queue_max_delay_minutes'] ?? 20)));
   $config['token'] = mikhmonFonnteNormalizeToken($config['token'] ?? '');
   $config['country_code'] = preg_replace('/[^0-9]/', '', (string) ($config['country_code'] ?? '62'));
   if ($config['country_code'] === '') $config['country_code'] = '62';
@@ -94,6 +100,8 @@ function mikhmonFonnteWriteConfig($config) {
   $config['payment_link_enabled'] = !empty($config['payment_link_enabled']);
   $config['reminder_days'] = max(1, min(30, (int) ($config['reminder_days'] ?? 7)));
   $config['grace_days'] = max(0, min(30, (int) ($config['grace_days'] ?? 0)));
+  $config['queue_min_delay_minutes'] = max(1, min(120, (int) ($config['queue_min_delay_minutes'] ?? 5)));
+  $config['queue_max_delay_minutes'] = max($config['queue_min_delay_minutes'], min(240, (int) ($config['queue_max_delay_minutes'] ?? 20)));
   $defaultTemplates = mikhmonFonnteDefaults()['templates'];
   $config['templates'] = array_merge($defaultTemplates, isset($config['templates']) && is_array($config['templates']) ? $config['templates'] : array());
   foreach ($defaultTemplates as $key => $defaultTemplate) {

@@ -2,6 +2,7 @@
 
 session_save_path('/tmp');
 session_start();
+date_default_timezone_set('Asia/Jakarta');
 require dirname(__DIR__) . '/include/database.php';
 require dirname(__DIR__) . '/lib/fonnte.php';
 require dirname(__DIR__) . '/lib/billing_automation.php';
@@ -35,7 +36,30 @@ $databasePath = tempnam(sys_get_temp_dir(), 'mikhmon-billing-');
 putenv('MIKHMON_DATABASE_PATH=' . $databasePath);
 $fonntePath = tempnam(sys_get_temp_dir(), 'mikhmon-fonnte-');
 putenv('MIKHMON_FONNTE_CONFIG=' . $fonntePath);
+$queuePath = tempnam(sys_get_temp_dir(), 'mikhmon-fonnte-queue-');
+putenv('MIKHMON_FONNTE_QUEUE=' . $queuePath);
 mikhmonFonnteWriteConfig(array('enabled' => false, 'automation_enabled' => true, 'reminder_enabled' => false, 'isolation_enabled' => true));
+
+$workStart = strtotime('2026-09-01 07:00:00');
+billingAutomationTestAssert(!mikhmonBillingAutomationIsWorkHour(strtotime('2026-09-01 06:59:00')), 'automatic messages wait before 07:00');
+billingAutomationTestAssert(mikhmonBillingAutomationIsWorkHour($workStart), 'automatic messages start at 07:00');
+billingAutomationTestAssert(!mikhmonBillingAutomationIsWorkHour(strtotime('2026-09-01 17:00:00')), 'automatic messages stop at 17:00');
+billingAutomationTestAssert(
+  mikhmonBillingAutomationNextQueueAttempt(strtotime('2026-09-01 16:50:00'), 15) === strtotime('2026-09-02 07:00:00'),
+  'a random slot past closing moves to the next 07:00 window'
+);
+$queueConfig = mikhmonFonnteReadConfig();
+$queueConfig['queue_min_delay_minutes'] = 15;
+$queueConfig['queue_max_delay_minutes'] = 15;
+$queuedAttempt = mikhmonBillingAutomationQueuedSend('08123456789', 'Test queue', $queueConfig, $workStart);
+billingAutomationTestAssert(!empty($queuedAttempt['attempted']), 'the first eligible customer claims the current queue slot');
+$storedQueue = mikhmonBillingAutomationReadQueue();
+billingAutomationTestAssert((int) ($storedQueue['next_attempt_at'] ?? 0) === $workStart + 900, 'the following customer is delayed by the configured random interval');
+$deferredAttempt = mikhmonBillingAutomationQueuedSend('08123456780', 'Test queue 2', $queueConfig, $workStart + 60);
+billingAutomationTestAssert(empty($deferredAttempt['attempted']), 'another customer is not sent in the same queue interval');
+$failedInvoice = array('automation' => array('last_error_event' => 'reminder', 'last_error_at' => $workStart));
+billingAutomationTestAssert(!mikhmonBillingAutomationRetryReady($failedInvoice, 'reminder', $workStart + 1800), 'a failed recipient waits before retrying so later customers can use the queue');
+billingAutomationTestAssert(mikhmonBillingAutomationRetryReady($failedInvoice, 'reminder', $workStart + 3600), 'a failed recipient becomes eligible after the retry delay');
 
 $novemberDue = strtotime('2026-11-05 00:00:00');
 $latePayment = strtotime('2027-02-01 12:00:00');
@@ -90,4 +114,5 @@ billingAutomationTestAssert(strpos($renderedWithLink, $savedInvoice['payment_url
 
 @unlink($databasePath);
 @unlink($fonntePath);
+@unlink($queuePath);
 echo 'billing-automation-tests: OK' . PHP_EOL;

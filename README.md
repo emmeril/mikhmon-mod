@@ -60,10 +60,13 @@ Billing due dates use the 5th day of each month. A late payment does not move
 the following billing cycle; the next invoice remains aligned to the monthly
 5th.
 
-Fonnte invoice, reminder, isolation, and payment messages are sent only during
-working hours, from 08:00 to 17:00 in the configured Mikhmon timezone. Messages
-that become pending outside those hours are retried by the billing worker on
-the next working period. Manual invoice sending follows the same restriction.
+Fonnte invoice, reminder, isolation, and payment messages are sent one recipient
+at a time during working hours, from 07:00 to 17:00 in the configured Mikhmon
+timezone. The next recipient gets a random 5-20 minute delay by default; this
+range can be changed in `Settings > WhatsApp Gateway`. A slot that would pass
+17:00 is moved to 07:00 on the next day. Messages pending outside those hours
+are retried by the billing worker in the next working period. Manual invoice
+sending follows the same working-hour restriction.
 
 #### Payment gateway (Midtrans and Xendit)
 

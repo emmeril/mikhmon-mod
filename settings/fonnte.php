@@ -33,6 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       'payment_link_enabled' => isset($_POST['payment_link_enabled']) && $_POST['payment_link_enabled'] === '1',
       'reminder_days' => max(1, min(30, (int) ($_POST['reminder_days'] ?? 7))),
       'grace_days' => max(0, min(30, (int) ($_POST['grace_days'] ?? 0))),
+      'queue_min_delay_minutes' => max(1, min(120, (int) ($_POST['queue_min_delay_minutes'] ?? 5))),
+      'queue_max_delay_minutes' => max(1, min(240, (int) ($_POST['queue_max_delay_minutes'] ?? 20))),
       'templates' => array(
         'reminder' => array_key_exists('template_reminder', $_POST) ? trim((string) $_POST['template_reminder']) : ($fonnteConfig['templates']['reminder'] ?? ''),
         'isolation' => array_key_exists('template_isolation', $_POST) ? trim((string) $_POST['template_isolation']) : ($fonnteConfig['templates']['isolation'] ?? ''),
@@ -139,6 +141,16 @@ $maskedToken = $fonnteConfig['token'] !== '' ? str_repeat('*', max(4, min(20, st
                 </tr>
                 <tr><td class="align-middle">Notifikasi Bayar</td><td><label><input type="checkbox" name="payment_enabled" value="1" <?= !empty($fonnteConfig['payment_enabled']) ? 'checked' : ''; ?>> Kirim setelah pembayaran</label></td></tr>
                 <tr><td class="align-middle">Link Pembayaran</td><td><label><input type="checkbox" name="payment_link_enabled" value="1" <?= !empty($fonnteConfig['payment_link_enabled']) ? 'checked' : ''; ?>> Buat dan kirim otomatis ke WhatsApp</label><small class="payment-secret-note">Membutuhkan Payment Gateway dan Fonnte aktif. Link dikirim satu kali per invoice.</small></td></tr>
+                <tr>
+                  <td class="align-middle">Jeda Pesan</td>
+                  <td>
+                    <div class="fonnte-automation-control">
+                      <div class="fonnte-day-control"><input class="form-control" type="number" min="1" max="120" name="queue_min_delay_minutes" value="<?= (int) ($fonnteConfig['queue_min_delay_minutes'] ?? 5); ?>"> <span>sampai</span></div>
+                      <div class="fonnte-day-control"><input class="form-control" type="number" min="1" max="240" name="queue_max_delay_minutes" value="<?= (int) ($fonnteConfig['queue_max_delay_minutes'] ?? 20); ?>"> <span>menit (acak)</span></div>
+                    </div>
+                    <small class="payment-secret-note">Pesan otomatis dikirim satu per satu pada jam 07.00-17.00.</small>
+                  </td>
+                </tr>
               </table>
             </div>
           </div>

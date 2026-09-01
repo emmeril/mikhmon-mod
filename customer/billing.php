@@ -486,7 +486,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($invoices as $invoiceRow) if (isset($invoiceRow['id']) && (string) $invoiceRow['id'] === $invoiceId) { $invoiceToSend = $invoiceRow; break; }
     if (!mikhmonFonnteValidCsrf($_POST['fonnte_csrf'] ?? '')) $customerError = 'Sesi pengiriman WhatsApp tidak valid. Muat ulang halaman lalu coba lagi.';
     elseif (!$customer || !$invoiceToSend || (string) ($invoiceToSend['customer_id'] ?? '') !== (string) ($customer['id'] ?? '')) $customerError = 'Invoice atau pelanggan tidak ditemukan.';
-    elseif (!mikhmonBillingAutomationIsWorkHour()) $customerError = 'Pengiriman invoice melalui Fonnte hanya dapat dilakukan pada jam kerja (08.00-17.00).';
+    elseif (!mikhmonBillingAutomationIsWorkHour()) $customerError = 'Pengiriman invoice melalui Fonnte hanya dapat dilakukan pada jam kerja (07.00-17.00).';
     else {
       $brand = isset($brandname) && trim((string) $brandname) !== '' ? trim((string) $brandname) : 'MIKHMON';
       $message = billingInvoiceMessage($customer, $invoiceToSend, $invoiceToSend['due_date'] ?? '', $currency, $brand);
