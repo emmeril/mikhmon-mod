@@ -11,6 +11,10 @@ require_once dirname(__DIR__) . '/lib/billing_automation.php';
 require_once dirname(__DIR__) . '/lib/billing_profile.php';
 
 function mikhmonPaymentActivationApiError($response) {
+  // RouterOS returns the newly created item id as a scalar for successful
+  // add commands (for example, "*733A"). Only structured trap/fatal replies
+  // represent an API error; scalar replies are successful command results.
+  if (is_string($response)) return '';
   if (!is_array($response)) return 'Respons MikroTik tidak valid.';
   foreach (array('!trap', '!fatal') as $type) {
     if (isset($response[$type][0]['message'])) return (string) $response[$type][0]['message'];
