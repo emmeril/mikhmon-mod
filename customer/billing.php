@@ -311,6 +311,31 @@ $customerSchedulers = array(); $customerError = ''; $customerMessage = '';
 $fonnteConfig = mikhmonFonnteReadConfig();
 $paymentGatewayConfig = mikhmonPaymentGatewayReadConfig();
 
+// Webhooks can be delayed or blocked by a firewall. Reconcile recent Midtrans
+// invoices directly so a successful payment is still visible to the operator.
+if (!empty($paymentGatewayConfig['enabled']) && !empty($paymentGatewayConfig['midtrans']['enabled'])) {
+  $midtransReconciled = 0;
+  foreach ($invoices as $invoiceIndex => $invoiceRow) {
+    if ($midtransReconciled >= 20) break;
+    if (($invoiceRow['status'] ?? '') !== 'unpaid' || !empty($invoiceRow['gateway_payment_received']) || ($invoiceRow['payment_gateway'] ?? '') !== 'midtrans' || empty($invoiceRow['payment_order_id'])) continue;
+    if (!empty($invoiceRow['payment_environment']) && $invoiceRow['payment_environment'] !== $paymentGatewayConfig['midtrans']['environment']) continue;
+    if (!empty($invoiceRow['payment_created_at']) && (int) $invoiceRow['payment_created_at'] + (int) $paymentGatewayConfig['invoice_duration'] < time()) continue;
+    $gatewayStatus = mikhmonPaymentGatewayGetMidtransStatus($invoiceRow['payment_order_id'], $paymentGatewayConfig);
+    if (empty($gatewayStatus['success'])) continue;
+    if (!empty($gatewayStatus['paid']) && (int) round((float) $gatewayStatus['amount']) !== (int) round((float) ($invoiceRow['amount'] ?? 0))) continue;
+    $midtransReconciled++;
+    $changed = false;
+    if (($invoiceRow['gateway_status'] ?? '') !== $gatewayStatus['status']) { $invoiceRow['gateway_status'] = $gatewayStatus['status']; $changed = true; }
+    if (!empty($gatewayStatus['reference']) && ($invoiceRow['payment_reference'] ?? '') !== $gatewayStatus['reference']) { $invoiceRow['payment_reference'] = $gatewayStatus['reference']; $changed = true; }
+    if (!empty($gatewayStatus['paid'])) {
+      $invoiceRow['gateway_payment_received'] = true;
+      $invoiceRow['gateway_paid_at'] = $invoiceRow['gateway_paid_at'] ?? time();
+      $changed = true;
+    }
+    if ($changed && mikhmonSaveInvoice($session, $invoiceRow) !== false) $invoices[$invoiceIndex] = $invoiceRow;
+  }
+}
+
 if (!empty($routerConnected)) {
   $hotspotProfiles = $API->comm('/ip/hotspot/user/profile/print');
   $pppoeProfiles = $API->comm('/ppp/profile/print');
@@ -586,6 +611,7 @@ foreach ($invoiceCandidates as $key => $candidates) {
       $waUrl = $phone !== '' && $invoiceStatus !== 'none' ? 'https://wa.me/' . $phone . '?text=' . rawurlencode($invoiceText) : '';
       $canSendFonnte = !empty($fonnteConfig['enabled']) && $fonnteConfig['token'] !== '' && $phone !== '' && $invoiceStatus !== 'none';
       $gatewayPaymentReceived = !empty($invoice['gateway_payment_received']) && $invoiceStatus === 'unpaid';
+      if ($gatewayPaymentReceived) { $invoiceStatusText = 'Pembayaran Diterima'; $invoiceStatusClass = 'text-success'; }
       $storedPaymentEnvironment = (string) ($invoice['payment_environment'] ?? '');
       if ($storedPaymentEnvironment === '' && ($invoice['payment_gateway'] ?? '') === 'midtrans') $storedPaymentEnvironment = mikhmonPaymentGatewayMidtransUrlEnvironment($invoice['payment_url'] ?? '');
       $paymentEnvironmentChanged = ($invoice['payment_gateway'] ?? '') === 'midtrans'

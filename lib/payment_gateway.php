@@ -262,6 +262,27 @@ function mikhmonPaymentGatewayTestConnection($provider, $config = null) {
   return array('success' => false, 'message' => 'Payment gateway tidak dikenal.');
 }
 
+function mikhmonPaymentGatewayGetMidtransStatus($orderId, $config = null) {
+  $config = $config === null ? mikhmonPaymentGatewayReadConfig() : mikhmonPaymentGatewayNormalizeConfig($config);
+  $orderId = trim((string) $orderId);
+  if ($orderId === '' || $config['midtrans']['server_key'] === '') return array('success' => false, 'message' => 'Order ID atau Server Key Midtrans belum tersedia.');
+  $baseUrl = $config['midtrans']['environment'] === 'production' ? 'https://api.midtrans.com' : 'https://api.sandbox.midtrans.com';
+  $response = mikhmonPaymentGatewayHttpRequest('GET', $baseUrl . '/v2/' . rawurlencode($orderId) . '/status', array(
+    'Accept: application/json',
+    'Authorization: Basic ' . base64_encode($config['midtrans']['server_key'] . ':'),
+  ));
+  if (!$response['success']) return array('success' => false, 'message' => mikhmonPaymentGatewayErrorMessage($response, 'HTTP ' . $response['http_code']), 'response' => $response);
+  $data = $response['data'];
+  return array(
+    'success' => true,
+    'paid' => mikhmonPaymentGatewayMidtransPaid($data),
+    'amount' => (float) ($data['gross_amount'] ?? 0),
+    'status' => (string) ($data['transaction_status'] ?? 'unknown'),
+    'reference' => (string) ($data['transaction_id'] ?? ''),
+    'response' => $data,
+  );
+}
+
 function mikhmonPaymentGatewayCreatePayment($provider, $payment, $config = null) {
   $config = $config === null ? mikhmonPaymentGatewayReadConfig() : mikhmonPaymentGatewayNormalizeConfig($config);
   if (empty($config['enabled'])) return array('success' => false, 'message' => 'Payment gateway belum diaktifkan.');
