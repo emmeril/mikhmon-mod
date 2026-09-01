@@ -29,6 +29,13 @@ $csrf = mikhmonPaymentGatewayCsrfToken();
 paymentGatewayTestAssert(mikhmonPaymentGatewayValidCsrf($csrf), 'generated csrf is accepted');
 paymentGatewayTestAssert(!mikhmonPaymentGatewayValidCsrf('invalid'), 'invalid csrf is rejected');
 paymentGatewayTestAssert(mikhmonPaymentGatewayMask('abcdefghijkl') === 'abcd****ijkl', 'secrets are masked for display');
+$midtransPayload = mikhmonPaymentGatewayMidtransPayload(array(
+  'order_id' => 'INV-1', 'amount' => 1000, 'customer_name' => 'Pelanggan', 'email' => '', 'phone' => '08123456789',
+), $read);
+paymentGatewayTestAssert(!isset($midtransPayload['customer_details']['email']), 'empty Midtrans email is omitted');
+paymentGatewayTestAssert($midtransPayload['customer_details']['phone'] === '08123456789', 'available Midtrans phone is included');
+$midtransError = mikhmonPaymentGatewayErrorMessage(array('data' => array('error_messages' => array('invalid email'))), 'fallback');
+paymentGatewayTestAssert($midtransError === 'invalid email', 'Midtrans error messages are exposed');
 paymentGatewayTestAssert(!mikhmonPaymentGatewayCreatePayment('midtrans', array('order_id' => 'INV-1', 'amount' => 1000), array('enabled' => false))['success'], 'disabled gateway does not create payments');
 paymentGatewayTestAssert(mikhmonPaymentGatewayValidMidtransNotification(array(
   'order_id' => 'INV-1', 'status_code' => '200', 'gross_amount' => '1000',

@@ -198,8 +198,28 @@ function mikhmonPaymentGatewayErrorMessage($response, $fallback) {
   foreach (array('message', 'error_code', 'status_message', 'error') as $key) {
     if (isset($data[$key]) && is_scalar($data[$key])) return (string) $data[$key];
   }
+  if (!empty($data['error_messages']) && is_array($data['error_messages'])) return implode(', ', array_map('strval', $data['error_messages']));
   if (isset($data['errors'][0]['message'])) return (string) $data['errors'][0]['message'];
   return $fallback;
+}
+
+function mikhmonPaymentGatewayMidtransPayload($payment, $config) {
+  $customerDetails = array(
+    'first_name' => trim((string) ($payment['customer_name'] ?? '')) ?: 'Pelanggan',
+  );
+  $email = trim((string) ($payment['email'] ?? ''));
+  $phone = trim((string) ($payment['phone'] ?? ''));
+  if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) $customerDetails['email'] = $email;
+  if ($phone !== '') $customerDetails['phone'] = $phone;
+
+  return array(
+    'transaction_details' => array(
+      'order_id' => trim((string) ($payment['order_id'] ?? '')),
+      'gross_amount' => (int) round((float) ($payment['amount'] ?? 0)),
+    ),
+    'customer_details' => $customerDetails,
+    'expiry' => array('unit' => 'minute', 'duration' => max(15, (int) ceil($config['invoice_duration'] / 60))),
+  );
 }
 
 function mikhmonPaymentGatewayTestConnection($provider, $config = null) {
@@ -249,15 +269,7 @@ function mikhmonPaymentGatewayCreatePayment($provider, $payment, $config = null)
     $url = $config['midtrans']['environment'] === 'production'
       ? 'https://app.midtrans.com/snap/v1/transactions'
       : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
-    $payload = array(
-      'transaction_details' => array('order_id' => $orderId, 'gross_amount' => $amount),
-      'customer_details' => array(
-        'first_name' => (string) ($payment['customer_name'] ?? 'Pelanggan'),
-        'email' => (string) ($payment['email'] ?? ''),
-        'phone' => (string) ($payment['phone'] ?? ''),
-      ),
-      'expiry' => array('unit' => 'minute', 'duration' => max(15, (int) ceil($config['invoice_duration'] / 60))),
-    );
+    $payload = mikhmonPaymentGatewayMidtransPayload($payment, $config);
     $response = mikhmonPaymentGatewayHttpRequest('POST', $url, array(
       'Accept: application/json',
       'Content-Type: application/json',
