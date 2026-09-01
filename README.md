@@ -44,11 +44,11 @@ so expired or intentionally deleted users are not recreated.
 #### Automatic billing reminders and isolation
 
 After enabling Billing Automation in `Settings > WhatsApp Gateway`, run the
-worker every five minutes. The worker sends the configured reminder, isolates
+worker every minute. The worker sends the configured reminder, isolates
 unpaid services after the due date and retries failed Fonnte requests:
 
 ```cron
-*/5 * * * * /usr/bin/php /path/to/mikhmon/cron/billing.php >> /path/to/mikhmon/data/billing-cron.log 2>&1
+* * * * * /usr/bin/php /path/to/mikhmon/cron/billing.php >> /path/to/mikhmon/data/billing-cron.log 2>&1
 ```
 
 The worker uses `MIKHMON_TIMEZONE` when set, otherwise `Asia/Jakarta`.

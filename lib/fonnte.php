@@ -21,7 +21,8 @@ function mikhmonFonnteDefaults() {
     'reminder_enabled' => true,
     'isolation_enabled' => true,
     'payment_enabled' => true,
-    'payment_link_enabled' => false,
+    // Payment links are automatic once the payment gateway is enabled.
+    'payment_link_enabled' => true,
     'reminder_days' => 7,
     'grace_days' => 0,
     'templates' => array(
