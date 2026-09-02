@@ -40,16 +40,17 @@ ksort($comments);
 ?>
 <style>
   .print-center-toolbar {
-    display: grid;
-    grid-template-columns: auto repeat(3, minmax(0, 1fr));
+    display: flex;
     align-items: center;
     gap: 6px;
+    flex-wrap: wrap;
   }
   .print-center-toolbar > span { white-space: nowrap; }
-  .print-center-toolbar .btn { width: 100%; white-space: nowrap; }
+  .print-center-toolbar .btn { width: auto; white-space: nowrap; }
+  .print-center-toolbar .print-center-btn-small { color: #2f353a; }
   @media (max-width: 600px) {
-    .print-center-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .print-center-toolbar > span { grid-column: 1 / -1; text-align: center; }
+    .print-center-toolbar { justify-content: center; }
+    .print-center-toolbar > span { flex-basis: 100%; text-align: center; }
   }
 </style>
 <div class="row">
@@ -82,9 +83,9 @@ ksort($comments);
         </div>
         <div class="box bg-secondary print-center-toolbar">
           <span><i class="fa fa-check-square-o"></i> <span id="printCenterCount">0</span> dipilih</span>
-          <button type="button" class="btn bg-primary" onclick="printCenterSubmit('default')"><i class="fa fa-print"></i> <?= $_print_default; ?></button>
-          <button type="button" class="btn bg-primary" onclick="printCenterSubmit('qr')"><i class="fa fa-qrcode"></i> <?= $_print_qr; ?></button>
-          <button type="button" class="btn bg-primary" onclick="printCenterSubmit('small')"><i class="fa fa-print"></i> <?= $_print_small; ?></button>
+          <button type="button" class="btn bg-primary print-center-btn-default" onclick="printCenterSubmit('default')"><i class="fa fa-print"></i> <?= $_print_default; ?></button>
+          <button type="button" class="btn bg-info print-center-btn-qr" onclick="printCenterSubmit('qr')"><i class="fa fa-qrcode"></i> <?= $_print_qr; ?></button>
+          <button type="button" class="btn bg-warning print-center-btn-small" onclick="printCenterSubmit('small')"><i class="fa fa-print"></i> <?= $_print_small; ?></button>
         </div>
         <div class="overflow mr-t-10 box-bordered" style="max-height:70vh">
           <table id="printCenterTable" class="table table-bordered table-hover text-nowrap">
