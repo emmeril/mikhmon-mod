@@ -186,6 +186,15 @@ if (!empty($routerConnected)) {
       #dataTable .customer-profile-cell { min-width:180px; color:#888; font-size:12px; white-space:normal; }
       #dataTable .customer-isolation-date { min-width:135px; text-align:center; }
       #dataTable .customer-status { min-width:85px; text-align:center; font-weight:bold; }
+      .customer-delete-modal-card { max-width:520px; margin:6vh auto 0; overflow:hidden; }
+      .customer-delete-modal-card .card-body { padding:12px 15px 15px; }
+      #customerDeleteText { line-height:1.6; margin:0 0 14px; }
+      .customer-delete-options { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+      .customer-delete-options .btn { display:flex; align-items:center; justify-content:flex-start; gap:10px; width:100%; min-height:48px; margin:0; padding:9px 12px; box-sizing:border-box; text-align:left; white-space:normal; }
+      .customer-delete-options .btn i { width:20px; font-size:17px; text-align:center; }
+      .customer-delete-options .customer-delete-all { grid-column:1/-1; justify-content:center; font-weight:bold; }
+      .customer-delete-cancel { display:flex; justify-content:flex-end; margin-top:12px; padding-top:12px; border-top:1px solid rgba(127,127,127,.25); }
+      .customer-delete-cancel .btn { min-width:110px; margin:0; }
       @media(max-width:900px) {
         .customer-toolbar { flex-direction:column; }
         .customer-toolbar-actions { justify-content:stretch; }
@@ -194,6 +203,11 @@ if (!empty($routerConnected)) {
       @media(max-width:600px) {
         .customer-filter-controls, .customer-toolbar-actions { flex-direction:column; }
         #customerSearch, #customerServiceFilter, #customerStatusFilter { width:100%; min-width:0; }
+        #customerDeleteModal { padding:20px 10px !important; }
+        .customer-delete-modal-card { margin:0 auto; }
+        .customer-delete-options { grid-template-columns:1fr; }
+        .customer-delete-options .customer-delete-all { grid-column:auto; }
+        .customer-delete-cancel .btn { width:100%; }
       }
     </style>
     <div class="customer-toolbar">
@@ -252,16 +266,18 @@ if (!empty($routerConnected)) {
       </tbody></table></div>
   </div>
 </div></div></div>
-<div id="customerDeleteModal" style="display:none;position:fixed;z-index:1000;inset:0;background:rgba(0,0,0,.45);padding:12% 20px 20px">
-  <div class="card" style="max-width:520px;margin:auto">
+<div id="customerDeleteModal" style="display:none;position:fixed;z-index:1000;inset:0;background:rgba(0,0,0,.45);padding:20px;overflow-y:auto">
+  <div class="card customer-delete-modal-card">
     <div class="card-header"><h3><i class="fa fa-trash"></i> Hapus Pelanggan</h3></div>
     <div class="card-body">
       <p id="customerDeleteText">Pilih jenis penghapusan.</p>
       <form method="post" id="customerDeleteForm"><input type="hidden" name="customer_id" id="customerDeleteId"><input type="hidden" name="service_id" id="customerDeleteServiceId"><input type="hidden" name="customer_action" id="customerDeleteAction" value="delete_identity">
-        <button type="submit" class="btn bg-warning" onclick="return customerDeleteChoice('delete_identity');"><i class="fa fa-user-times"></i> Hapus Identitas Pelanggan</button>
-        <button type="submit" class="btn bg-danger" onclick="return customerDeleteChoice('delete_service');"><i class="fa fa-link"></i> Hapus Layanan</button>
-        <button type="submit" class="btn bg-danger" onclick="return customerDeleteChoice('delete_all');"><i class="fa fa-trash"></i> Hapus Semua</button>
-        <button type="button" class="btn bg-secondary" onclick="closeCustomerDelete()">Batal</button>
+        <div class="customer-delete-options">
+          <button type="submit" class="btn bg-warning" onclick="return customerDeleteChoice('delete_identity');"><i class="fa fa-user-times"></i><span>Hapus Identitas Pelanggan</span></button>
+          <button type="submit" class="btn bg-danger" onclick="return customerDeleteChoice('delete_service');"><i class="fa fa-unlink"></i><span>Hapus Layanan Terpilih</span></button>
+          <button type="submit" class="btn bg-danger customer-delete-all" onclick="return customerDeleteChoice('delete_all');"><i class="fa fa-trash"></i><span>Hapus Identitas dan Semua Layanan</span></button>
+        </div>
+        <div class="customer-delete-cancel"><button type="button" class="btn bg-secondary" onclick="closeCustomerDelete()"><i class="fa fa-close"></i> Batal</button></div>
       </form>
     </div>
   </div>
