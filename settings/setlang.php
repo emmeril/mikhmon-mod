@@ -30,7 +30,7 @@ if (empty($getlang)) {
     if (!empty($isocodelang[$getlang])) {
         include_once('./include/headhtml.php');
         $gen = '<?php $langid="' . $getlang . '";?>';
-        $slang = './include/lang.php';
+        $slang = './include/lang-active.php';
         $handle = fopen($slang, 'w') or die('Cannot open file:  ' . $slang);
         $data = $gen;
         fwrite($handle, $data);

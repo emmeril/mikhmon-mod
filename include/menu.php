@@ -282,7 +282,7 @@ if($idleto != "disable"){
     ?>
   </select>
   <select class="slang ses text-right mr-t-10 pd-5">
-    <option> <?= $language ?></option>
+    <option><?= $language ?>: <?= $langname ?></option>
     <?php 
       $fileList = glob('lang/*');
       foreach($fileList as $filename){
@@ -362,6 +362,18 @@ include('./info.php');
     <?php for ($i = 0; $i < count($mtheme); $i++) {
       echo '<option value="'.$url.'&set-theme='.$mtheme[$i],'">'.ucfirst($mtheme[$i]),'</option>';
     }
+    ?>
+  </select>
+  <select class="slang ses text-right mr-t-10 pd-5" aria-label="Pilih bahasa">
+    <option><?= $language ?>: <?= $langname ?></option>
+    <?php
+      $fileList = glob('lang/*.php');
+      foreach ($fileList as $filename) {
+        $languageCode = pathinfo($filename, PATHINFO_FILENAME);
+        if ($languageCode !== 'isocodelang' && isset($isocodelang[$languageCode])) {
+          echo '<option value="'.$url.'&setlang='.$languageCode.'">'.$isocodelang[$languageCode].'</option>';
+        }
+      }
     ?>
   </select>
   <select class="connect optfa ses text-right mr-t-10 pd-5">
@@ -535,6 +547,10 @@ $(document).ready(function(){
   });
   $(".stheme").change(function(){
     notify("<?= $_loading_theme ?>");
+    stheme(this.value)
+  });
+  $(".slang").change(function(){
+    notify("<?= $_loading ?>");
     stheme(this.value)
   });
 });

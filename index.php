@@ -56,6 +56,7 @@ if (!isset($_SESSION["mikhmon"])) {
   date_default_timezone_set($_SESSION['timezone']);
 
 // lang
+  include('./lang/isocodelang.php');
   include('./include/lang.php');
   include('./lang/'.$langid.'.php');
 
@@ -79,9 +80,10 @@ if (!isset($_SESSION["mikhmon"])) {
   }
   include('./include/readcfg.php');
 
-// theme  
+// theme
   include('./include/theme.php');
   include('./settings/settheme.php');
+  include('./settings/setlang.php');
   if ($_SESSION['theme'] == "") {
     $theme = $theme;
     $themecolor = $themecolor;

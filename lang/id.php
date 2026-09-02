@@ -165,22 +165,22 @@ $_details_add_user = '
 ';
 
 $_details_user_profile = '
-'.$_expired_mode.' adalah kontrol untuk user hotspot.<br>
-        Pilihan : None, Remove, Notice, Remove & Record, Notice & Record.
+'.$_expired_mode.' mengatur tindakan untuk pengguna hotspot.<br>
+        Pilihan: Tidak Ada (None), Hapus (Remove), Notifikasi (Notice), Hapus &amp; Catat (Remove &amp; Record), Notifikasi &amp; Catat (Notice &amp; Record).
         <ul>
-        <li>None : Gunakan pilihan ini untuk profile pelanggan yang dikelola Billing. Masa berlaku, jatuh tempo, dan isolir dikontrol oleh otomasi Billing.</li>
-        <li>Remove : User akan dihapus ketika sudah kedaluwarsa.</li>
-        <li>Notice : User tidah dihapus dan akan mendapatkan notifikasi setelah user expired.</li>
-        <li>Record : Menyimpan data harga tiap user yang login. Untuk menghitung total penjualan user hotspot dan ditampilkan dalam laporan penjualan.</li>
+        <li>Tidak Ada (None): Gunakan pilihan ini untuk profil pelanggan yang dikelola oleh Billing. Masa berlaku, tanggal jatuh tempo pembayaran, dan isolir dikendalikan oleh otomatisasi Billing.</li>
+        <li>Hapus (Remove): Pengguna akan dihapus saat masa berlakunya berakhir.</li>
+        <li>Notifikasi (Notice): Pengguna tidak dihapus dan akan menerima notifikasi setelah masa berlakunya berakhir.</li>
+        <li>Catat (Record): Simpan harga setiap login pengguna untuk menghitung total penjualan pengguna hotspot dan menampilkannya dalam laporan penjualan.</li>
         </ul>
         </p>
-        <p>'.$_lock_user.' : Username/Kode voucher hanya bisa digunakan pada 1 perangkat saja.</p>
+        <p>'.$_lock_user.' : Nama pengguna hanya dapat digunakan pada 1 perangkat.</p>
 ';
 
 $_format_validity = '
 Format '.$_validity.'<br>
-[wdhm] Contoh : 30d = 30'.$_days.', 12h = 12'.$_hours.', 30m = 30'.$_minutes.'<br>
-5'.$_hours.' 30'.$_minutes.' = 5h30m';
+[wdhm] Contoh: 30d = 30 '.$_days.', 12h = 12 '.$_hours.', 30m = 30 '.$_minutes.'<br>
+5 jam 30 menit = 5h30m';
 
 $_format_ip_binding = '
     Format Upload/Download Max Limit<br>
