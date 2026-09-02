@@ -63,17 +63,18 @@ function mikhmonInvoicePdf($invoice, $customer, $currency, $brand) {
   mikhmonInvoicePdfDrawText($commands, 430, 781, 9, $number, '0.82 0.9 0.96');
 
   // Customer and invoice metadata cards.
-  mikhmonInvoicePdfDrawRect($commands, 40, 675, 250, 62, '0.95 0.97 0.99');
-  mikhmonInvoicePdfDrawRect($commands, 305, 675, 250, 62, '0.95 0.97 0.99');
+  mikhmonInvoicePdfDrawRect($commands, 40, 660, 250, 77, '0.95 0.97 0.99');
+  mikhmonInvoicePdfDrawRect($commands, 305, 660, 250, 77, '0.95 0.97 0.99');
   mikhmonInvoicePdfDrawText($commands, 52, 720, 9, 'TAGIHAN UNTUK', '0.08 0.22 0.38');
   mikhmonInvoicePdfDrawText($commands, 52, 702, 11, $name);
   mikhmonInvoicePdfDrawText($commands, 52, 686, 8, 'Telepon: ' . ($customer['phone'] ?? '-') . '  |  Alamat: ' . ($customer['address'] ?? '-'));
   mikhmonInvoicePdfDrawText($commands, 317, 720, 9, 'INFORMASI INVOICE', '0.08 0.22 0.38');
   mikhmonInvoicePdfDrawText($commands, 317, 702, 9, 'No. Invoice: ' . $number);
-  mikhmonInvoicePdfDrawText($commands, 317, 686, 9, 'Tanggal: ' . $createdAt . '  |  Jatuh tempo: ' . $dueDate);
+  mikhmonInvoicePdfDrawText($commands, 317, 686, 9, 'Tanggal: ' . $createdAt);
+  mikhmonInvoicePdfDrawText($commands, 317, 670, 9, 'Jatuh tempo: ' . $dueDate);
 
   // Service detail table.
-  $tableLeft = 40; $tableTop = 645; $headerHeight = 26; $rowHeight = 25;
+  $tableLeft = 40; $tableTop = 630; $headerHeight = 26; $rowHeight = 25;
   $columns = array(40, 70, 165, 295, 455, 555);
   mikhmonInvoicePdfDrawRect($commands, $tableLeft, $tableTop - $headerHeight, 515, $headerHeight, '0.08 0.22 0.38');
   mikhmonInvoicePdfDrawText($commands, 50, $tableTop - 18, 9, 'NO', '1 1 1');
