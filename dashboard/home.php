@@ -83,6 +83,11 @@ if (!isset($_SESSION["mikhmon"])) {
   $pppuserunit = ($countpppusers == 1) ? "item" : "items";
   $pppactiveunit = ($countpppactive == 1) ? "item" : "items";
 
+// get & counting customers by service
+  $dashboardCustomers = mikhmonVisibleCustomers($session);
+  $dashboardHotspotCustomers = mikhmonMitraUsernamesByService($session, 'hotspot');
+  $dashboardPppoeCustomers = mikhmonMitraUsernamesByService($session, 'pppoe');
+
   if ($livereport == "disable") {
     $logh = "457px";
     $lreport = "style='display:none;'";
@@ -446,6 +451,37 @@ if (!isset($_SESSION["mikhmon"])) {
                   <div id="trafficMonitor"></div>
                 </div>
               </div>
+            <div class="card">
+              <div class="card-header"><h3><i class="fa fa-address-card"></i> Pelanggan</h3></div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-4">
+                    <div class="box bg-blue bmh-75">
+                      <a onclick="cancelPage()" href="./?customer=list&session=<?= $session; ?>">
+                        <h1><?= count($dashboardCustomers); ?></h1>
+                        <div><i class="fa fa-users"></i> Pelanggan</div>
+                      </a>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="box bg-green bmh-75">
+                      <a onclick="cancelPage()" href="./?customer=list&session=<?= $session; ?>">
+                        <h1><?= count($dashboardHotspotCustomers); ?></h1>
+                        <div><i class="fa fa-wifi"></i> Hotspot</div>
+                      </a>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="box bg-yellow bmh-75">
+                      <a onclick="cancelPage()" href="./?customer=list&session=<?= $session; ?>">
+                        <h1><?= count($dashboardPppoeCustomers); ?></h1>
+                        <div><i class="fa fa-exchange"></i> PPPoE</div>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             </div>
             <div class="col-4 dashboard-main-column dashboard-main-right">
             <div id="r_4" class="row">
