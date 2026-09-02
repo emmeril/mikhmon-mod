@@ -25,9 +25,6 @@ $systemLogLevelClasses = array(
     <h3><i class=" fa fa-align-justify"></i> System Logs Aplikasi &nbsp; | &nbsp;&nbsp;<i onclick="location.reload();" class="fa fa-refresh pointer" title="Reload data"></i></h3>
   </div>
   <div class="card-body">
-    <div style="max-width: 350px;">
-      <input id="filterTable" type="text" class="form-control" placeholder="Search..">
-    </div>
     <div style="padding: 5px; max-height: <?= $systemLogMaxHeight; ?>;" class="mr-t-10 overflow">
       <table class="table table-sm table-bordered table-hover" style="font-size: 12px;" id="dataTable">
         <thead>
