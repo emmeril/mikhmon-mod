@@ -6,7 +6,7 @@ include_once('./report/reportrecord.php');
 $clock = array('date' => date('M/d/Y'), 'time' => date('H:i:s'));
 $resource = array();
 $routerboard = array();
-$mitraCustomers = mikhmonVisibleCustomers($session);
+$mitraCustomers = mikhmonVisibleServiceCustomers($session);
 $hotspotCustomerNames = mikhmonMitraUsernamesByService($session, 'hotspot');
 $pppoeCustomerNames = mikhmonMitraUsernamesByService($session, 'pppoe');
 $mitraHotspotUsers = array();

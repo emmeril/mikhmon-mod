@@ -133,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 
-$customers = array_values(array_filter(mikhmonVisibleCustomers($session), function ($customer) { return count(mikhmonCustomerServices($customer)) > 0; }));
+$customers = mikhmonVisibleServiceCustomers($session);
 $mitras = mikhmonIsAdmin() ? mikhmonGetUsers('mitra', $session) : array();
 $customerInvoiceCandidates = array();
 foreach (mikhmonGetInvoices($session) as $invoice) {

@@ -132,6 +132,12 @@ function mikhmonVisibleCustomers($session, $customers = null) {
   }));
 }
 
+function mikhmonVisibleServiceCustomers($session, $customers = null) {
+  return array_values(array_filter(mikhmonVisibleCustomers($session, $customers), function ($customer) {
+    return count(mikhmonCustomerServices($customer)) > 0;
+  }));
+}
+
 function mikhmonVisibleInvoices($session, $invoices = null) {
   $invoices = $invoices === null ? mikhmonGetInvoices($session) : (array) $invoices;
   if (!mikhmonIsMitra()) return array_values($invoices);

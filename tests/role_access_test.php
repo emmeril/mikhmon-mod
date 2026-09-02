@@ -39,6 +39,8 @@ roleTestAssert(count(mikhmonGetCustomers('router-a')) === 2, 'same-name records 
 $identityOnly = mikhmonSaveCustomerIdentity('router-a', '', 'Identitas Baru', '08123456789', 'Alamat Baru', $mitraId);
 roleTestAssert($identityOnly !== false, 'customer identity can be saved without a service');
 roleTestAssert(count(mikhmonCustomerServices(mikhmonFindCustomer('router-a', $identityOnly))) === 0, 'identity starts without linked services');
+roleTestAssert(count(mikhmonVisibleCustomers('router-a')) === 3, 'identity list includes customers without services');
+roleTestAssert(count(mikhmonVisibleServiceCustomers('router-a')) === 2, 'customer list and dashboard exclude identities without services');
 roleTestAssert(mikhmonAddCustomerService('router-a', $identityOnly, array('service'=>'hotspot','username'=>'identity-hotspot','profile'=>'basic','server'=>'all')) === $identityOnly, 'a service can be linked to an existing identity');
 roleTestAssert(count(mikhmonCustomerServices(mikhmonFindCustomer('router-a', $identityOnly))) === 1, 'linked service appears under the identity');
 roleTestAssert(mikhmonSetCustomerDueDate('router-a', $identityOnly, '2026-10-10') === true, 'linked identity due date can be stored');
@@ -53,6 +55,7 @@ roleTestAssert(mikhmonAssignedCustomerCount($mitraId) === 2, 'assigned customer 
 mikhmonSetLoginSession(mikhmonFindUser($mitraId));
 roleTestAssert(mikhmonRefreshStaffSession(), 'active staff session remains valid');
 roleTestAssert(count(mikhmonVisibleCustomers('router-a')) === 2, 'mitra only sees assigned customer identities');
+roleTestAssert(count(mikhmonVisibleServiceCustomers('router-a')) === 2, 'mitra customer count includes only assigned identities with services');
 roleTestAssert(count(mikhmonVisibleInvoices('router-a', array(
   array('customer_id' => $customerOne),
   array('customer_id' => $customerTwo),

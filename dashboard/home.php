@@ -84,7 +84,7 @@ if (!isset($_SESSION["mikhmon"])) {
   $pppactiveunit = ($countpppactive == 1) ? "item" : "items";
 
 // get & counting customers by service
-  $dashboardCustomers = mikhmonVisibleCustomers($session);
+  $dashboardCustomers = mikhmonVisibleServiceCustomers($session);
   $dashboardHotspotCustomers = mikhmonMitraUsernamesByService($session, 'hotspot');
   $dashboardPppoeCustomers = mikhmonMitraUsernamesByService($session, 'pppoe');
 
