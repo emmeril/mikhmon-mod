@@ -155,7 +155,6 @@ if (!isset($_SESSION["mikhmon"])) {
     <?php ; }else if ($exp == "1"){ ?>
   <button class="btn bg-red" onclick="if(confirm('Are you sure to delete users?')){loadpage('./?remove-hotspot-user-expired=1&session=<?= $session; ?>');loader();}else{}" title="Remove user expired">  <i class="fa fa-trash"></i> Expired Users</button>
       <?php } ?>
-  <span><i class="fa fa-print"></i> Cetak Semua:</span>
   <button type="button" class="btn bg-primary" onclick="voucherListPrint('default')" title="Cetak semua voucher - <?= htmlspecialchars($_print_default, ENT_QUOTES); ?>"><i class="fa fa-print"></i> <?= $_print_default; ?></button>
   <button type="button" class="btn bg-info" onclick="voucherListPrint('qr')" title="Cetak semua voucher - <?= htmlspecialchars($_print_qr, ENT_QUOTES); ?>"><i class="fa fa-qrcode"></i> <?= $_print_qr; ?></button>
   <button type="button" class="btn bg-warning" onclick="voucherListPrint('small')" title="Cetak semua voucher - <?= htmlspecialchars($_print_small, ENT_QUOTES); ?>"><i class="fa fa-print"></i> <?= $_print_small; ?></button>
