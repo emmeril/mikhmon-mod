@@ -25,7 +25,7 @@ function mikhmonI18nCommonCatalog() {
     array('en' => 'Brand Setting', 'id' => 'Pengaturan Merek', 'es' => 'Configuracion de marca', 'tl' => 'Mga Setting ng Brand', 'tr' => 'Marka Ayarlari'),
     array('en' => 'Database Backup', 'id' => 'Cadangan Database', 'es' => 'Copia de seguridad', 'tl' => 'Backup ng Database', 'tr' => 'Veritabani Yedegi'),
     array('en' => 'WhatsApp Gateway', 'id' => 'Gateway WhatsApp', 'es' => 'Pasarela de WhatsApp', 'tl' => 'WhatsApp Gateway', 'tr' => 'WhatsApp Ag Gecidi'),
-    array('en' => 'Payment Gateway', 'id' => 'Gateway Pembayaran', 'es' => 'Pasarela de pago', 'tl' => 'Gateway ng Pagbabayad', 'tr' => 'Odeme Ag Gecidi'),
+    array('en' => 'Payment Gateway', 'id' => 'Pembayaran', 'es' => 'Pasarela de pago', 'tl' => 'Gateway ng Pagbabayad', 'tr' => 'Odeme Ag Gecidi'),
     array('en' => 'User Management', 'id' => 'Manajemen Pengguna', 'es' => 'Gestion de usuarios', 'tl' => 'Pamamahala ng Gumagamit', 'tr' => 'Kullanici Yonetimi'),
     array('en' => 'Customer', 'id' => 'Pelanggan', 'es' => 'Cliente', 'tl' => 'Customer', 'tr' => 'Musteri'),
     array('en' => 'Customers', 'id' => 'Pelanggan', 'es' => 'Clientes', 'tl' => 'Mga Customer', 'tr' => 'Musteriler'),
