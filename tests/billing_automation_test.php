@@ -111,6 +111,8 @@ billingAutomationTestAssert(strpos($rendered, 'Pelanggan A') !== false && strpos
 $savedInvoice['payment_url'] = 'https://app.midtrans.com/snap/v2/vtweb/test-token';
 $renderedWithLink = mikhmonBillingAutomationMessage('Tagihan {{nomor_invoice}}', mikhmonFindCustomer('router-a', $customerId), $savedInvoice, 'Rp', 'Mikhmon', $savedInvoice['due_date']);
 billingAutomationTestAssert(strpos($renderedWithLink, $savedInvoice['payment_url']) !== false, 'payment link is included in WhatsApp message');
+$paymentConfirmation = mikhmonBillingAutomationMessage('Pembayaran {{nomor_invoice}} diterima', mikhmonFindCustomer('router-a', $customerId), $savedInvoice, 'Rp', 'Mikhmon', $savedInvoice['due_date'], '2026-10-05 00:00:00', false);
+billingAutomationTestAssert(strpos($paymentConfirmation, $savedInvoice['payment_url']) === false, 'payment link is excluded from payment confirmation message');
 
 @unlink($databasePath);
 @unlink($fonntePath);

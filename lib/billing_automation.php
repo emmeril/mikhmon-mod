@@ -148,7 +148,7 @@ function mikhmonBillingAutomationAmount($amount, $currency) {
   return $currency . ' ' . number_format((float) $amount, $indo ? 0 : 2, $indo ? ',' : '.', $indo ? '.' : ',');
 }
 
-function mikhmonBillingAutomationMessage($template, $customer, $invoice, $currency, $brand, $dueDate, $nextDueDate = '') {
+function mikhmonBillingAutomationMessage($template, $customer, $invoice, $currency, $brand, $dueDate, $nextDueDate = '', $includePaymentLink = true) {
   $services = array();
   foreach (mikhmonBillingAutomationInvoiceServices($invoice, $customer) as $service) {
     $services[] = '- ' . strtoupper((string) ($service['service'] ?? 'hotspot')) . ' / ' . (string) ($service['username'] ?? '') . ' / ' . (string) ($service['profile'] ?? '') . ' / ' . mikhmonBillingAutomationAmount($service['amount'] ?? 0, $currency);
@@ -165,7 +165,7 @@ function mikhmonBillingAutomationMessage($template, $customer, $invoice, $curren
     'link_pembayaran' => $invoice['payment_url'] ?? '',
   ));
   $paymentUrl = trim((string) ($invoice['payment_url'] ?? ''));
-  if ($paymentUrl !== '' && strpos($message, $paymentUrl) === false) $message .= "\n\nLink Pembayaran: " . $paymentUrl;
+  if ($includePaymentLink && $paymentUrl !== '' && strpos($message, $paymentUrl) === false) $message .= "\n\nLink Pembayaran: " . $paymentUrl;
   return $message;
 }
 
@@ -373,7 +373,7 @@ function mikhmonBillingAutomationProcessPaidNotification($session, &$invoices, $
   $customerId = (string) ($invoice['customer_id'] ?? '');
   if (!isset($customersById[$customerId])) return false;
   if (!mikhmonBillingAutomationRetryReady($invoice, 'payment', $now)) return null;
-  $message = mikhmonBillingAutomationMessage($fonnteConfig['templates']['payment'] ?? '', $customersById[$customerId], $invoice, $currency, $brand, $invoice['due_date'] ?? '', $invoice['next_due_date'] ?? '');
+  $message = mikhmonBillingAutomationMessage($fonnteConfig['templates']['payment'] ?? '', $customersById[$customerId], $invoice, $currency, $brand, $invoice['due_date'] ?? '', $invoice['next_due_date'] ?? '', false);
   $send = mikhmonBillingAutomationQueuedSend($customersById[$customerId]['phone'] ?? '', $message, $fonnteConfig, $now);
   if (!empty($send['status'])) {
     $invoice['automation']['payment_notification_pending'] = false;
