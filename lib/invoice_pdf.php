@@ -44,6 +44,53 @@ function mikhmonInvoicePdfDrawRect(&$commands, $x, $y, $width, $height, $color, 
   $commands[] = (float) $x . ' ' . (float) $y . ' ' . (float) $width . ' ' . (float) $height . ' re ' . ($fill ? 'f' : 'S');
 }
 
+function mikhmonInvoicePdfTextWidth($text, $fontSize) {
+  $text = mikhmonInvoicePdfText($text);
+  $units = 0;
+  for ($index = 0, $length = strlen($text); $index < $length; $index++) {
+    $character = $text[$index];
+    if ($character === ' ') $units += 0.278;
+    elseif (strpos('ilI.,:;!|\'`', $character) !== false) $units += 0.278;
+    elseif (strpos('mwMW@%&', $character) !== false) $units += 0.889;
+    elseif (ctype_upper($character)) $units += 0.667;
+    else $units += 0.556;
+  }
+  return $units * (float) $fontSize;
+}
+
+function mikhmonInvoicePdfWrapText($text, $maxWidth, $fontSize, $maxLines = 2) {
+  $words = preg_split('/\s+/', trim((string) $text));
+  $lines = array();
+  $line = '';
+  foreach ($words as $word) {
+    if ($word === '') continue;
+    $candidate = $line === '' ? $word : $line . ' ' . $word;
+    if (mikhmonInvoicePdfTextWidth($candidate, $fontSize) <= $maxWidth) {
+      $line = $candidate;
+      continue;
+    }
+    if ($line !== '') $lines[] = $line;
+    $line = $word;
+    while (mikhmonInvoicePdfTextWidth($line, $fontSize) > $maxWidth) {
+      $part = '';
+      for ($index = 0, $length = strlen($line); $index < $length; $index++) {
+        if (mikhmonInvoicePdfTextWidth($part . $line[$index], $fontSize) > $maxWidth) break;
+        $part .= $line[$index];
+      }
+      if ($part === '') break;
+      $lines[] = $part;
+      $line = substr($line, strlen($part));
+    }
+  }
+  if ($line !== '') $lines[] = $line;
+  if (count($lines) <= $maxLines) return $lines ?: array('-');
+  $lines = array_slice($lines, 0, $maxLines);
+  $last = rtrim($lines[$maxLines - 1]);
+  while ($last !== '' && mikhmonInvoicePdfTextWidth($last . '...', $fontSize) > $maxWidth) $last = substr($last, 0, -1);
+  $lines[$maxLines - 1] = rtrim($last) . '...';
+  return $lines;
+}
+
 function mikhmonInvoicePdf($invoice, $customer, $currency, $brand) {
   $paymentReceived = ($invoice['status'] ?? '') === 'paid' || !empty($invoice['gateway_payment_received']);
   $number = (string) ($invoice['number'] ?? '-');
@@ -63,18 +110,20 @@ function mikhmonInvoicePdf($invoice, $customer, $currency, $brand) {
   mikhmonInvoicePdfDrawText($commands, 430, 781, 9, $number, '0.82 0.9 0.96');
 
   // Customer and invoice metadata cards.
-  mikhmonInvoicePdfDrawRect($commands, 40, 660, 250, 77, '0.95 0.97 0.99');
-  mikhmonInvoicePdfDrawRect($commands, 305, 660, 250, 77, '0.95 0.97 0.99');
+  mikhmonInvoicePdfDrawRect($commands, 40, 645, 250, 92, '0.95 0.97 0.99');
+  mikhmonInvoicePdfDrawRect($commands, 305, 645, 250, 92, '0.95 0.97 0.99');
   mikhmonInvoicePdfDrawText($commands, 52, 720, 9, 'TAGIHAN UNTUK', '0.08 0.22 0.38');
   mikhmonInvoicePdfDrawText($commands, 52, 702, 11, $name);
-  mikhmonInvoicePdfDrawText($commands, 52, 686, 8, 'Telepon: ' . ($customer['phone'] ?? '-') . '  |  Alamat: ' . ($customer['address'] ?? '-'));
+  mikhmonInvoicePdfDrawText($commands, 52, 686, 8, 'Telepon: ' . ($customer['phone'] ?? '-'));
+  $addressLines = mikhmonInvoicePdfWrapText('Alamat: ' . ($customer['address'] ?? '-'), 226, 8, 2);
+  foreach ($addressLines as $addressIndex => $addressLine) mikhmonInvoicePdfDrawText($commands, 52, 671 - ($addressIndex * 13), 8, $addressLine);
   mikhmonInvoicePdfDrawText($commands, 317, 720, 9, 'INFORMASI INVOICE', '0.08 0.22 0.38');
   mikhmonInvoicePdfDrawText($commands, 317, 702, 9, 'No. Invoice: ' . $number);
   mikhmonInvoicePdfDrawText($commands, 317, 686, 9, 'Tanggal: ' . $createdAt);
   mikhmonInvoicePdfDrawText($commands, 317, 670, 9, 'Jatuh tempo: ' . $dueDate);
 
   // Service detail table.
-  $tableLeft = 40; $tableTop = 630; $headerHeight = 26; $rowHeight = 25;
+  $tableLeft = 40; $tableTop = 615; $headerHeight = 26; $rowHeight = 25;
   $columns = array(40, 70, 165, 295, 455, 555);
   mikhmonInvoicePdfDrawRect($commands, $tableLeft, $tableTop - $headerHeight, 515, $headerHeight, '0.08 0.22 0.38');
   mikhmonInvoicePdfDrawText($commands, 50, $tableTop - 18, 9, 'NO', '1 1 1');

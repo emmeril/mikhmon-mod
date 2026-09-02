@@ -18,7 +18,8 @@ $invoice = array(
   'due_date' => '2026-09-05 00:00:00',
   'services' => array(array('service' => 'hotspot', 'username' => 'apri', 'profile' => 'Paket 3K', 'amount' => 3000)),
 );
-$pdf = mikhmonInvoicePdf($invoice, array('name' => 'Apri', 'phone' => '08123456789'), 'Rp', 'Emmeril Hotspot');
+$longAddress = 'Jalan Pahlawan Kemerdekaan Nomor 123 Blok C, Kelurahan Sukamaju, Kecamatan Cempaka, Jakarta Selatan';
+$pdf = mikhmonInvoicePdf($invoice, array('name' => 'Apri', 'phone' => '08123456789', 'address' => $longAddress), 'Rp', 'Emmeril Hotspot');
 
 invoicePdfTestAssert(substr($pdf, 0, 8) === '%PDF-1.4', 'output has a PDF header');
 invoicePdfTestAssert(substr($pdf, -6) === "%%EOF\n", 'output has a PDF trailer');
@@ -28,6 +29,10 @@ invoicePdfTestAssert(strpos($pdf, 'Status: LUNAS') !== false, 'paid status is re
 invoicePdfTestAssert(strpos($pdf, 'Tanggal: 2026-09-01 20:00:00') !== false && strpos($pdf, 'Jatuh tempo: 2026-09-05 00:00:00') !== false, 'invoice dates are rendered on separate lines');
 invoicePdfTestAssert(strpos($pdf, 'LAYANAN') !== false && strpos($pdf, 'USERNAME') !== false && strpos($pdf, 'PROFILE') !== false && strpos($pdf, 'NOMINAL') !== false, 'service table headers are rendered');
 invoicePdfTestAssert(strpos($pdf, '0.6 w') !== false && strpos($pdf, 're S') !== false, 'service table borders are rendered');
+$addressLines = mikhmonInvoicePdfWrapText('Alamat: ' . $longAddress, 226, 8, 2);
+invoicePdfTestAssert(count($addressLines) === 2, 'long address is limited to two lines');
+invoicePdfTestAssert(mikhmonInvoicePdfTextWidth($addressLines[0], 8) <= 226 && mikhmonInvoicePdfTextWidth($addressLines[1], 8) <= 226, 'address lines stay inside the customer card');
+invoicePdfTestAssert(substr($addressLines[1], -3) === '...', 'overflowing address is truncated visibly');
 invoicePdfTestAssert(preg_match('/xref\n0 6\n(?:\d{10} \d{5} [fn] \n){6}/', $pdf) === 1, 'cross-reference table is valid');
 
 echo 'invoice-pdf-tests: OK' . PHP_EOL;
