@@ -155,6 +155,7 @@ if (!isset($_SESSION["mikhmon"])) {
   elseif ($customer == 'identity-list') $requestedRoute = 'customer-identity-list';
   elseif ($customer == 'identity-edit' || $customer == 'edit') $requestedRoute = 'customer-identity-edit';
   elseif ($customer == 'identity-add' || $customer == 'add') $requestedRoute = 'customer-identity-add';
+  elseif ($customer == 'service-edit') $requestedRoute = 'customer-service-edit';
   elseif ($customer == 'service-add') $requestedRoute = 'customer-service-add';
   elseif ($report == 'selling') $requestedRoute = 'report-selling';
   elseif ($report == 'resume-report') $requestedRoute = 'report-resume';
@@ -309,6 +310,9 @@ if (!isset($_SESSION["mikhmon"])) {
   }
   elseif ($customer == "service-add") {
     include_once('./customer/serviceadd.php');
+  }
+  elseif ($customer == "service-edit") {
+    include_once('./customer/serviceedit.php');
   }
 
 // hotspot log

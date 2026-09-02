@@ -532,6 +532,39 @@ function mikhmonAddCustomerService($session, $customerId, $service) {
   return mikhmonSaveCustomerWithServices($session, $customer['id'], $customer['name'], $customer['phone'] ?? '', $customer['address'] ?? '', $services, $customer['mitra_id'] ?? '');
 }
 
+function mikhmonUpdateCustomerService($session, $customerId, $serviceId, $service) {
+  $customer = mikhmonFindCustomer($session, $customerId);
+  if (!$customer || !is_array($service)) return false;
+  $serviceId = (string) $serviceId;
+  $serviceType = ($service['service'] ?? '') === 'pppoe' ? 'pppoe' : 'hotspot';
+  $username = trim(strip_tags((string) ($service['username'] ?? '')));
+  if ($serviceId === '' || $username === '') return false;
+
+  foreach (mikhmonGetCustomers($session) as $candidate) {
+    foreach (mikhmonCustomerServices($candidate) as $existingService) {
+      if ((string) ($existingService['id'] ?? '') === $serviceId && (string) ($candidate['id'] ?? '') === (string) $customerId) continue;
+      if (($existingService['service'] ?? '') === $serviceType && strtolower((string) ($existingService['username'] ?? '')) === strtolower($username)) return false;
+    }
+  }
+
+  $services = mikhmonCustomerServices($customer);
+  $found = false;
+  foreach ($services as $index => $existingService) {
+    if ((string) ($existingService['id'] ?? '') !== $serviceId) continue;
+    $services[$index] = array(
+      'id' => $serviceId,
+      'service' => $serviceType,
+      'username' => $username,
+      'profile' => trim(strip_tags((string) ($service['profile'] ?? ''))),
+      'server' => trim(strip_tags((string) ($service['server'] ?? 'all'))),
+    );
+    $found = true;
+    break;
+  }
+  if (!$found) return false;
+  return mikhmonSaveCustomerWithServices($session, $customer['id'], $customer['name'], $customer['phone'] ?? '', $customer['address'] ?? '', $services, $customer['mitra_id'] ?? '');
+}
+
 function mikhmonSaveCustomerWithServices($session, $id, $name, $phone, $address, $services, $mitraId = null) {
   $database = mikhmonReadDatabase();
   if (!isset($database['customers'][$session]) || !is_array($database['customers'][$session])) {

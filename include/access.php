@@ -183,7 +183,7 @@ function mikhmonCanOpenMainRoute($route) {
   if (mikhmonIsAdmin()) return true;
   if (mikhmonIsCustomer()) return in_array($route, array('customer-portal', 'logout'), true);
   if (mikhmonIsBiller()) return in_array($route, array('billing', 'commission', 'logout'), true);
-  if (mikhmonIsMitra()) return in_array($route, array('home', 'billing', 'customer-list', 'customer-identity-list', 'customer-identity-add', 'customer-identity-edit', 'customer-service-add', 'report-selling', 'report-resume', 'hotspot-generate', 'hotspot-active', 'hotspot-vouchers', 'hotspot-users', 'hotspot-print-center', 'pppoe-users', 'pppoe-active', 'logout'), true);
+  if (mikhmonIsMitra()) return in_array($route, array('home', 'billing', 'customer-list', 'customer-identity-list', 'customer-identity-add', 'customer-identity-edit', 'customer-service-add', 'customer-service-edit', 'report-selling', 'report-resume', 'hotspot-generate', 'hotspot-active', 'hotspot-vouchers', 'hotspot-users', 'hotspot-print-center', 'pppoe-users', 'pppoe-active', 'logout'), true);
   return false;
 }
 
