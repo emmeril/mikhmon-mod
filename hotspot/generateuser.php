@@ -314,35 +314,9 @@ date_default_timezone_set($_SESSION['timezone']);
 	<h3><i class="fa fa-user-plus"></i> <?= $_generate_user ?> <small id="loader" style="display: none;" ><i><i class='fa fa-circle-o-notch fa-spin'></i> <?= $_processing ?> </i></small></h3> 
 	</div>
 <div class="card-body">
-<?php if ($profileError !== ''): ?><div class="box bg-danger"><i class="fa fa-warning"></i> <?= htmlspecialchars($profileError, ENT_QUOTES); ?></div><?php endif; ?>
-<form autocomplete="off" method="post" action="">
-	<div>
-		<?php if ($_SESSION['ubp'] != "") {
-		echo "    <a class='btn bg-warning' href='./?hotspot=users&profile=" . $_SESSION['ubp'] . "&session=" . $session . "'> <i class='fa fa-close'></i> ".$_close."</a>";
-	} elseif ($_SESSION['vcr'] = "active") {
-		echo "    <a class='btn bg-warning' href='./?hotspot=users-by-profile&session=" . $session . "'> <i class='fa fa-close'></i> ".$_close."</a>";
-	} else {
-		echo "    <a class='btn bg-warning' href='./?hotspot=users&profile=all&session=" . $session . "'> <i class='fa fa-close'></i> ".$_close."</a>";
-	}
-
-	?>
-	<a class="btn bg-pink" title="Open User List by Profile 
-<?php if ($_SESSION['ubp'] == "") {
-	echo "all";
-} else {
-	echo $uprofile;
-} ?>" href="./?hotspot=users&profile=
-<?php if ($_SESSION['ubp'] == "") {
-	echo "all";
-} else {
-	echo $uprofile;
-} ?>&session=<?= $session; ?>"> <i class="fa fa-users"></i> <?= $_user_list ?></a>
-    <button type="submit" name="save" onclick="loader()" class="btn bg-primary" title="Generate User"> <i class="fa fa-save"></i> <?= $_generate ?></button>
-    <a class="btn bg-secondary" title="Print Default" href="./voucher/print.php?id=<?= $urlprint; ?>&qr=no&session=<?= $session; ?>" target="_blank"> <i class="fa fa-print"></i> <?= $_print ?></a>
-    <a class="btn bg-danger" title="Print QR" href="./voucher/print.php?id=<?= $urlprint; ?>&qr=yes&session=<?= $session; ?>" target="_blank"> <i class="fa fa-qrcode"></i> <?= $_print_qr ?></a>
-    <a class="btn bg-info" title="Print Small" href="./voucher/print.php?id=<?= $urlprint; ?>&small=yes&session=<?= $session; ?>" target="_blank"> <i class="fa fa-print"></i> <?= $_print_small ?></a>
-</div>
-<table class="table">
+	<?php if ($profileError !== ''): ?><div class="box bg-danger"><i class="fa fa-warning"></i> <?= htmlspecialchars($profileError, ENT_QUOTES); ?></div><?php endif; ?>
+	<form autocomplete="off" method="post" action="">
+	<table class="table">
   <tr>
     <td class="align-middle"><?= $_qty ?></td><td><div><input class="form-control " type="number" name="qty" min="1" max="500" value="1" required="1"></div></td>
   </tr>
@@ -441,9 +415,24 @@ date_default_timezone_set($_SESSION['timezone']);
 					echo $ValidPrice;
 				} ?>
     </td>
-  </tr>
-</table>
-</form>
+	  </tr>
+	</table>
+	<div class="text-right">
+	  <button type="submit" name="save" onclick="loader()" class="btn bg-primary" title="Generate User"> <i class="fa fa-save"></i> <?= $_generate ?></button>
+	  <a class="btn bg-pink" title="Open Voucher List by Profile <?php if ($_SESSION['ubp'] == "") { echo "all"; } else { echo $uprofile; } ?>" href="./?hotspot=users&profile=<?php if ($_SESSION['ubp'] == "") { echo "all"; } else { echo $uprofile; } ?>&session=<?= $session; ?>"> <i class="fa fa-ticket"></i> Voucher List</a>
+	  <a class="btn bg-secondary" title="Print Default" href="./voucher/print.php?id=<?= $urlprint; ?>&qr=no&session=<?= $session; ?>" target="_blank"> <i class="fa fa-print"></i> <?= $_print ?></a>
+	  <a class="btn bg-danger" title="Print QR" href="./voucher/print.php?id=<?= $urlprint; ?>&qr=yes&session=<?= $session; ?>" target="_blank"> <i class="fa fa-qrcode"></i> <?= $_print_qr ?></a>
+	  <a class="btn bg-info" title="Print Small" href="./voucher/print.php?id=<?= $urlprint; ?>&small=yes&session=<?= $session; ?>" target="_blank"> <i class="fa fa-print"></i> <?= $_print_small ?></a>
+	  <?php if ($_SESSION['ubp'] != "") {
+		echo "    <a class='btn bg-warning' href='./?hotspot=users&profile=" . $_SESSION['ubp'] . "&session=" . $session . "'> <i class='fa fa-close'></i> ".$_close."</a>";
+	  } elseif ($_SESSION['vcr'] = "active") {
+		echo "    <a class='btn bg-warning' href='./?hotspot=users-by-profile&session=" . $session . "'> <i class='fa fa-close'></i> ".$_close."</a>";
+	  } else {
+		echo "    <a class='btn bg-warning' href='./?hotspot=users&profile=all&session=" . $session . "'> <i class='fa fa-close'></i> ".$_close."</a>";
+	  }
+	  ?>
+	</div>
+	</form>
 </div>
 </div>
 </div>
