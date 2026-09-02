@@ -305,7 +305,7 @@ Panduan, https://laksa19.github.io/printBT.html
 
 # Portal Pelanggan (OTP Fonnte)
 
-Pelanggan dapat masuk melalui `pelanggan.php` menggunakan nomor handphone yang tersimpan pada identitas pelanggan. Kode OTP dikirim oleh Fonnte; akun pelanggan tidak memerlukan akun staf di menu Users.
+Pelanggan dapat masuk melalui `/pelanggan` menggunakan nomor handphone yang tersimpan pada identitas pelanggan. Kode OTP dikirim oleh Fonnte; akun pelanggan tidak memerlukan akun staf di menu Users.
 
 - Aktifkan Fonnte pada menu Admin dan pastikan token/device siap digunakan.
 - Aktifkan Payment Gateway (Midtrans atau Xendit). Status Midtrans akan diperiksa langsung dari API saat Billing admin atau portal pelanggan dibuka; callback `payment-notification.php` bersifat opsional.

@@ -28,6 +28,12 @@ if (
     exit;
 }
 
+// Serve the customer portal from its canonical extensionless URL.
+if ($requestPath === '/pelanggan') {
+    require __DIR__ . '/pelanggan.php';
+    return;
+}
+
 $requestedFile = __DIR__ . $requestPath;
 
 if ($requestPath !== '/' && (is_file($requestedFile) || is_dir($requestedFile))) {

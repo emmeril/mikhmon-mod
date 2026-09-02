@@ -106,6 +106,12 @@ $maskedToken = $fonnteConfig['token'] !== '' ? str_repeat('*', max(4, min(20, st
   flex: 0 0 auto;
   margin: 5px 0 5px 0;
 }
+.fonnte-payment-note {
+  display: inline-block;
+  margin-left: 8px;
+  color: #777;
+  font-size: 11px;
+}
 @media screen and (max-width: 750px) {
   .fonnte-settings-table td:first-child {
     width: 115px;
@@ -116,6 +122,7 @@ $maskedToken = $fonnteConfig['token'] !== '' ? str_repeat('*', max(4, min(20, st
   }
   .fonnte-payment-note {
     display: block;
+    margin-left: 0;
     margin-top: 4px;
   }
 }

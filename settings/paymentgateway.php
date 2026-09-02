@@ -88,14 +88,6 @@ $midtransWebhookUrl = $paymentBaseUrl !== '' ? $paymentBaseUrl . '/payment-notif
 $xenditWebhookUrl = $paymentBaseUrl !== '' ? $paymentBaseUrl . '/payment-notification.php?provider=xendit' : 'https://domain-anda/payment-notification.php?provider=xendit';
 ?>
 <style>
-.payment-settings-hero {
-  background: linear-gradient(125deg, #0f766e, #155e75);
-  color: #fff;
-  border-radius: 5px;
-  padding: 18px 20px;
-  margin-bottom: 15px;
-}
-.payment-settings-hero h3 { margin: 0 0 6px; color: #fff; }
 .payment-settings-grid { display: flex; flex-wrap: wrap; margin: 0 -7px; }
 .payment-settings-column { width: 50%; padding: 0 7px; box-sizing: border-box; }
 .payment-provider-card { border-top: 4px solid #0f766e; height: calc(100% - 14px); }
@@ -115,16 +107,10 @@ $xenditWebhookUrl = $paymentBaseUrl !== '' ? $paymentBaseUrl . '/payment-notific
   .payment-settings-table, .payment-settings-table tbody, .payment-settings-table tr, .payment-settings-table td { display: block; width: 100%; box-sizing: border-box; }
   .payment-settings-table td:first-child { width: 100%; padding-bottom: 3px; }
   .payment-settings-table td:last-child { padding-top: 3px; }
-  .payment-settings-hero { padding: 15px; }
 }
 </style>
 <div class="row">
   <div class="col-12">
-    <div class="payment-settings-hero">
-      <h3><i class="fa fa-credit-card"></i> Payment Gateway</h3>
-      <div>Kelola pembayaran invoice melalui Midtrans dan Xendit dari satu tempat.</div>
-    </div>
-
     <?php if ($paymentMessage !== ''): ?><div class="bg-success pd-10 radius-3 mr-b-10"><i class="fa fa-check"></i> <?= htmlspecialchars($paymentMessage, ENT_QUOTES); ?></div><?php endif; ?>
     <?php if ($paymentError !== ''): ?><div class="bg-danger pd-10 radius-3 mr-b-10"><i class="fa fa-ban"></i> <?= htmlspecialchars($paymentError, ENT_QUOTES); ?></div><?php endif; ?>
     <?php if ($activePaymentEnvironmentSecrets): ?><div class="bg-info pd-10 radius-3 mr-b-10"><i class="fa fa-shield"></i> Kredensial aktif dari environment: <?= htmlspecialchars(implode(', ', $activePaymentEnvironmentSecrets), ENT_QUOTES); ?>. Nilai environment tidak disalin ke file konfigurasi.</div><?php endif; ?>

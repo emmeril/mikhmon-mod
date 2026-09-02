@@ -41,7 +41,7 @@ $identityAddress = $identityCustomer['address'] ?? '';
   .identity-fields .wide{grid-column:1/-1}
   .identity-fields label{display:block;margin-bottom:6px;font-size:12px;font-weight:bold;color:#d7dbe0}
   .identity-fields textarea{height:90px;resize:vertical}
-  .identity-actions{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+  .identity-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
   .identity-actions .btn,.identity-actions a{box-sizing:border-box;margin:0}
   @media(max-width:767px){.identity-fields{grid-template-columns:1fr}.identity-fields .wide{grid-column:auto}.identity-actions{flex-direction:column}.identity-actions .btn,.identity-actions a{width:100%;text-align:center}}
 </style>

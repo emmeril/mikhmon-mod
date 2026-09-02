@@ -102,16 +102,6 @@ if (!isset($_SESSION["mikhmon"])) {
   <div class="card-body">
 <?php if ($profileError !== ''): ?><div class="box bg-danger"><i class="fa fa-warning"></i> <?= htmlspecialchars($profileError, ENT_QUOTES); ?></div><?php endif; ?>
 <form autocomplete="off" method="post" action="">
-  <div>
-  <?php if ($_SESSION['ubp'] != "") {
-    echo "    <a class='btn bg-warning' href='./?hotspot=users&profile=" . $_SESSION['ubp'] . "&session=" . $session . "'> <i class='fa fa-close'></i> ".$_close."</a>";
-  } else {
-    echo "    <a class='btn bg-warning' href='./?hotspot=users&profile=all&session=" . $session . "'> <i class='fa fa-close'></i> ".$_close."</a>";
-  }
-  ?>
-    <button type="submit" onclick="loader()" class="btn bg-primary" name="save"><i class="fa fa-save"></i> <?= $_save ?></button>
-  </div>
-
 <table class="table">
   <tr>
     <td class="align-middle" >Server</td>
@@ -179,6 +169,15 @@ if (!isset($_SESSION["mikhmon"])) {
     <td  colspan="4" class="align-middle"  id="GetValidPrice"></td>
   </tr>
 </table>
+  <div class="text-right">
+    <button type="submit" onclick="loader()" class="btn bg-primary" name="save"><i class="fa fa-save"></i> <?= $_save ?></button>
+  <?php if ($_SESSION['ubp'] != "") {
+    echo "    <a class='btn bg-warning' href='./?hotspot=users&profile=" . $_SESSION['ubp'] . "&session=" . $session . "'> <i class='fa fa-close'></i> ".$_close."</a>";
+  } else {
+    echo "    <a class='btn bg-warning' href='./?hotspot=users&profile=all&session=" . $session . "'> <i class='fa fa-close'></i> ".$_close."</a>";
+  }
+  ?>
+  </div>
 </form>
 </div>
 </div>

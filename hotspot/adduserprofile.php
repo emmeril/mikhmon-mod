@@ -132,10 +132,6 @@ if (!isset($_SESSION["mikhmon"])) {
   </div>
   <div class="card-body">
 <form autocomplete="off" method="post" action="">
-  <div>
-    <a class="btn bg-warning" href="./?hotspot=user-profiles&session=<?= $session; ?>"> <i class="fa fa-close btn-mrg"></i> <?= $_close ?></a>
-    <button type="submit" name="save" class="btn bg-primary btn-mrg" ><i class="fa fa-save btn-mrg"></i> <?= $_save ?></button>
-  </div>
 <table class="table">
   <tr>
     <td class="align-middle"><?= $_name ?></td><td><input class="form-control" type="text" onchange="remSpace();" autocomplete="off" name="name" value="" required="1" autofocus></td>
@@ -207,6 +203,10 @@ if (!isset($_SESSION["mikhmon"])) {
   </td>
   </tr>
 </table>
+  <div class="text-right">
+    <button type="submit" name="save" class="btn bg-primary btn-mrg"><i class="fa fa-save btn-mrg"></i> <?= $_save ?></button>
+    <a class="btn bg-warning" href="./?hotspot=user-profiles&session=<?= $session; ?>"> <i class="fa fa-close btn-mrg"></i> <?= $_close ?></a>
+  </div>
 </form>
 </div>
 </div>

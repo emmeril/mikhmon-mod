@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['service_action'] ?? '') ==
   .service-add-fields{display:grid;grid-template-columns:1fr;gap:14px}
   .service-add-fields .wide{grid-column:1/-1}
   .service-add-fields label{display:block;margin-bottom:6px;font-size:12px;font-weight:bold;color:#d7dbe0}
-  .service-add-actions{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+  .service-add-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
   .service-add-actions .btn,.service-add-actions a{box-sizing:border-box;margin:0}
   @media(max-width:767px){.service-add-fields{grid-template-columns:1fr}.service-add-fields .wide{grid-column:auto}.service-add-actions{flex-direction:column}.service-add-actions .btn,.service-add-actions a{width:100%;text-align:center}}
 </style>
