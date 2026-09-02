@@ -30,38 +30,92 @@ function mikhmonInvoicePdfServices($invoice, $customer) {
   return array();
 }
 
+function mikhmonInvoicePdfDrawText(&$commands, $x, $y, $size, $text, $color = '0 0 0') {
+  $commands[] = 'BT';
+  $commands[] = '/F1 ' . (float) $size . ' Tf';
+  $commands[] = $color . ' rg';
+  $commands[] = '1 0 0 1 ' . (float) $x . ' ' . (float) $y . ' Tm';
+  $commands[] = '(' . mikhmonInvoicePdfText($text) . ') Tj';
+  $commands[] = 'ET';
+}
+
+function mikhmonInvoicePdfDrawRect(&$commands, $x, $y, $width, $height, $color, $fill = true) {
+  $commands[] = $color . ($fill ? ' rg' : ' RG');
+  $commands[] = (float) $x . ' ' . (float) $y . ' ' . (float) $width . ' ' . (float) $height . ' re ' . ($fill ? 'f' : 'S');
+}
+
 function mikhmonInvoicePdf($invoice, $customer, $currency, $brand) {
   $paymentReceived = ($invoice['status'] ?? '') === 'paid' || !empty($invoice['gateway_payment_received']);
-  $lines = array(
-    (string) $brand,
-    'INVOICE',
-    '',
-    'No. Invoice: ' . ($invoice['number'] ?? '-'),
-    'Nama Pelanggan: ' . ($customer['name'] ?? ($invoice['customer_name'] ?? '-')),
-    'Telepon: ' . ($customer['phone'] ?? '-'),
-    'Alamat: ' . ($customer['address'] ?? '-'),
-    'Status: ' . ($paymentReceived ? 'LUNAS' : 'BELUM DIBAYAR'),
-    'Tanggal Invoice: ' . (!empty($invoice['created_at']) ? date('Y-m-d H:i:s', (int) $invoice['created_at']) : '-'),
-    'Jatuh Tempo: ' . ($invoice['due_date'] ?? '-'),
-    '',
-    'DETAIL LAYANAN',
-  );
-  foreach (mikhmonInvoicePdfServices($invoice, $customer) as $service) {
-    $lines[] = strtoupper((string) ($service['service'] ?? 'hotspot')) . ' / ' . (string) ($service['username'] ?? '-') . ' / ' . (string) ($service['profile'] ?? '-');
-    $lines[] = '  Nominal: ' . mikhmonInvoicePdfMoney($service['amount'] ?? 0, $currency);
-  }
-  $lines[] = '';
-  $lines[] = 'TOTAL TAGIHAN: ' . mikhmonInvoicePdfMoney($invoice['amount'] ?? 0, $currency);
+  $number = (string) ($invoice['number'] ?? '-');
+  $name = (string) ($customer['name'] ?? ($invoice['customer_name'] ?? '-'));
+  $createdAt = !empty($invoice['created_at']) ? date('Y-m-d H:i:s', (int) $invoice['created_at']) : '-';
+  $dueDate = (string) ($invoice['due_date'] ?? '-');
+  $status = $paymentReceived ? 'LUNAS' : 'BELUM DIBAYAR';
+  $total = mikhmonInvoicePdfMoney($invoice['amount'] ?? 0, $currency);
   $paidAt = (int) ($invoice['paid_at'] ?? $invoice['gateway_paid_at'] ?? 0);
-  if ($paidAt > 0) $lines[] = 'Tanggal Bayar: ' . date('Y-m-d H:i:s', $paidAt);
-  if (!empty($invoice['next_due_date'])) $lines[] = 'Jatuh Tempo Berikutnya: ' . $invoice['next_due_date'];
+  $commands = array();
 
-  $commands = array('BT', '/F1 20 Tf', '50 790 Td', '(' . mikhmonInvoicePdfText($lines[0]) . ') Tj', '/F1 14 Tf', '0 -30 Td', '(' . mikhmonInvoicePdfText($lines[1]) . ') Tj', '/F1 10 Tf');
-  for ($index = 2, $count = count($lines); $index < $count; $index++) {
-    $commands[] = '0 -18 Td';
-    $commands[] = '(' . mikhmonInvoicePdfText($lines[$index]) . ') Tj';
+  // Header and invoice title.
+  mikhmonInvoicePdfDrawRect($commands, 40, 760, 515, 70, '0.08 0.22 0.38');
+  mikhmonInvoicePdfDrawText($commands, 55, 800, 19, $brand, '1 1 1');
+  mikhmonInvoicePdfDrawText($commands, 55, 778, 9, 'Tagihan layanan internet', '0.82 0.9 0.96');
+  mikhmonInvoicePdfDrawText($commands, 430, 804, 19, 'INVOICE', '1 1 1');
+  mikhmonInvoicePdfDrawText($commands, 430, 781, 9, $number, '0.82 0.9 0.96');
+
+  // Customer and invoice metadata cards.
+  mikhmonInvoicePdfDrawRect($commands, 40, 675, 250, 62, '0.95 0.97 0.99');
+  mikhmonInvoicePdfDrawRect($commands, 305, 675, 250, 62, '0.95 0.97 0.99');
+  mikhmonInvoicePdfDrawText($commands, 52, 720, 9, 'TAGIHAN UNTUK', '0.08 0.22 0.38');
+  mikhmonInvoicePdfDrawText($commands, 52, 702, 11, $name);
+  mikhmonInvoicePdfDrawText($commands, 52, 686, 8, 'Telepon: ' . ($customer['phone'] ?? '-') . '  |  Alamat: ' . ($customer['address'] ?? '-'));
+  mikhmonInvoicePdfDrawText($commands, 317, 720, 9, 'INFORMASI INVOICE', '0.08 0.22 0.38');
+  mikhmonInvoicePdfDrawText($commands, 317, 702, 9, 'No. Invoice: ' . $number);
+  mikhmonInvoicePdfDrawText($commands, 317, 686, 9, 'Tanggal: ' . $createdAt . '  |  Jatuh tempo: ' . $dueDate);
+
+  // Service detail table.
+  $tableLeft = 40; $tableTop = 645; $headerHeight = 26; $rowHeight = 25;
+  $columns = array(40, 70, 165, 295, 455, 555);
+  mikhmonInvoicePdfDrawRect($commands, $tableLeft, $tableTop - $headerHeight, 515, $headerHeight, '0.08 0.22 0.38');
+  mikhmonInvoicePdfDrawText($commands, 50, $tableTop - 18, 9, 'NO', '1 1 1');
+  mikhmonInvoicePdfDrawText($commands, 80, $tableTop - 18, 9, 'LAYANAN', '1 1 1');
+  mikhmonInvoicePdfDrawText($commands, 175, $tableTop - 18, 9, 'USERNAME', '1 1 1');
+  mikhmonInvoicePdfDrawText($commands, 305, $tableTop - 18, 9, 'PROFILE', '1 1 1');
+  mikhmonInvoicePdfDrawText($commands, 470, $tableTop - 18, 9, 'NOMINAL', '1 1 1');
+  $services = mikhmonInvoicePdfServices($invoice, $customer);
+  $maxRows = 16;
+  foreach ($services as $index => $service) {
+    if ($index >= $maxRows) break;
+    $rowY = $tableTop - $headerHeight - (($index + 1) * $rowHeight);
+    if ($index % 2 === 0) mikhmonInvoicePdfDrawRect($commands, $tableLeft, $rowY, 515, $rowHeight, '0.97 0.98 1');
+    mikhmonInvoicePdfDrawText($commands, 52, $rowY + 8, 9, (string) ($index + 1));
+    mikhmonInvoicePdfDrawText($commands, 80, $rowY + 8, 9, strtoupper((string) ($service['service'] ?? 'hotspot')));
+    mikhmonInvoicePdfDrawText($commands, 175, $rowY + 8, 9, (string) ($service['username'] ?? '-'));
+    mikhmonInvoicePdfDrawText($commands, 305, $rowY + 8, 9, (string) ($service['profile'] ?? '-'));
+    mikhmonInvoicePdfDrawText($commands, 470, $rowY + 8, 9, mikhmonInvoicePdfMoney($service['amount'] ?? 0, $currency));
   }
-  $commands[] = 'ET';
+  $shownRows = min(count($services), $maxRows);
+  if (count($services) > $maxRows) {
+    $rowY = $tableTop - $headerHeight - (($maxRows + 1) * $rowHeight);
+    mikhmonInvoicePdfDrawText($commands, 80, $rowY + 8, 9, 'Layanan lainnya tidak ditampilkan.');
+  }
+  $tableRows = $shownRows + (count($services) > $maxRows ? 1 : 0);
+  $tableBottom = $tableTop - $headerHeight - ($tableRows * $rowHeight);
+  $commands[] = '0.75 0.8 0.86 RG';
+  $commands[] = '0.6 w';
+  $commands[] = $tableLeft . ' ' . $tableBottom . ' 515 ' . ($tableTop - $tableBottom) . ' re S';
+  foreach ($columns as $columnX) $commands[] = $columnX . ' ' . $tableBottom . ' m ' . $columnX . ' ' . $tableTop . ' l S';
+  for ($row = 0; $row <= $tableRows; $row++) {
+    $lineY = $tableTop - $headerHeight - ($row * $rowHeight);
+    $commands[] = $tableLeft . ' ' . $lineY . ' m 555 ' . $lineY . ' l S';
+  }
+  $summaryY = $tableBottom - 34;
+  mikhmonInvoicePdfDrawRect($commands, 350, $summaryY - 60, 205, 60, '0.95 0.97 0.99');
+  mikhmonInvoicePdfDrawText($commands, 365, $summaryY - 22, 10, 'TOTAL TAGIHAN: ' . $total, '0.08 0.22 0.38');
+  mikhmonInvoicePdfDrawText($commands, 365, $summaryY - 42, 10, 'Status: ' . $status, $paymentReceived ? '0.05 0.45 0.25' : '0.75 0.35 0.05');
+  if ($paidAt > 0) mikhmonInvoicePdfDrawText($commands, 52, $summaryY - 20, 9, 'Tanggal Bayar: ' . date('Y-m-d H:i:s', $paidAt));
+  if (!empty($invoice['next_due_date'])) mikhmonInvoicePdfDrawText($commands, 52, $summaryY - 38, 9, 'Jatuh Tempo Berikutnya: ' . $invoice['next_due_date']);
+  mikhmonInvoicePdfDrawText($commands, 40, 55, 8, 'Terima kasih telah menggunakan layanan kami.', '0.4 0.4 0.4');
+
   $stream = implode("\n", $commands) . "\n";
   $objects = array(
     '<< /Type /Catalog /Pages 2 0 R >>',
