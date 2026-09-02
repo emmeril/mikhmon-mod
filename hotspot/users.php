@@ -155,6 +155,10 @@ if (!isset($_SESSION["mikhmon"])) {
     <?php ; }else if ($exp == "1"){ ?>
   <button class="btn bg-red" onclick="if(confirm('Are you sure to delete users?')){loadpage('./?remove-hotspot-user-expired=1&session=<?= $session; ?>');loader();}else{}" title="Remove user expired">  <i class="fa fa-trash"></i> Expired Users</button>
       <?php } ?>
+  <span><i class="fa fa-print"></i> Cetak Semua:</span>
+  <button type="button" class="btn bg-primary" onclick="voucherListPrint('default')" title="Cetak semua voucher - <?= htmlspecialchars($_print_default, ENT_QUOTES); ?>"><i class="fa fa-print"></i> <?= $_print_default; ?></button>
+  <button type="button" class="btn bg-info" onclick="voucherListPrint('qr')" title="Cetak semua voucher - <?= htmlspecialchars($_print_qr, ENT_QUOTES); ?>"><i class="fa fa-qrcode"></i> <?= $_print_qr; ?></button>
+  <button type="button" class="btn bg-warning" onclick="voucherListPrint('small')" title="Cetak semua voucher - <?= htmlspecialchars($_print_small, ENT_QUOTES); ?>"><i class="fa fa-print"></i> <?= $_print_small; ?></button>
 </div>
   </div>
 <div class="overflow mr-t-10 box-bordered" style="max-height: 75vh">
@@ -206,7 +210,7 @@ for ($i = 0; $i < $TotalReg; $i++) {
     $udatalimit = ' ' . formatBytes($udatalimit, 2);
   }
 
-  echo "<tr>";
+  echo "<tr data-voucher-name=\"" . htmlspecialchars($uname, ENT_QUOTES) . "\">";
   ?>
   <td style='text-align:center;'>  <i class='fa fa-minus-square text-danger pointer' onclick="if(confirm('Are you sure to delete username (<?= $uname; ?>)?')){loadpage('./?remove-hotspot-user=<?= $uid; ?>&session=<?= $session; ?>')}else{}" title='Remove <?= $uname; ?>'></i>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
   <?php
@@ -253,6 +257,37 @@ for ($i = 0; $i < $TotalReg; $i++) {
 
 <script>
 $(function() {
+  // Print every voucher currently visible after the active filters.
+  window.voucherListPrint = function(format) {
+    var users = Array.prototype.slice.call(document.querySelectorAll('#dataTable tbody tr'))
+      .filter(function(row) { return row.style.display !== 'none'; })
+      .map(function(row) { return row.getAttribute('data-voucher-name') || ''; })
+      .filter(function(name) { return name !== ''; });
+    if (!users.length) {
+      alert('Tidak ada voucher untuk dicetak.');
+      return;
+    }
+    var form = document.createElement('form');
+    form.method = 'post';
+    form.action = './voucher/print.php';
+    form.target = '_blank';
+    [
+      ['session', <?= json_encode($session); ?>],
+      ['qr', format === 'qr' ? 'yes' : 'no'],
+      ['small', format === 'small' ? 'yes' : 'no'],
+      ['users_json', JSON.stringify(users)]
+    ].forEach(function(field) {
+      var input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = field[0];
+      input.value = field[1];
+      form.appendChild(input);
+    });
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
+  };
+
   function setVoucherPasswordVisibility(cell, visible) {
     var password = cell.attr('data-password') || '';
     cell.find('.voucher-password-value').text(visible ? (password || '-') : '******');
