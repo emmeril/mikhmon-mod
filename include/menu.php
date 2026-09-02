@@ -430,7 +430,6 @@ include('./info.php');
     <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> Daftar Pelanggan</a>
     <a href="./?billing=1&session=<?= $session; ?>" class="<?= $sbilling; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-money"></i> Billing</a>
   </div>
-  <a href="./?hotspot=print-center&session=<?= $session; ?>" class="menu <?= $sprintcenter; ?>"><i class="fa fa-print"></i> Print Center</a>
   <div class="dropdown-btn <?= $sselling; ?>"><i class="fa fa-money"></i> <?= $_report ?> <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $reportmenu; ?>">
     <a href="./?report=selling&idbl=<?= strtolower(date("M")) . date("Y"); ?>&session=<?= $session; ?>" class="<?= $sreportall; ?>"><i class="fa fa-list"></i> Semua</a>
@@ -488,9 +487,6 @@ include('./info.php');
     <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> Daftar Pelanggan</a>
     <a href="./?billing=1&session=<?= $session; ?>" class="<?= $sbilling; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-money"></i> Billing</a>
   </div>
-  <!--quick print-->
-  <a href="./?hotspot=print-center&session=<?= $session; ?>" class="menu <?= $sprintcenter; ?>"><i class="fa fa-print"></i> Print Center</a>
-  <!--vouchers-->
    <!--log-->
   <div class="dropdown-btn <?= $log; ?>"><i class=" fa fa-align-justify"></i> <?= $_log ?>
     <i class="fa fa-caret-down"></i>
