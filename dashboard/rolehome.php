@@ -207,6 +207,17 @@ $pppoeCustomers = count($pppoeCustomerNames);
         var mitraTrafficChart;
         var mitraTrafficSession = <?= json_encode((string) $session); ?>;
         var mitraTrafficInterface = <?= json_encode($interfaceName); ?>;
+        var mitraTrafficTooltipTitle = <?= json_encode(htmlspecialchars($brandname . ' - ' . $_traffic, ENT_QUOTES, 'UTF-8')); ?>;
+        var mitraTrafficTimeLabel = <?= json_encode(htmlspecialchars($_time, ENT_QUOTES, 'UTF-8')); ?>;
+
+        function formatMitraTrafficRate(value) {
+          var rate = Number(value) || 0;
+          var sizes = ['bps', 'kbps', 'Mbps', 'Gbps', 'Tbps'];
+          if (rate <= 0) return '0 bps';
+
+          var index = Math.min(Math.floor(Math.log(rate) / Math.log(1024)), sizes.length - 1);
+          return parseFloat((rate / Math.pow(1024, index)).toFixed(2)) + ' ' + sizes[index];
+        }
 
         function requestMitraTraffic() {
           if (!mitraTrafficChart || !mitraTrafficInterface) return;
@@ -236,18 +247,31 @@ $pppoeCustomers = count($pppoeCustomerNames);
               maxPadding: 0.2,
               title: { text: null },
               labels: { formatter: function () {
-                var bytes = this.value;
-                var sizes = ['bps', 'kbps', 'Mbps', 'Gbps', 'Tbps'];
-                if (!bytes) return '0 bps';
-                var index = Math.floor(Math.log(bytes) / Math.log(1024));
-                return parseFloat((bytes / Math.pow(1024, index)).toFixed(2)) + ' ' + sizes[index];
+                return formatMitraTrafficRate(this.value);
               } }
             },
             series: [
-              { name: 'Tx', data: [], marker: { symbol: 'circle' } },
-              { name: 'Rx', data: [], marker: { symbol: 'circle' } }
+              { name: 'TX', data: [], marker: { symbol: 'circle' } },
+              { name: 'RX', data: [], marker: { symbol: 'circle' } }
             ],
-            tooltip: { shared: true }
+            tooltip: {
+              shared: true,
+              formatter: function () {
+                var lines = [
+                  '<b>' + mitraTrafficTooltipTitle + '</b>',
+                  '<b>' + mitraTrafficTimeLabel + ':</b> ' + Highcharts.dateFormat('%H:%M:%S', new Date(this.x))
+                ];
+
+                $.each(this.points, function (_, point) {
+                  lines.push(
+                    '<span style="color:' + point.series.color + ';font-size:1.5em;">●</span>' +
+                    '<b>' + point.series.name + ':</b> ' + formatMitraTrafficRate(point.y)
+                  );
+                });
+
+                return lines.join('<br>');
+              }
+            }
           });
           requestMitraTraffic();
           setInterval(requestMitraTraffic, 8000);
