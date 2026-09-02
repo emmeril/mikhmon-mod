@@ -1,7 +1,5 @@
 <?php
-/**
- * Payment gateway configuration and small API clients for Midtrans and Xendit.
- */
+/** Payment gateway configuration and API client for Midtrans. */
 
 function mikhmonPaymentGatewayConfigPath() {
   $override = getenv('MIKHMON_PAYMENT_GATEWAY_CONFIG');
@@ -15,8 +13,6 @@ function mikhmonPaymentGatewayConfigPath() {
 function mikhmonPaymentGatewayDefaults() {
   return array(
     'enabled' => false,
-    'default_gateway' => 'midtrans',
-    'currency' => 'IDR',
     'invoice_duration' => 86400,
     'midtrans' => array(
       'enabled' => false,
@@ -24,12 +20,6 @@ function mikhmonPaymentGatewayDefaults() {
       'merchant_id' => '',
       'server_key' => '',
       'client_key' => '',
-    ),
-    'xendit' => array(
-      'enabled' => false,
-      'secret_key' => '',
-      'public_key' => '',
-      'webhook_token' => '',
     ),
   );
 }
@@ -40,26 +30,15 @@ function mikhmonPaymentGatewayCleanSecret($value) {
 
 function mikhmonPaymentGatewayNormalizeConfig($config) {
   $defaults = mikhmonPaymentGatewayDefaults();
-  $config = array_merge($defaults, is_array($config) ? $config : array());
-  $config['midtrans'] = array_merge($defaults['midtrans'], isset($config['midtrans']) && is_array($config['midtrans']) ? $config['midtrans'] : array());
-  $config['xendit'] = array_merge($defaults['xendit'], isset($config['xendit']) && is_array($config['xendit']) ? $config['xendit'] : array());
-
-  $config['enabled'] = !empty($config['enabled']);
-  $config['default_gateway'] = $config['default_gateway'] === 'xendit' ? 'xendit' : 'midtrans';
-  $config['currency'] = strtoupper(preg_replace('/[^A-Za-z]/', '', (string) $config['currency']));
-  if ($config['currency'] === '') $config['currency'] = 'IDR';
-  // Xendit invoices accept a maximum duration of 24 hours.
-  $config['invoice_duration'] = max(900, min(86400, (int) $config['invoice_duration']));
-
-  $config['midtrans']['enabled'] = !empty($config['midtrans']['enabled']);
-  $config['midtrans']['environment'] = $config['midtrans']['environment'] === 'production' ? 'production' : 'sandbox';
+  $input = is_array($config) ? $config : array();
+  $midtrans = isset($input['midtrans']) && is_array($input['midtrans']) ? $input['midtrans'] : array();
+  $config = $defaults;
+  $config['enabled'] = !empty($input['enabled']);
+  $config['invoice_duration'] = max(900, min(86400, (int) ($input['invoice_duration'] ?? $defaults['invoice_duration'])));
+  $config['midtrans']['enabled'] = !empty($midtrans['enabled']);
+  $config['midtrans']['environment'] = ($midtrans['environment'] ?? '') === 'production' ? 'production' : 'sandbox';
   foreach (array('merchant_id', 'server_key', 'client_key') as $key) {
-    $config['midtrans'][$key] = mikhmonPaymentGatewayCleanSecret($config['midtrans'][$key]);
-  }
-
-  $config['xendit']['enabled'] = !empty($config['xendit']['enabled']);
-  foreach (array('secret_key', 'public_key', 'webhook_token') as $key) {
-    $config['xendit'][$key] = mikhmonPaymentGatewayCleanSecret($config['xendit'][$key]);
+    $config['midtrans'][$key] = mikhmonPaymentGatewayCleanSecret($midtrans[$key] ?? '');
   }
   return $config;
 }
@@ -80,9 +59,6 @@ function mikhmonPaymentGatewayReadConfig() {
     'MIKHMON_MIDTRANS_MERCHANT_ID' => array('midtrans', 'merchant_id'),
     'MIKHMON_MIDTRANS_SERVER_KEY' => array('midtrans', 'server_key'),
     'MIKHMON_MIDTRANS_CLIENT_KEY' => array('midtrans', 'client_key'),
-    'MIKHMON_XENDIT_SECRET_KEY' => array('xendit', 'secret_key'),
-    'MIKHMON_XENDIT_PUBLIC_KEY' => array('xendit', 'public_key'),
-    'MIKHMON_XENDIT_WEBHOOK_TOKEN' => array('xendit', 'webhook_token'),
   );
   foreach ($environment as $name => $target) {
     $value = getenv($name);
@@ -230,36 +206,19 @@ function mikhmonPaymentGatewayMidtransUrlEnvironment($url) {
 
 function mikhmonPaymentGatewayTestConnection($provider, $config = null) {
   $config = $config === null ? mikhmonPaymentGatewayReadConfig() : mikhmonPaymentGatewayNormalizeConfig($config);
-  if ($provider === 'midtrans') {
-    $serverKey = $config['midtrans']['server_key'];
-    if ($serverKey === '') return array('success' => false, 'message' => 'Server Key Midtrans belum diatur.');
-    $baseUrl = $config['midtrans']['environment'] === 'production' ? 'https://api.midtrans.com' : 'https://api.sandbox.midtrans.com';
-    $orderId = 'MIKHMON-CREDENTIAL-CHECK-' . time();
-    $response = mikhmonPaymentGatewayHttpRequest('GET', $baseUrl . '/v2/' . rawurlencode($orderId) . '/status', array(
-      'Accept: application/json',
-      'Authorization: Basic ' . base64_encode($serverKey . ':'),
-    ));
-    if ($response['success'] || $response['http_code'] === 404) {
-      return array('success' => true, 'message' => 'Kredensial Midtrans diterima pada mode ' . $config['midtrans']['environment'] . '.');
-    }
-    return array('success' => false, 'message' => 'Koneksi Midtrans gagal: ' . mikhmonPaymentGatewayErrorMessage($response, 'HTTP ' . $response['http_code']));
+  if ($provider !== 'midtrans') return array('success' => false, 'message' => 'Hanya payment gateway Midtrans yang tersedia.');
+  $serverKey = $config['midtrans']['server_key'];
+  if ($serverKey === '') return array('success' => false, 'message' => 'Server Key Midtrans belum diatur.');
+  $baseUrl = $config['midtrans']['environment'] === 'production' ? 'https://api.midtrans.com' : 'https://api.sandbox.midtrans.com';
+  $orderId = 'MIKHMON-CREDENTIAL-CHECK-' . time();
+  $response = mikhmonPaymentGatewayHttpRequest('GET', $baseUrl . '/v2/' . rawurlencode($orderId) . '/status', array(
+    'Accept: application/json',
+    'Authorization: Basic ' . base64_encode($serverKey . ':'),
+  ));
+  if ($response['success'] || $response['http_code'] === 404) {
+    return array('success' => true, 'message' => 'Kredensial Midtrans diterima pada mode ' . $config['midtrans']['environment'] . '.');
   }
-
-  if ($provider === 'xendit') {
-    $secretKey = $config['xendit']['secret_key'];
-    if ($secretKey === '') return array('success' => false, 'message' => 'Secret API Key Xendit belum diatur.');
-    $response = mikhmonPaymentGatewayHttpRequest('GET', 'https://api.xendit.co/balance?account_type=CASH', array(
-      'Accept: application/json',
-      'Authorization: Basic ' . base64_encode($secretKey . ':'),
-    ));
-    if ($response['success']) {
-      $balance = isset($response['data']['balance']) ? ' Saldo CASH: ' . number_format((float) $response['data']['balance'], 0, ',', '.') . '.' : '';
-      return array('success' => true, 'message' => 'Koneksi Xendit berhasil.' . $balance);
-    }
-    return array('success' => false, 'message' => 'Koneksi Xendit gagal: ' . mikhmonPaymentGatewayErrorMessage($response, 'HTTP ' . $response['http_code']));
-  }
-
-  return array('success' => false, 'message' => 'Payment gateway tidak dikenal.');
+  return array('success' => false, 'message' => 'Koneksi Midtrans gagal: ' . mikhmonPaymentGatewayErrorMessage($response, 'HTTP ' . $response['http_code']));
 }
 
 function mikhmonPaymentGatewayGetMidtransStatus($orderId, $config = null) {
@@ -316,52 +275,25 @@ function mikhmonPaymentGatewayGetMidtransSnapStatus($token, $config = null) {
 function mikhmonPaymentGatewayCreatePayment($provider, $payment, $config = null) {
   $config = $config === null ? mikhmonPaymentGatewayReadConfig() : mikhmonPaymentGatewayNormalizeConfig($config);
   if (empty($config['enabled'])) return array('success' => false, 'message' => 'Payment gateway belum diaktifkan.');
-  $provider = $provider === '' ? $config['default_gateway'] : $provider;
+  if ($provider !== '' && $provider !== 'midtrans') return array('success' => false, 'message' => 'Hanya payment gateway Midtrans yang tersedia.');
   $orderId = trim((string) ($payment['order_id'] ?? ''));
   $amount = (int) round((float) ($payment['amount'] ?? 0));
   if ($orderId === '' || $amount < 1) return array('success' => false, 'message' => 'Order ID dan nominal pembayaran wajib diisi.');
 
-  if ($provider === 'midtrans') {
-    if (empty($config['midtrans']['enabled']) || $config['midtrans']['server_key'] === '') return array('success' => false, 'message' => 'Midtrans belum aktif atau Server Key belum diatur.');
-    $url = $config['midtrans']['environment'] === 'production'
-      ? 'https://app.midtrans.com/snap/v1/transactions'
-      : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
-    $payload = mikhmonPaymentGatewayMidtransPayload($payment, $config);
-    $response = mikhmonPaymentGatewayHttpRequest('POST', $url, array(
-      'Accept: application/json',
-      'Content-Type: application/json',
-      'Authorization: Basic ' . base64_encode($config['midtrans']['server_key'] . ':'),
-    ), $payload);
-    if (!$response['success'] || empty($response['data']['redirect_url'])) {
-      return array('success' => false, 'message' => 'Transaksi Midtrans gagal: ' . mikhmonPaymentGatewayErrorMessage($response, 'respons tidak valid'), 'response' => $response);
-    }
-    return array('success' => true, 'provider' => 'midtrans', 'environment' => $config['midtrans']['environment'], 'payment_url' => $response['data']['redirect_url'], 'reference' => $response['data']['token'] ?? '', 'response' => $response['data']);
+  if (empty($config['midtrans']['enabled']) || $config['midtrans']['server_key'] === '') return array('success' => false, 'message' => 'Midtrans belum aktif atau Server Key belum diatur.');
+  $url = $config['midtrans']['environment'] === 'production'
+    ? 'https://app.midtrans.com/snap/v1/transactions'
+    : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
+  $payload = mikhmonPaymentGatewayMidtransPayload($payment, $config);
+  $response = mikhmonPaymentGatewayHttpRequest('POST', $url, array(
+    'Accept: application/json',
+    'Content-Type: application/json',
+    'Authorization: Basic ' . base64_encode($config['midtrans']['server_key'] . ':'),
+  ), $payload);
+  if (!$response['success'] || empty($response['data']['redirect_url'])) {
+    return array('success' => false, 'message' => 'Transaksi Midtrans gagal: ' . mikhmonPaymentGatewayErrorMessage($response, 'respons tidak valid'), 'response' => $response);
   }
-
-  if ($provider === 'xendit') {
-    if (empty($config['xendit']['enabled']) || $config['xendit']['secret_key'] === '') return array('success' => false, 'message' => 'Xendit belum aktif atau Secret API Key belum diatur.');
-    $payload = array(
-      'external_id' => $orderId,
-      'amount' => $amount,
-      'description' => (string) ($payment['description'] ?? ('Pembayaran ' . $orderId)) . (!empty($payment['customer_name']) ? ' - ' . (string) $payment['customer_name'] : ''),
-      'invoice_duration' => $config['invoice_duration'],
-      'currency' => $config['currency'],
-    );
-    foreach (array('success_redirect_url', 'failure_redirect_url') as $key) {
-      if (!empty($payment[$key])) $payload[$key] = (string) $payment[$key];
-    }
-    $response = mikhmonPaymentGatewayHttpRequest('POST', 'https://api.xendit.co/v2/invoices', array(
-      'Accept: application/json',
-      'Content-Type: application/json',
-      'Authorization: Basic ' . base64_encode($config['xendit']['secret_key'] . ':'),
-    ), $payload);
-    if (!$response['success'] || empty($response['data']['invoice_url'])) {
-      return array('success' => false, 'message' => 'Invoice Xendit gagal: ' . mikhmonPaymentGatewayErrorMessage($response, 'respons tidak valid'), 'response' => $response);
-    }
-    return array('success' => true, 'provider' => 'xendit', 'payment_url' => $response['data']['invoice_url'], 'reference' => $response['data']['id'] ?? '', 'response' => $response['data']);
-  }
-
-  return array('success' => false, 'message' => 'Payment gateway tidak dikenal.');
+  return array('success' => true, 'provider' => 'midtrans', 'environment' => $config['midtrans']['environment'], 'payment_url' => $response['data']['redirect_url'], 'reference' => $response['data']['token'] ?? '', 'response' => $response['data']);
 }
 
 function mikhmonPaymentGatewayValidMidtransNotification($notification, $serverKey) {
@@ -388,14 +320,4 @@ function mikhmonPaymentGatewayMidtransPaidAt($notification) {
     }
   }
   return 0;
-}
-
-function mikhmonPaymentGatewayValidXenditCallback($headerToken, $configuredToken) {
-  $configuredToken = mikhmonPaymentGatewayCleanSecret($configuredToken);
-  return $configuredToken !== '' && is_string($headerToken) && hash_equals($configuredToken, trim($headerToken));
-}
-
-function mikhmonPaymentGatewayXenditPaid($notification) {
-  $status = strtoupper((string) ($notification['status'] ?? ''));
-  return $status === 'PAID' || $status === 'SETTLED';
 }

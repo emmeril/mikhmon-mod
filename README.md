@@ -68,15 +68,14 @@ range can be changed in `Settings > WhatsApp Gateway`. A slot that would pass
 are retried by the billing worker in the next working period. Manual invoice
 sending follows the same working-hour restriction.
 
-#### Payment gateway (Midtrans and Xendit)
+#### Payment gateway (Midtrans)
 
 Open `Settings > Payment Gateway` as an administrator to enable online invoice
-payments. Select the default provider, configure the Midtrans Sandbox/Production
-credentials or Xendit API keys, then save and test the connection. An unpaid
-invoice in `Billing` can then generate a hosted payment link and stores its
-provider/reference on the invoice.
+payments. Configure the Midtrans Sandbox/Production credentials, then save and
+test the connection. An unpaid invoice in `Billing` can then generate a hosted
+Midtrans payment link and store its reference on the invoice.
 
-After a verified Midtrans/Xendit payment, Mikhmon automatically attempts to
+After a verified Midtrans payment, Mikhmon automatically attempts to
 activate every customer service and completes the invoice. If the router is
 offline, a user is missing, or one activation fails, the invoice remains in the
 gateway-confirmed state and Billing shows `Coba Lagi Aktivasi`. Successful
@@ -85,10 +84,9 @@ billing cycles.
 
 Secrets can be supplied through environment variables instead of the settings
 file: `MIKHMON_MIDTRANS_MERCHANT_ID`, `MIKHMON_MIDTRANS_SERVER_KEY`,
-`MIKHMON_MIDTRANS_CLIENT_KEY`, `MIKHMON_XENDIT_SECRET_KEY`,
-`MIKHMON_XENDIT_PUBLIC_KEY`, and `MIKHMON_XENDIT_WEBHOOK_TOKEN`. Environment
-values take precedence and are never written back to disk. The local config is
-stored in `data/payment-gateway.json` with restrictive permissions.
+and `MIKHMON_MIDTRANS_CLIENT_KEY`. Environment values take precedence and are
+never written back to disk. The local config is stored in
+`data/payment-gateway.json` with restrictive permissions.
 
 #### Download update.zip
 [update.zip](https://raw.githubusercontent.com/laksa19/laksa19.github.io/master/download/update.zip){:target="_blank"}
@@ -308,7 +306,7 @@ Panduan, https://laksa19.github.io/printBT.html
 Pelanggan dapat masuk melalui `/pelanggan` menggunakan nomor handphone yang tersimpan pada identitas pelanggan. Kode OTP dikirim oleh Fonnte; akun pelanggan tidak memerlukan akun staf di menu Users.
 
 - Aktifkan Fonnte pada menu Admin dan pastikan token/device siap digunakan.
-- Aktifkan Payment Gateway (Midtrans atau Xendit). Status Midtrans akan diperiksa langsung dari API saat Billing admin atau portal pelanggan dibuka; callback `payment-notification.php` bersifat opsional.
+- Aktifkan Payment Gateway Midtrans. Status pembayaran akan diperiksa langsung dari API saat Billing admin atau portal pelanggan dibuka; callback `payment-notification.php` bersifat opsional.
 - Pembelian voucher hanya menampilkan profile hotspot dengan `Expired Mode` selain `None`; setelah pembayaran final webhook membuat username dan password voucher yang sama secara otomatis.
 - Pembayaran langganan bulanan memakai layanan hotspot/PPPoE dengan `Expired Mode = None`; webhook menjalankan aktivasi ulang layanan yang terisolir melalui MikroTik.
 - Riwayat pembayaran dan link invoice tersedia di dashboard pelanggan. Perubahan password hotspot berlaku untuk seluruh layanan hotspot milik pelanggan.

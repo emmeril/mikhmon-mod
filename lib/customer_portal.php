@@ -98,14 +98,7 @@ function mikhmonCustomerPortalLatestInvoice($session, $customerId, $kind = '') {
 function mikhmonCustomerPortalActiveGateway($config = null) {
   $config = $config === null ? mikhmonPaymentGatewayReadConfig() : mikhmonPaymentGatewayNormalizeConfig($config);
   if (empty($config['enabled'])) return '';
-  $available = array(
-    'midtrans' => !empty($config['midtrans']['enabled']) && $config['midtrans']['server_key'] !== '',
-    'xendit' => !empty($config['xendit']['enabled']) && $config['xendit']['secret_key'] !== '',
-  );
-  $default = (string) ($config['default_gateway'] ?? 'midtrans');
-  if (!empty($available[$default])) return $default;
-  foreach (array('midtrans', 'xendit') as $provider) if (!empty($available[$provider])) return $provider;
-  return '';
+  return !empty($config['midtrans']['enabled']) && $config['midtrans']['server_key'] !== '' ? 'midtrans' : '';
 }
 
 function mikhmonCustomerPortalSyncPayments($session, $customer, $api = null) {
@@ -149,7 +142,7 @@ function mikhmonCustomerPortalReturnUrl() {
   return $baseUrl !== '' ? $baseUrl . '/pelanggan?payment=return' : '';
 }
 
-function mikhmonCustomerPortalCreateVoucherInvoice($session, $customer, $profile, $provider = '') {
+function mikhmonCustomerPortalCreateVoucherInvoice($session, $customer, $profile) {
   $details = is_array($profile) ? mikhmonCustomerPortalProfileDetails($profile) : array();
   if (!$details || $details['expired_mode'] === 'none' || $details['selling_price'] < 1) return array('success' => false, 'message' => 'Profile voucher tidak valid atau Expired Mode = None.');
   foreach (mikhmonGetInvoices($session) as $existing) {
@@ -168,10 +161,9 @@ function mikhmonCustomerPortalCreateVoucherInvoice($session, $customer, $profile
   );
   $orderId = $number . '-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
   $gatewayConfig = mikhmonPaymentGatewayReadConfig();
-  $provider = mikhmonCustomerPortalActiveGateway($gatewayConfig);
-  if ($provider === '') return array('success' => false, 'message' => 'Payment gateway aktif belum tersedia.');
+  if (mikhmonCustomerPortalActiveGateway($gatewayConfig) === '') return array('success' => false, 'message' => 'Midtrans belum aktif atau Server Key belum tersedia.');
   $returnUrl = mikhmonCustomerPortalReturnUrl();
-  $payment = mikhmonPaymentGatewayCreatePayment($provider, array('order_id' => $orderId, 'amount' => $invoice['amount'], 'description' => 'Voucher ' . $details['name'], 'customer_name' => $customer['name'] ?? 'Pelanggan', 'phone' => $customer['phone'] ?? '', 'success_redirect_url' => $returnUrl, 'failure_redirect_url' => $returnUrl), $gatewayConfig);
+  $payment = mikhmonPaymentGatewayCreatePayment('midtrans', array('order_id' => $orderId, 'amount' => $invoice['amount'], 'description' => 'Voucher ' . $details['name'], 'customer_name' => $customer['name'] ?? 'Pelanggan', 'phone' => $customer['phone'] ?? '', 'success_redirect_url' => $returnUrl, 'failure_redirect_url' => $returnUrl), $gatewayConfig);
   if (empty($payment['success'])) return $payment;
   $invoice['payment_gateway'] = $payment['provider']; $invoice['payment_order_id'] = $orderId; $invoice['payment_url'] = $payment['payment_url'];
   $invoice['payment_reference'] = $payment['reference'] ?? ''; $invoice['payment_environment'] = $payment['environment'] ?? ''; $invoice['payment_created_at'] = time();
@@ -179,7 +171,7 @@ function mikhmonCustomerPortalCreateVoucherInvoice($session, $customer, $profile
   return array('success' => true, 'invoice' => $invoice, 'payment_url' => $payment['payment_url']);
 }
 
-function mikhmonCustomerPortalCreateMonthlyInvoice($session, $customer, $api, $provider = '') {
+function mikhmonCustomerPortalCreateMonthlyInvoice($session, $customer, $api) {
   // Billing admin and the customer portal share the same unpaid invoice.
   // Look it up before recalculating services so an existing admin invoice is
   // never duplicated or silently changed by the portal.
@@ -204,10 +196,9 @@ function mikhmonCustomerPortalCreateMonthlyInvoice($session, $customer, $api, $p
   $number = (string) ($invoice['number'] ?? $invoice['id']);
   $orderId = $number . '-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
   $gatewayConfig = mikhmonPaymentGatewayReadConfig();
-  $provider = mikhmonCustomerPortalActiveGateway($gatewayConfig);
-  if ($provider === '') return array('success' => false, 'message' => 'Payment gateway aktif belum tersedia.');
+  if (mikhmonCustomerPortalActiveGateway($gatewayConfig) === '') return array('success' => false, 'message' => 'Midtrans belum aktif atau Server Key belum tersedia.');
   $returnUrl = mikhmonCustomerPortalReturnUrl();
-  $payment = mikhmonPaymentGatewayCreatePayment($provider, array('order_id' => $orderId, 'amount' => $amount, 'description' => 'Langganan bulanan ' . $number, 'customer_name' => $customer['name'] ?? 'Pelanggan', 'phone' => $customer['phone'] ?? '', 'success_redirect_url' => $returnUrl, 'failure_redirect_url' => $returnUrl), $gatewayConfig);
+  $payment = mikhmonPaymentGatewayCreatePayment('midtrans', array('order_id' => $orderId, 'amount' => $amount, 'description' => 'Langganan bulanan ' . $number, 'customer_name' => $customer['name'] ?? 'Pelanggan', 'phone' => $customer['phone'] ?? '', 'success_redirect_url' => $returnUrl, 'failure_redirect_url' => $returnUrl), $gatewayConfig);
   if (empty($payment['success'])) return $payment;
   $invoice['payment_gateway'] = $payment['provider']; $invoice['payment_order_id'] = $orderId; $invoice['payment_url'] = $payment['payment_url']; $invoice['payment_reference'] = $payment['reference'] ?? ''; $invoice['payment_environment'] = $payment['environment'] ?? ''; $invoice['payment_created_at'] = time();
   if (mikhmonSaveInvoice($session, $invoice) === false) return array('success' => false, 'message' => 'Invoice langganan gagal disimpan.');

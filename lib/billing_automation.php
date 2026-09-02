@@ -174,7 +174,7 @@ function mikhmonBillingAutomationEnsurePaymentLink($session, &$invoice, $custome
   $now = $now === null ? time() : (int) $now;
   $result = array('created' => false, 'sent' => false, 'error' => '');
   if (($invoice['status'] ?? '') !== 'unpaid' || !empty($invoice['gateway_payment_received'])) return $result;
-  if (empty($fonnteConfig['payment_link_enabled']) || empty($paymentGatewayConfig['enabled'])) return $result;
+  if (empty($fonnteConfig['payment_link_enabled']) || empty($paymentGatewayConfig['enabled']) || empty($paymentGatewayConfig['midtrans']['enabled']) || empty($paymentGatewayConfig['midtrans']['server_key'])) return $result;
 
   $provider = (string) ($invoice['payment_gateway'] ?? '');
   $storedEnvironment = (string) ($invoice['payment_environment'] ?? '');
@@ -184,7 +184,7 @@ function mikhmonBillingAutomationEnsurePaymentLink($session, &$invoice, $custome
   $hasUsableLink = !empty($invoice['payment_url']) && !$environmentChanged && !$expired;
   if (!$hasUsableLink) {
     $orderId = ($invoice['number'] ?? $invoice['id'] ?? 'invoice') . '-' . strtoupper(substr(uniqid(), -6));
-    $payment = mikhmonPaymentGatewayCreatePayment('', array(
+    $payment = mikhmonPaymentGatewayCreatePayment('midtrans', array(
       'order_id' => $orderId,
       'amount' => $invoice['amount'] ?? 0,
       'description' => 'Invoice ' . ($invoice['number'] ?? $invoice['id'] ?? ''),

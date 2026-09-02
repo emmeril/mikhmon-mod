@@ -13,11 +13,6 @@ function paymentNotificationRespond($httpCode, $payload) {
   exit;
 }
 
-function paymentNotificationHeader($name) {
-  $serverName = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
-  return isset($_SERVER[$serverName]) ? trim((string) $_SERVER[$serverName]) : '';
-}
-
 function paymentNotificationFindInvoice($orderId) {
   $database = mikhmonReadDatabase();
   foreach ((array) ($database['invoices'] ?? array()) as $session => $invoices) {
@@ -42,39 +37,28 @@ $paid = false;
 $status = '';
 $reference = '';
 
-if ($provider === 'midtrans') {
-  if (!mikhmonPaymentGatewayValidMidtransNotification($payload, $config['midtrans']['server_key'])) paymentNotificationRespond(401, array('success' => false, 'message' => 'Invalid Midtrans signature.'));
-  $orderId = (string) ($payload['order_id'] ?? '');
-  $paid = mikhmonPaymentGatewayMidtransPaid($payload);
-  $status = (string) ($payload['transaction_status'] ?? 'unknown');
-  $reference = (string) ($payload['transaction_id'] ?? '');
-} elseif ($provider === 'xendit') {
-  $callbackToken = paymentNotificationHeader('X-Callback-Token');
-  if (!mikhmonPaymentGatewayValidXenditCallback($callbackToken, $config['xendit']['webhook_token'])) paymentNotificationRespond(401, array('success' => false, 'message' => 'Invalid Xendit callback token.'));
-  $orderId = (string) ($payload['external_id'] ?? '');
-  $paid = mikhmonPaymentGatewayXenditPaid($payload);
-  $status = (string) ($payload['status'] ?? 'unknown');
-  $reference = (string) ($payload['id'] ?? '');
-} else {
-  paymentNotificationRespond(400, array('success' => false, 'message' => 'Unknown provider.'));
-}
+if ($provider !== 'midtrans') paymentNotificationRespond(400, array('success' => false, 'message' => 'Only Midtrans notifications are supported.'));
+if (!mikhmonPaymentGatewayValidMidtransNotification($payload, $config['midtrans']['server_key'])) paymentNotificationRespond(401, array('success' => false, 'message' => 'Invalid Midtrans signature.'));
+$orderId = (string) ($payload['order_id'] ?? '');
+$paid = mikhmonPaymentGatewayMidtransPaid($payload);
+$status = (string) ($payload['transaction_status'] ?? 'unknown');
+$reference = (string) ($payload['transaction_id'] ?? '');
 
 if ($orderId === '') paymentNotificationRespond(400, array('success' => false, 'message' => 'Missing order ID.'));
 $match = paymentNotificationFindInvoice($orderId);
 if (!$match) paymentNotificationRespond(404, array('success' => false, 'message' => 'Invoice not found.'));
 
 $invoice = $match['invoice'];
-$notifiedAmount = $provider === 'midtrans' ? (float) ($payload['gross_amount'] ?? 0) : (float) ($payload['paid_amount'] ?? ($payload['amount'] ?? 0));
+$notifiedAmount = (float) ($payload['gross_amount'] ?? 0);
 if ($paid && (int) round($notifiedAmount) !== (int) round((float) ($invoice['amount'] ?? 0))) paymentNotificationRespond(422, array('success' => false, 'message' => 'Payment amount does not match invoice.'));
-$invoice['payment_gateway'] = $provider;
-if ($provider === 'midtrans' && $reference !== '') $invoice['payment_transaction_id'] = $reference;
-elseif ($reference !== '') $invoice['payment_reference'] = $reference;
+$invoice['payment_gateway'] = 'midtrans';
+if ($reference !== '') $invoice['payment_transaction_id'] = $reference;
 $invoice['gateway_status'] = $status;
 $invoice['gateway_updated_at'] = time();
 if ($paid) {
   // Billing performs the router activation transaction before changing invoice status.
   $invoice['gateway_payment_received'] = true;
-  $midtransPaidAt = $provider === 'midtrans' ? mikhmonPaymentGatewayMidtransPaidAt($payload) : 0;
+  $midtransPaidAt = mikhmonPaymentGatewayMidtransPaidAt($payload);
   $invoice['gateway_paid_at'] = $midtransPaidAt > 0 ? $midtransPaidAt : time();
 }
 if (mikhmonSaveInvoice($match['session'], $invoice) === false) paymentNotificationRespond(500, array('success' => false, 'message' => 'Invoice update failed.'));
@@ -84,7 +68,7 @@ if ($paid) {
   if (($invoice['kind'] ?? 'monthly') === 'voucher') {
     $activation = mikhmonCustomerPortalFulfillVoucher($match['session'], $invoice['id']);
   } else {
-    $activation = mikhmonPaymentActivationProcess($match['session'], $invoice['id'], null, array('actor_name' => 'Otomatis ' . strtoupper($provider)));
+    $activation = mikhmonPaymentActivationProcess($match['session'], $invoice['id'], null, array('actor_name' => 'Otomatis MIDTRANS'));
   }
 }
 
