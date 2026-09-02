@@ -139,7 +139,7 @@ function mikhmonCustomerPortalSyncPayments($session, $customer, $api = null) {
 
 function mikhmonCustomerPortalReturnUrl() {
   $baseUrl = mikhmonPaymentGatewayBaseUrl();
-  return $baseUrl !== '' ? $baseUrl . '/pelanggan?payment=return' : '';
+  return $baseUrl !== '' ? $baseUrl . '/pelanggan.php?payment=return' : '';
 }
 
 function mikhmonCustomerPortalCreateVoucherInvoice($session, $customer, $profile) {
