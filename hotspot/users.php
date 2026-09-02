@@ -26,12 +26,12 @@ if (!isset($_SESSION["mikhmon"])) {
   header("Location:../admin.php?id=login");
 } else {
   if ($prof == "all") {
-    $getuser = $API->comm("/ip/hotspot/user/print", array('.proplist' => 'server,name,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total'));
+    $getuser = $API->comm("/ip/hotspot/user/print", array('.proplist' => 'server,name,password,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total'));
     $TotalReg = count($getuser);
 
   } elseif ($prof != "all") {
     $getuser = $API->comm("/ip/hotspot/user/print", array(
-      '.proplist' => 'server,name,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total',
+      '.proplist' => 'server,name,password,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total',
       "?profile" => "$prof",
     ));
     $TotalReg = count($getuser);
@@ -39,7 +39,7 @@ if (!isset($_SESSION["mikhmon"])) {
   }
   if ($comm != "") {
     $getuser = $API->comm("/ip/hotspot/user/print", array(
-      '.proplist' => 'server,name,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total',
+      '.proplist' => 'server,name,password,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total',
       "?comment" => "$comm",
     //"?uptime" => "00:00:00"
     ));
@@ -49,7 +49,7 @@ if (!isset($_SESSION["mikhmon"])) {
   $exp = $_GET['exp'];
   if ($exp != "") {
     $getuser = $API->comm("/ip/hotspot/user/print", array(
-      '.proplist' => 'server,name,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total',
+      '.proplist' => 'server,name,password,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total',
       "?limit-uptime" => "1s",
     ));
     
@@ -158,12 +158,17 @@ if (!isset($_SESSION["mikhmon"])) {
 </div>
   </div>
 <div class="overflow mr-t-10 box-bordered" style="max-height: 75vh">
+<style>
+  #dataTable .voucher-password-cell { min-width:105px; text-align:center; font-weight:bold; cursor:pointer; user-select:none; }
+  #dataTable .voucher-password-cell i { margin-left:5px; color:#888; }
+</style>
 <table id="dataTable" class="table table-bordered table-hover text-nowrap">
   <thead>
   <tr>
     <th style="min-width:50px;" class="align-middle text-center" id="cuser"><?= $counttuser; ?></th>
     <th style="min-width:50px;" class="pointer" title="Click to sort"><i class="fa fa-sort"></i> Server</th>
     <th class="pointer" title="Click to sort"><i class="fa fa-sort"></i> <?= $_name ?></th>
+    <th class="pointer" title="Click to sort"><i class="fa fa-sort"></i> <?= $_password ?></th>
     <th class="pointer" title="Click to sort"><i class="fa fa-sort"></i> <?= $_profile ?></th>
 	  <th class="pointer" title="Click to sort"><i class="fa fa-sort"></i> Mac Address</th>
     <th class="text-right align-middle pointer" title="Click to sort"><i class="fa fa-sort"></i> <?= $_uptime_user ?></th>
@@ -179,6 +184,7 @@ for ($i = 0; $i < $TotalReg; $i++) {
   $uid = $userdetails['.id'];
   $userver = $userdetails['server'];
   $uname = $userdetails['name'];
+  $upassword = isset($userdetails['password']) ? (string) $userdetails['password'] : '';
   $uprofile = $userdetails['profile'];
   $umacadd = $userdetails['mac-address'];
   $uuptime = formatDTM($userdetails['uptime']);
@@ -214,6 +220,9 @@ for ($i = 0; $i < $TotalReg; $i++) {
   echo "<td>" . $userver . "</td>";
   echo "<td><a title='Open User " . $uname . "' href=./?hotspot-user=" . $uid . "&session=" . $session . "><i class='fa fa-edit'></i> " . $uname . " </a>";
   echo '</td>';
+  ?>
+  <td class="voucher-password-cell" data-password="<?= htmlspecialchars($upassword, ENT_QUOTES); ?>" data-pinned="false" role="button" tabindex="0" aria-label="Tampilkan password" aria-pressed="false" title="Arahkan kursor atau klik untuk melihat password"><span class="voucher-password-value">******</span><i class="fa fa-eye"></i></td>
+  <?php
   echo "<td>" . $uprofile . "</td>";
   echo "<td style=' text-align:left'>" . $umacadd . "</td>";
   echo "<td style=' text-align:right'>" . $uuptime . "</td>";
@@ -242,5 +251,28 @@ for ($i = 0; $i < $TotalReg; $i++) {
 </div>
 </div>
 
-	
-	
+<script>
+$(function() {
+  function setVoucherPasswordVisibility(cell, visible) {
+    var password = cell.attr('data-password') || '';
+    cell.find('.voucher-password-value').text(visible ? (password || '-') : '******');
+    cell.find('i').toggleClass('fa-eye', !visible).toggleClass('fa-eye-slash', visible);
+  }
+
+  $('.voucher-password-cell')
+    .on('mouseenter focus', function() { setVoucherPasswordVisibility($(this), true); })
+    .on('mouseleave', function() { if ($(this).attr('data-pinned') !== 'true') setVoucherPasswordVisibility($(this), false); })
+    .on('blur', function() { $(this).attr('data-pinned', 'false').attr('aria-pressed', 'false'); setVoucherPasswordVisibility($(this), false); })
+    .on('click', function() {
+      var cell = $(this), pinned = cell.attr('data-pinned') !== 'true';
+      cell.attr('data-pinned', pinned ? 'true' : 'false').attr('aria-pressed', pinned ? 'true' : 'false');
+      setVoucherPasswordVisibility(cell, pinned);
+    })
+    .on('keydown', function(event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        $(this).trigger('click');
+      }
+    });
+});
+</script>
