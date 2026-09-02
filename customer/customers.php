@@ -69,26 +69,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
       $customerError = 'Assignment mitra gagal disimpan.';
     }
-  } elseif ($action === 'delete') {
+  } elseif ($action === 'delete' || $action === 'delete_identity') {
     if (!$actionCustomer || !mikhmonCanManageCustomer($actionCustomer)) {
       $customerError = 'Anda tidak berhak menghapus pelanggan ini.';
     } elseif (mikhmonDeleteCustomer($session, $actionCustomerId)) {
-      $customerMessage = 'Data pelanggan berhasil dihapus.';
+      $customerMessage = 'Identitas pelanggan berhasil dihapus. Layanan MikroTik tetap tersedia.';
     } else {
       $customerError = 'Data pelanggan tidak ditemukan.';
     }
-  } elseif ($action === 'delete_all') {
+  } elseif ($action === 'delete_service' || $action === 'delete_all') {
     $deleteId = $actionCustomerId;
     $deleteCustomer = $actionCustomer;
+    $deleteServiceId = isset($_POST['service_id']) ? (string) $_POST['service_id'] : '';
+    $deleteServices = mikhmonCustomerServices($deleteCustomer ?: array());
+    if ($action === 'delete_service') {
+      $selectedService = array();
+      foreach ($deleteServices as $candidateService) if ((string) ($candidateService['id'] ?? '') === $deleteServiceId) { $selectedService = $candidateService; break; }
+      $deleteServices = $selectedService ? array($selectedService) : array();
+    }
     if (!$deleteCustomer) {
       $customerError = 'Data pelanggan tidak ditemukan.';
     } elseif (!mikhmonCanManageCustomer($deleteCustomer)) {
       $customerError = 'Anda tidak berhak menghapus pelanggan ini.';
+    } elseif ($action === 'delete_service' && !$deleteServices) {
+      $customerError = 'Layanan pelanggan tidak ditemukan.';
     } elseif (empty($routerConnected)) {
       $customerError = 'Router MikroTik tidak terhubung. Data tidak dihapus.';
     } else {
       $deleteOk = true;
-      foreach (mikhmonCustomerServices($deleteCustomer) as $deleteService) {
+      foreach ($deleteServices as $deleteService) {
         $deleteCommand = $deleteService['service'] === 'pppoe' ? '/ppp/secret' : '/ip/hotspot/user';
         $deleteUsername = (string) $deleteService['username'];
         $deleteRows = $deleteUsername !== '' ? $API->comm($deleteCommand . '/print', array('?name' => $deleteUsername)) : array();
@@ -106,10 +115,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
       }
       if ($deleteOk) {
-        if (mikhmonDeleteCustomer($session, $deleteId)) {
-          $customerMessage = 'Pelanggan dan user MikroTik berhasil dihapus.';
+        $saved = $action === 'delete_all'
+          ? mikhmonDeleteCustomer($session, $deleteId)
+          : mikhmonDeleteCustomerService($session, $deleteId, $deleteServiceId);
+        if ($saved) {
+          if ($action === 'delete_service') {
+            $schedulerName = 'mikhmon-customer-' . substr(md5((string) $deleteId), 0, 12);
+            $schedulerRows = $API->comm('/system/scheduler/print', array('?name' => $schedulerName));
+            if (customerListApiError($schedulerRows) === '') foreach ((array) $schedulerRows as $schedulerRow) if (isset($schedulerRow['.id'])) $API->comm('/system/scheduler/remove', array('.id' => $schedulerRow['.id']));
+          }
+          $customerMessage = $action === 'delete_all' ? 'Identitas pelanggan dan seluruh layanan berhasil dihapus.' : 'Layanan pelanggan berhasil dihapus.';
         } else {
-          $customerError = 'User MikroTik sudah dihapus, tetapi data pelanggan gagal dihapus.';
+          $customerError = 'User MikroTik sudah dihapus, tetapi data pelanggan gagal diperbarui.';
         }
       }
     }
@@ -236,12 +253,13 @@ if (!empty($routerConnected)) {
   </div>
 </div></div></div>
 <div id="customerDeleteModal" style="display:none;position:fixed;z-index:1000;inset:0;background:rgba(0,0,0,.45);padding:12% 20px 20px">
-  <div class="card" style="max-width:460px;margin:auto">
+  <div class="card" style="max-width:520px;margin:auto">
     <div class="card-header"><h3><i class="fa fa-trash"></i> Hapus Pelanggan</h3></div>
     <div class="card-body">
       <p id="customerDeleteText">Pilih jenis penghapusan.</p>
-      <form method="post" id="customerDeleteForm"><input type="hidden" name="customer_id" id="customerDeleteId"><input type="hidden" name="customer_action" id="customerDeleteAction" value="delete">
-        <button type="submit" class="btn bg-warning" onclick="return customerDeleteChoice('delete');"><i class="fa fa-database"></i> Hapus Data Saja</button>
+      <form method="post" id="customerDeleteForm"><input type="hidden" name="customer_id" id="customerDeleteId"><input type="hidden" name="service_id" id="customerDeleteServiceId"><input type="hidden" name="customer_action" id="customerDeleteAction" value="delete_identity">
+        <button type="submit" class="btn bg-warning" onclick="return customerDeleteChoice('delete_identity');"><i class="fa fa-user-times"></i> Hapus Identitas Pelanggan</button>
+        <button type="submit" class="btn bg-danger" onclick="return customerDeleteChoice('delete_service');"><i class="fa fa-link"></i> Hapus Layanan</button>
         <button type="submit" class="btn bg-danger" onclick="return customerDeleteChoice('delete_all');"><i class="fa fa-trash"></i> Hapus Semua</button>
         <button type="button" class="btn bg-secondary" onclick="closeCustomerDelete()">Batal</button>
       </form>
@@ -315,14 +333,19 @@ $(function() {
   });
   filterCustomers();
   $('.customer-delete-button').on('click', function() {
-    $('#customerDeleteId').val($(this).data('customer-id'));
-    $('#customerDeleteText').text('Hapus data pelanggan "' + $(this).data('customer-name') + '" saja, atau sekaligus user MikroTik "' + ($(this).data('customer-username') || '-') + '"?');
+    var button = $(this), row = button.closest('tr'), option = row.find('.customer-service-select option:selected');
+    $('#customerDeleteId').val(button.data('customer-id'));
+    $('#customerDeleteServiceId').val(option.attr('data-service-id') || '');
+    $('#customerDeleteText').html('Pilih tindakan untuk pelanggan <strong>"' + $('<div>').text(button.data('customer-name')).html() + '"</strong>.<br>Layanan terpilih: <strong>' + $('<div>').text(option.data('type') ? option.data('type').toUpperCase() + ' / ' + (option.data('username') || '-') : '-').html() + '</strong>');
     $('#customerDeleteModal').show();
   });
 });
 function closeCustomerDelete() { $('#customerDeleteModal').hide(); }
 function customerDeleteChoice(action) {
-  if (action === 'delete_all' && !confirm('Hapus data pelanggan dan user MikroTik sekaligus? Tindakan ini tidak dapat dibatalkan tanpa restore backup.')) return false;
+  var message = action === 'delete_identity'
+    ? 'Hapus identitas pelanggan dari database? Layanan MikroTik tetap tersedia.'
+    : (action === 'delete_service' ? 'Hapus layanan terpilih dari database dan MikroTik?' : 'Hapus identitas pelanggan beserta seluruh layanan MikroTik? Tindakan ini tidak dapat dibatalkan tanpa restore backup.');
+  if (!confirm(message)) return false;
   $('#customerDeleteAction').val(action);
   return true;
 }

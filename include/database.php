@@ -565,6 +565,39 @@ function mikhmonUpdateCustomerService($session, $customerId, $serviceId, $servic
   return mikhmonSaveCustomerWithServices($session, $customer['id'], $customer['name'], $customer['phone'] ?? '', $customer['address'] ?? '', $services, $customer['mitra_id'] ?? '');
 }
 
+function mikhmonDeleteCustomerService($session, $customerId, $serviceId) {
+  $customer = mikhmonFindCustomer($session, $customerId);
+  if (!$customer || (string) $serviceId === '') return false;
+  $services = mikhmonCustomerServices($customer);
+  $remaining = array();
+  $removed = false;
+  foreach ($services as $service) {
+    if (!$removed && (string) ($service['id'] ?? '') === (string) $serviceId) {
+      $removed = true;
+      continue;
+    }
+    $remaining[] = $service;
+  }
+  if (!$removed) return false;
+  if (!$remaining) {
+    $database = mikhmonReadDatabase();
+    foreach ((array) ($database['customers'][$session] ?? array()) as $index => $storedCustomer) {
+      if ((string) ($storedCustomer['id'] ?? '') !== (string) $customerId) continue;
+      $storedCustomer = mikhmonNormalizeCustomer($storedCustomer);
+      $storedCustomer['services'] = array();
+      $storedCustomer['service'] = 'hotspot';
+      $storedCustomer['username'] = '';
+      $storedCustomer['profile'] = '';
+      $storedCustomer['server'] = 'all';
+      $storedCustomer['updated_at'] = time();
+      $database['customers'][$session][$index] = $storedCustomer;
+      return mikhmonWriteDatabase($database);
+    }
+    return false;
+  }
+  return mikhmonSaveCustomerWithServices($session, $customer['id'], $customer['name'], $customer['phone'] ?? '', $customer['address'] ?? '', $remaining, $customer['mitra_id'] ?? '');
+}
+
 function mikhmonSaveCustomerWithServices($session, $id, $name, $phone, $address, $services, $mitraId = null) {
   $database = mikhmonReadDatabase();
   if (!isset($database['customers'][$session]) || !is_array($database['customers'][$session])) {
