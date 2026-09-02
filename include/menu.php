@@ -173,7 +173,7 @@ if (!isset($_SESSION["mikhmon"])) {
     $susers = "active";
   } elseif ($admin == "settings") {
     $sadminsettings = "active";
-    $mpage = $_admin_settings;
+    $mpage = "Brand Setting";
     $settmenu = "menu-open";
     $ssett = "active";
   } elseif ($admin == "fonnte") {
@@ -302,7 +302,7 @@ if($idleto != "disable"){
 <div id="sidenav" class="sidenav">
 <?php if ($id == "admin-settings") { ?>
   <a href="./admin.php?id=sessions" class="menu"><i class="fa fa-server"></i> Router</a>
-  <a href="./admin.php?id=admin-settings" class="menu active"><i class="fa fa-user-circle"></i> <?= $_admin_settings ?></a>
+  <a href="./admin.php?id=admin-settings" class="menu active"><i class="fa fa-tag"></i> Brand Setting</a>
   <a href="./admin.php?id=users" class="menu"><i class="fa fa-users"></i> Mitra &amp; Biller</a>
 <?php } elseif (($id == "settings" && $session == "new") || ($id == "settings" && !empty($router) && explode("-", $router, 2)[0] == "new")) {
 }else if ($id == "settings" || $id == "editor"|| $id == "uplogo" || $id == "database" || $id == "connect"){
@@ -317,7 +317,7 @@ if($idleto != "disable"){
 <?php 
 } ?>  
   <a href="./admin.php?id=sessions" class="menu <?= $ssesslist; ?>"><i class="fa fa-server"></i> Router</a>
-  <a href="./admin.php?id=admin-settings" class="menu"><i class="fa fa-user-circle"></i> <?= $_admin_settings ?></a>
+  <a href="./admin.php?id=admin-settings" class="menu"><i class="fa fa-tag"></i> Brand Setting</a>
   <a href="./admin.php?id=users" class="menu <?= $susersadmin; ?>"><i class="fa fa-users"></i> Mitra &amp; Biller</a>
   <a href="./admin.php?id=fonnte" class="menu <?= $sfonnte; ?>"><i class="fa fa-whatsapp"></i> WhatsApp Gateway</a>
   <a href="./admin.php?id=payment-gateway" class="menu <?= $spaymentgateway; ?>"><i class="fa fa-credit-card"></i> Payment Gateway</a>
@@ -513,7 +513,7 @@ include('./info.php');
     <i class="fa fa-caret-down"></i> &nbsp;
   </div>
   <div class="dropdown-container <?= $settmenu; ?>">
-  <a href="./?admin=settings&session=<?= rawurlencode($session); ?>" class="menu <?= $sadminsettings; ?>"> <i class="fa fa-user-circle"></i> <?= $_admin_settings ?> </a>
+  <a href="./?admin=settings&session=<?= rawurlencode($session); ?>" class="menu <?= $sadminsettings; ?>"> <i class="fa fa-tag"></i> Brand Setting </a>
   <a href="./?admin=fonnte&session=<?= rawurlencode($session); ?>" class="menu <?= $sfonnte; ?>"> <i class="fa fa-whatsapp"></i> WhatsApp Gateway </a>
   <a href="./?admin=payment-gateway&session=<?= rawurlencode($session); ?>" class="menu <?= $spaymentgateway; ?>"> <i class="fa fa-credit-card"></i> Payment Gateway </a>
   <a href="./?admin=routers&session=<?= rawurlencode($session); ?>" class="menu <?= $srouterlist; ?>"> <i class="fa fa-server"></i> <?= $_router_list ?> </a>

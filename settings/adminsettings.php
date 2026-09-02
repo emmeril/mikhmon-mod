@@ -27,13 +27,12 @@ if (isset($_POST['save'])) {
   <div class="col-12">
     <div class="card">
       <div class="card-header">
-        <h3 class="card-title"><i class="fa fa-user-circle"></i> <?= $_admin_settings; ?></h3>
+        <h3 class="card-title"><i class="fa fa-tag"></i> Brand Setting</h3>
       </div>
       <div class="card-body">
         <?php if (isset($_GET['saved'])): ?>
           <div class="bg-success pd-10 radius-3 mr-b-10"><i class="fa fa-check"></i> Pengaturan admin berhasil disimpan.</div>
         <?php endif; ?>
-        <p class="mr-b-10">Atur identitas aplikasi. Akun administrator dikelola melalui menu <b>Manajemen User</b>.</p>
         <form autocomplete="off" method="post" action="">
           <div class="row">
             <div class="col-6">
