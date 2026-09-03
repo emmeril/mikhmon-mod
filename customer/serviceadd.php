@@ -3,6 +3,7 @@ error_reporting(0);
 if (!isset($_SESSION['mikhmon'])) { header('Location:../admin.php?id=login'); exit; }
 include_once('./include/database.php');
 include_once('./lib/billing_profile.php');
+include_once('./lib/customer_service.php');
 include_once('./ppp/profilemeta.php');
 $serviceError = '';
 $selectedServiceType = ($_POST['service_type'] ?? ($_GET['service'] ?? '')) === 'pppoe' ? 'pppoe' : 'hotspot';
@@ -45,27 +46,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['service_action'] ?? '') ==
       // Keep the MikroTik state untouched when a non-Billing profile is submitted.
     } else {
     $command = $service === 'pppoe' ? '/ppp/secret' : '/ip/hotspot/user';
+    $localOwnerCustomerId = '';
+    foreach (mikhmonGetCustomers($session) as $candidateCustomer) {
+      foreach (mikhmonCustomerServices($candidateCustomer) as $candidateService) {
+        if (($candidateService['service'] ?? '') !== $service || strcasecmp((string) ($candidateService['username'] ?? ''), $username) !== 0) continue;
+        $localOwnerCustomerId = (string) ($candidateCustomer['id'] ?? '');
+        break 2;
+      }
+    }
+    if ($localOwnerCustomerId !== '' && $localOwnerCustomerId !== (string) $customerId) {
+      $serviceError = 'Username ' . $username . ' sudah dikaitkan ke pelanggan lain.';
+    } elseif ($localOwnerCustomerId === (string) $customerId) {
+      // Make retries idempotent when the router and local save both completed.
+      $query = './?customer=list&session=' . rawurlencode($session) . '&service-added=1';
+      echo "<script>window.location=" . json_encode($query) . "</script>"; exit;
+    }
+    if ($serviceError !== '') {
+      // Keep the router state untouched when the local username is already owned.
+    } else {
     $existing = $API->comm($command . '/print', array('?name' => $username));
     if (serviceAddApiError($existing) !== '') $serviceError = 'Gagal memeriksa username MikroTik: ' . serviceAddApiError($existing);
-    elseif (count($existing) > 0) $serviceError = 'Username ' . $username . ' sudah digunakan di MikroTik.';
     else {
       $args = $service === 'pppoe'
         ? array('name' => $username, 'password' => $password, 'service' => 'pppoe', 'profile' => $profile, 'comment' => $customer['name'])
         : array('server' => $server, 'name' => $username, 'password' => $password, 'profile' => $profile, 'comment' => 'up-' . $customer['name']);
       if (mikhmonIsMitra()) $args['comment'] .= ' ' . mikhmonOwnerTag();
-      $response = $API->comm($command . '/add', $args);
-      if (serviceAddApiError($response) !== '') $serviceError = 'MikroTik menolak layanan: ' . serviceAddApiError($response);
-      elseif (mikhmonAddCustomerService($session, $customerId, array('service' => $service, 'username' => $username, 'profile' => $profile, 'server' => $server)) === false) {
-        $createdRows = $API->comm($command . '/print', array('?name' => $username));
-        if (isset($createdRows[0]['.id'])) $API->comm($command . '/remove', array('.id' => $createdRows[0]['.id']));
-        $serviceError = 'Layanan gagal dikaitkan ke identitas pelanggan.';
+      $createdOnRouter = false;
+      $routerRow = isset($existing[0]) && is_array($existing[0]) ? $existing[0] : array();
+      if ($routerRow) {
+        $ownerTag = mikhmonIsMitra() ? mikhmonOwnerTag() : '';
+        if (!mikhmonServiceRouterRowBelongsToCustomer($routerRow, $service, $customer, $ownerTag)) {
+          $serviceError = 'Username ' . $username . ' sudah digunakan di MikroTik.';
+        } else {
+          // The previous request already created this user; refresh its settings
+          // and continue with the missing local customer relation.
+          $args['.id'] = $routerRow['.id'];
+          $response = $API->comm($command . '/set', $args);
+          if (serviceAddApiError($response) !== '') $serviceError = 'MikroTik menolak pembaruan layanan: ' . serviceAddApiError($response);
+        }
       } else {
+        $response = $API->comm($command . '/add', $args);
+        if (serviceAddApiError($response) !== '') $serviceError = 'MikroTik menolak layanan: ' . serviceAddApiError($response);
+        else $createdOnRouter = true;
+      }
+      if ($serviceError === '' && mikhmonAddCustomerService($session, $customerId, array('service' => $service, 'username' => $username, 'profile' => $profile, 'server' => $server)) === false) {
+        if ($createdOnRouter) {
+          $createdRows = $API->comm($command . '/print', array('?name' => $username));
+          if (isset($createdRows[0]['.id'])) $API->comm($command . '/remove', array('.id' => $createdRows[0]['.id']));
+        }
+        $serviceError = 'Layanan gagal dikaitkan ke identitas pelanggan.';
+      } elseif ($serviceError === '') {
         $schedulerName = 'mikhmon-customer-' . substr(md5((string) $customerId), 0, 12);
         $schedulerRows = $API->comm('/system/scheduler/print', array('?name' => $schedulerName));
         if (serviceAddApiError($schedulerRows) === '' && is_array($schedulerRows)) foreach ($schedulerRows as $schedulerRow) if (isset($schedulerRow['.id'])) $API->comm('/system/scheduler/remove', array('.id' => $schedulerRow['.id']));
         $query = './?customer=list&session=' . rawurlencode($session) . '&service-added=1';
         echo "<script>window.location=" . json_encode($query) . "</script>"; exit;
       }
+    }
     }
     }
   }
