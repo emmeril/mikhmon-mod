@@ -164,6 +164,8 @@ if (!isset($_SESSION["mikhmon"])) {
 <style>
   #dataTable .voucher-password-cell { min-width:105px; text-align:center; font-weight:bold; cursor:pointer; user-select:none; }
   #dataTable .voucher-password-cell i { margin-left:5px; color:#888; }
+  #dataTable .voucher-actions { display:flex; align-items:center; justify-content:center; gap:5px; }
+  #dataTable .voucher-actions .btn { margin:0; white-space:nowrap; }
 </style>
 <table id="dataTable" class="table table-bordered table-hover text-nowrap">
   <thead>
@@ -178,6 +180,7 @@ if (!isset($_SESSION["mikhmon"])) {
     <th class="text-right align-middle pointer" title="Click to sort"><i class="fa fa-sort"></i> Bytes In</th>
     <th class="text-right align-middle pointer" title="Click to sort"><i class="fa fa-sort"></i> Bytes Out</th>
     <th class="pointer" title="Click to sort"><i class="fa fa-sort"></i> <?= $_comment ?></th>
+    <th class="text-center align-middle"><?= $_action ?></th>
     </tr>
   </thead>
   <tbody id="tbody">
@@ -196,6 +199,9 @@ for ($i = 0; $i < $TotalReg; $i++) {
 
   $ucomment = $userdetails['comment'];
   $udisabled = $userdetails['disabled'];
+  $editUrl = './?hotspot-user=' . rawurlencode($uid) . '&session=' . rawurlencode($session);
+  $deleteUrl = './?remove-hotspot-user=' . rawurlencode($uid) . '&session=' . rawurlencode($session);
+  $deleteMessage = 'Are you sure to delete username (' . $uname . ')?';
   $utimelimit = $userdetails['limit-uptime'];
   if ($utimelimit == '1s') {
     $utimelimit = ' expired';
@@ -211,7 +217,7 @@ for ($i = 0; $i < $TotalReg; $i++) {
 
   echo "<tr data-voucher-name=\"" . htmlspecialchars($uname, ENT_QUOTES) . "\">";
   ?>
-  <td style='text-align:center;'>  <i class='fa fa-minus-square text-danger pointer' onclick="if(confirm('Are you sure to delete username (<?= htmlspecialchars(addslashes($uname), ENT_QUOTES); ?>)?')){loadpage('./?remove-hotspot-user=<?= rawurlencode($uid); ?>&session=<?= rawurlencode($session); ?>')}else{}" title='Remove <?= htmlspecialchars($uname, ENT_QUOTES); ?>'></i>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+  <td style='text-align:center;'>
   <?php
   if ($udisabled == "true") {
     $uriprocess = "'./?enable-hotspot-user=" . $uid . "&session=" . $session."'";
@@ -221,8 +227,7 @@ for ($i = 0; $i < $TotalReg; $i++) {
     echo '<span class="pointer" title="Disable User ' . htmlspecialchars($uname, ENT_QUOTES) . '"  onclick="loadpage('.$uriprocess.')"><i class="fa fa-unlock "></i></span></td>';
   }
   echo "<td>" . htmlspecialchars($userver, ENT_QUOTES) . "</td>";
-  echo "<td><a title='Open User " . htmlspecialchars($uname, ENT_QUOTES) . "' href='./?hotspot-user=" . rawurlencode($uid) . "&session=" . rawurlencode($session) . "'><i class='fa fa-edit'></i> " . htmlspecialchars($uname, ENT_QUOTES) . " </a>";
-  echo '</td>';
+  echo "<td>" . htmlspecialchars($uname, ENT_QUOTES) . "</td>";
   ?>
   <td class="voucher-password-cell" data-password="<?= htmlspecialchars($upassword, ENT_QUOTES); ?>" data-pinned="false" role="button" tabindex="0" aria-label="Tampilkan password" aria-pressed="false" title="Arahkan kursor atau klik untuk melihat password"><span class="voucher-password-value">******</span><i class="fa fa-eye"></i></td>
   <?php
@@ -241,6 +246,14 @@ for ($i = 0; $i < $TotalReg; $i++) {
     echo htmlspecialchars($ucomment, ENT_QUOTES).' ';
   }
   echo  "</td>";
+  ?>
+  <td class="text-center text-nowrap">
+    <div class="voucher-actions">
+      <a class="btn bg-primary" title="Edit User <?= htmlspecialchars($uname, ENT_QUOTES); ?>" href="<?= htmlspecialchars($editUrl, ENT_QUOTES); ?>"><i class="fa fa-edit"></i> <?= $_edit; ?></a>
+      <button type="button" class="btn bg-danger" onclick="if(confirm(<?= htmlspecialchars(json_encode($deleteMessage), ENT_QUOTES); ?>)){loadpage(<?= htmlspecialchars(json_encode($deleteUrl), ENT_QUOTES); ?>)}" title="Remove <?= htmlspecialchars($uname, ENT_QUOTES); ?>"><i class="fa fa-trash"></i> <?= $_delete; ?></button>
+    </div>
+  </td>
+  <?php
   echo "</tr>";
 
 
