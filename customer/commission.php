@@ -34,6 +34,7 @@ krsort($availableMonths);
 $selectedMonth = isset($_GET['month']) && preg_match('/^\d{4}-\d{2}$/', (string) $_GET['month']) ? (string) $_GET['month'] : date('Y-m');
 $totalAmount = 0;
 foreach ($commissionRows as $invoice) {
+  if (empty($invoice['paid_at']) || date('Y-m', (int) $invoice['paid_at']) !== $selectedMonth) continue;
   $commission = isset($invoice['biller_commission']) ? (float) $invoice['biller_commission'] : mikhmonBillerCommissionAmount();
   $totalAmount += $commission;
 }

@@ -211,34 +211,34 @@ for ($i = 0; $i < $TotalReg; $i++) {
 
   echo "<tr data-voucher-name=\"" . htmlspecialchars($uname, ENT_QUOTES) . "\">";
   ?>
-  <td style='text-align:center;'>  <i class='fa fa-minus-square text-danger pointer' onclick="if(confirm('Are you sure to delete username (<?= $uname; ?>)?')){loadpage('./?remove-hotspot-user=<?= $uid; ?>&session=<?= $session; ?>')}else{}" title='Remove <?= $uname; ?>'></i>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+  <td style='text-align:center;'>  <i class='fa fa-minus-square text-danger pointer' onclick="if(confirm('Are you sure to delete username (<?= htmlspecialchars(addslashes($uname), ENT_QUOTES); ?>)?')){loadpage('./?remove-hotspot-user=<?= rawurlencode($uid); ?>&session=<?= rawurlencode($session); ?>')}else{}" title='Remove <?= htmlspecialchars($uname, ENT_QUOTES); ?>'></i>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
   <?php
   if ($udisabled == "true") {
     $uriprocess = "'./?enable-hotspot-user=" . $uid . "&session=" . $session."'";
-    echo '<span class="text-warning pointer" title="Enable User ' . $uname . '"  onclick="loadpage('.$uriprocess.')"><i class="fa fa-lock "></i></span></td>';
+    echo '<span class="text-warning pointer" title="Enable User ' . htmlspecialchars($uname, ENT_QUOTES) . '"  onclick="loadpage('.$uriprocess.')"><i class="fa fa-lock "></i></span></td>';
   } else {
     $uriprocess = "'./?disable-hotspot-user=" . $uid . "&session=" . $session."'";
-    echo '<span class="pointer" title="Disable User ' . $uname . '"  onclick="loadpage('.$uriprocess.')"><i class="fa fa-unlock "></i></span></td>';
+    echo '<span class="pointer" title="Disable User ' . htmlspecialchars($uname, ENT_QUOTES) . '"  onclick="loadpage('.$uriprocess.')"><i class="fa fa-unlock "></i></span></td>';
   }
-  echo "<td>" . $userver . "</td>";
-  echo "<td><a title='Open User " . $uname . "' href=./?hotspot-user=" . $uid . "&session=" . $session . "><i class='fa fa-edit'></i> " . $uname . " </a>";
+  echo "<td>" . htmlspecialchars($userver, ENT_QUOTES) . "</td>";
+  echo "<td><a title='Open User " . htmlspecialchars($uname, ENT_QUOTES) . "' href='./?hotspot-user=" . rawurlencode($uid) . "&session=" . rawurlencode($session) . "'><i class='fa fa-edit'></i> " . htmlspecialchars($uname, ENT_QUOTES) . " </a>";
   echo '</td>';
   ?>
   <td class="voucher-password-cell" data-password="<?= htmlspecialchars($upassword, ENT_QUOTES); ?>" data-pinned="false" role="button" tabindex="0" aria-label="Tampilkan password" aria-pressed="false" title="Arahkan kursor atau klik untuk melihat password"><span class="voucher-password-value">******</span><i class="fa fa-eye"></i></td>
   <?php
-  echo "<td>" . $uprofile . "</td>";
-  echo "<td style=' text-align:left'>" . $umacadd . "</td>";
+  echo "<td>" . htmlspecialchars($uprofile, ENT_QUOTES) . "</td>";
+  echo "<td style=' text-align:left'>" . htmlspecialchars($umacadd, ENT_QUOTES) . "</td>";
   echo "<td style=' text-align:right'>" . $uuptime . "</td>";
   echo "<td style=' text-align:right'>" . $ubytesi . "</td>";
   echo "<td style=' text-align:right'>" . $ubyteso . "</td>";
   echo "<td>";
   if ($uname == "default-trial") {
   } else if (substr($ucomment,0,3) == "vc-" || substr($ucomment,0,3) == "up-") {
-    echo "<a href=./?hotspot=users&comment=" . $ucomment . "&session=" . $session . " title='Filter by " . $ucomment . "'><i class='fa fa-search'></i> ". $ucomment." ". $udatalimit ." ".$utimelimit . "</a>";
+    echo "<a href='./?hotspot=users&comment=" . rawurlencode($ucomment) . "&session=" . rawurlencode($session) . "' title='Filter by " . htmlspecialchars($ucomment, ENT_QUOTES) . "'><i class='fa fa-search'></i> ". htmlspecialchars($ucomment, ENT_QUOTES)." ". htmlspecialchars($udatalimit, ENT_QUOTES) ." ".htmlspecialchars($utimelimit, ENT_QUOTES) . "</a>";
   } else if ($utimelimit == ' expired') {
-    echo "<a href=./?hotspot=users&profile=all&exp=1&session=" . $session . " title='Filter by expired'><i class='fa fa-search'></i> " . $ucomment." ". $udatalimit ." ".$utimelimit . "</a>";
+    echo "<a href='./?hotspot=users&profile=all&exp=1&session=" . rawurlencode($session) . "' title='Filter by expired'><i class='fa fa-search'></i> " . htmlspecialchars($ucomment, ENT_QUOTES)." ". htmlspecialchars($udatalimit, ENT_QUOTES) ." ".htmlspecialchars($utimelimit, ENT_QUOTES) . "</a>";
   }else{
-    echo $ucomment.' ';
+    echo htmlspecialchars($ucomment, ENT_QUOTES).' ';
   }
   echo  "</td>";
   echo "</tr>";

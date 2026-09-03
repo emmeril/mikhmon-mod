@@ -1,4 +1,4 @@
 Options -Indexes
-<FilesMatch "\.(json|tmp)$">
+<FilesMatch ".*">
   Require all denied
 </FilesMatch>

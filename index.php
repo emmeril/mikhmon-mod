@@ -15,6 +15,10 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+if (session_status() === PHP_SESSION_NONE) {
+  session_set_cookie_params(array('lifetime' => 0, 'path' => '/', 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', 'httponly' => true, 'samesite' => 'Lax'));
+  ini_set('session.use_strict_mode', '1');
+}
 session_start();
 // hide all error
 error_reporting(0);
@@ -67,6 +71,16 @@ if (!isset($_SESSION["mikhmon"])) {
   include('./include/config.php');
   include_once('./include/access.php');
   include_once('./include/systemlog.php');
+  if ($_SERVER['REQUEST_METHOD'] === 'POST' && !mikhmonValidCsrf($_POST['_csrf'] ?? '')) {
+    http_response_code(403);
+    exit('Invalid request.');
+  }
+  $mutationKeys = array('remove-user-active','remove-host','remove-cookie','remove-ip-binding','remove-hotspot-user','remove-hotspot-users','remove-user-profile','reset-hotspot-user','remove-hotspot-user-by-comment','remove-hotspot-user-expired','enable-hotspot-user','disable-hotspot-user','enable-ip-binding','disable-ip-binding','remove-report','remove-pppsecret','enable-pppsecret','disable-pppsecret','remove-pprofile','remove-pactive','remove-scheduler','enable-scheduler','disable-scheduler');
+  foreach ($mutationKeys as $mutationKey) {
+    if (isset($_GET[$mutationKey]) && (string) $_GET[$mutationKey] !== '' && !mikhmonValidCsrf($_POST['_csrf'] ?? ($_GET['_csrf'] ?? ''))) {
+      http_response_code(403); exit('Invalid request.');
+    }
+  }
   if (!mikhmonRefreshStaffSession()) {
     session_destroy();
     header('Location:./admin.php?id=login');

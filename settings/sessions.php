@@ -86,7 +86,7 @@ $returnSession = !empty($session) ? $session : mikhmonDefaultRouterSession($data
                       <div class="router-actions">
                         <a class="btn bg-green" href="./admin.php?id=connect&amp;session=<?= rawurlencode($routerSession); ?>"><i class="fa fa-external-link"></i> <?= $_open; ?></a>
                         <a class="btn bg-primary" href="./admin.php?id=settings&amp;session=<?= rawurlencode($routerSession); ?>&amp;return=routers"><i class="fa fa-edit"></i> <?= $_session_settings; ?></a>
-                        <a class="btn bg-danger" href="./admin.php?id=remove-session&amp;session=<?= rawurlencode($routerSession); ?>" onclick="return confirm(<?= htmlspecialchars(json_encode($deleteMessage), ENT_QUOTES); ?>);"><i class="fa fa-trash"></i> <?= $_delete; ?></a>
+                        <form method="post" action="./admin.php?id=remove-session&amp;session=<?= rawurlencode($routerSession); ?>" style="display:inline" onsubmit="return confirm(<?= htmlspecialchars(json_encode($deleteMessage), ENT_QUOTES); ?>);"><?= mikhmonCsrfField(); ?><button class="btn bg-danger" type="submit"><i class="fa fa-trash"></i> <?= $_delete; ?></button></form>
                       </div>
                     </td>
                   </tr>

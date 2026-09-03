@@ -9,5 +9,6 @@ Thumbs.db
 /data/*.index
 /data/*.tmp.*
 /data/*.lock
+/data/.encryption-key
 .idea/
 .vscode/

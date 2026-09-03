@@ -24,14 +24,15 @@ include_once('./include/brand.php');
 <!DOCTYPE html>
 <html>
 	<head>
-		<title><?= htmlspecialchars($brandname, ENT_QUOTES); ?> <?= $hotspotname; ?></title>
+			<title><?= htmlspecialchars($brandname, ENT_QUOTES); ?> <?= htmlspecialchars((string) $hotspotname, ENT_QUOTES); ?></title>
 		<meta charset="utf-8">
 		<meta http-equiv="cache-control" content="private" />
 		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 		<!-- Tell the browser to be responsive to screen width -->
 		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<?php if (function_exists('mikhmonCsrfToken')): ?><meta name="csrf-token" content="<?= htmlspecialchars(mikhmonCsrfToken(), ENT_QUOTES); ?>"><?php endif; ?>
 		<!-- Theme color -->
-		<meta name="theme-color" content="<?= $themecolor ?>" />
+			<meta name="theme-color" content="<?= htmlspecialchars((string) $themecolor, ENT_QUOTES); ?>" />
 		<!-- Font Awesome -->
 		<link rel="stylesheet" type="text/css" href="css/font-awesome/css/font-awesome.min.css" />
 		<!-- Mikhmon UI -->

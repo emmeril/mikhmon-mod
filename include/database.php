@@ -1,5 +1,6 @@
 <?php
 // Versioned local snapshots sync automatically from MikroTik; restore is manual.
+require_once __DIR__ . '/crypto.php';
 
 function mikhmonBackupPath() {
   $override = getenv('MIKHMON_DATABASE_PATH');
@@ -128,9 +129,40 @@ function mikhmonReadRouterDatabase() {
   $data = is_file($path) ? json_decode((string) @file_get_contents($path), true) : array();
   if (!is_array($data)) $data = array();
   if (!isset($data['routers']) || !is_array($data['routers'])) $data['routers'] = array();
+  $changed = false;
+  foreach ($data['routers'] as $session => $record) {
+    foreach (array('latest') as $snapshotKey) {
+      if (!isset($record[$snapshotKey]) || !is_array($record[$snapshotKey])) continue;
+      $data['routers'][$session][$snapshotKey] = mikhmonProtectSnapshotSecrets($record[$snapshotKey], $changed);
+    }
+    foreach ((array) ($record['history'] ?? array()) as $historyIndex => $snapshot) {
+      if (!is_array($snapshot)) continue;
+      $data['routers'][$session]['history'][$historyIndex] = mikhmonProtectSnapshotSecrets($snapshot, $changed);
+    }
+  }
+  if ($changed) mikhmonWriteRouterDatabase($data);
   $GLOBALS['_mikhmon_router_database_cache'] = $data;
   $GLOBALS['_mikhmon_router_database_cache_path'] = $path;
   return $data;
+}
+
+function mikhmonProtectSnapshotSecrets($snapshot, &$changed = false) {
+  foreach (array('hotspot_users', 'ppp_secrets') as $rowKey) {
+    foreach ((array) ($snapshot[$rowKey] ?? array()) as $rowIndex => $row) {
+      if (!is_array($row)) continue;
+      foreach (array('password', 'secret', 'pass') as $secretField) {
+        if (empty($row[$secretField]) || strpos((string) $row[$secretField], 'v2:') === 0) continue;
+        $encrypted = mikhmonEncryptSecret($row[$secretField]);
+        if ($encrypted === false) {
+          unset($snapshot[$rowKey][$rowIndex][$secretField]);
+        } else {
+          $snapshot[$rowKey][$rowIndex][$secretField] = $encrypted;
+        }
+        $changed = true;
+      }
+    }
+  }
+  return $snapshot;
 }
 
 function mikhmonCustomerNameKey($name) {
@@ -767,6 +799,13 @@ function mikhmonSnapshotRows($rows) {
   foreach ((array) $rows as $row) {
     if (is_array($row) && isset($row['name']) && (!isset($row['dynamic']) || $row['dynamic'] !== 'true')) {
       unset($row['.id'], $row['dynamic']);
+      foreach (array('password', 'secret', 'pass') as $secretField) {
+        if (isset($row[$secretField]) && $row[$secretField] !== '') {
+          $encrypted = mikhmonEncryptSecret($row[$secretField]);
+          if ($encrypted !== false) $row[$secretField] = $encrypted;
+          else unset($row[$secretField]);
+        }
+      }
       $result[] = $row;
     }
   }
@@ -883,7 +922,12 @@ function mikhmonRestoreFields($row, $allowed) {
   $fields = array();
   foreach ($allowed as $field) {
     if (isset($row[$field]) && $row[$field] !== '') {
-      $fields[$field] = $row[$field];
+      $value = $row[$field];
+      if (in_array($field, array('password', 'secret', 'pass'), true) && strpos((string) $value, 'v2:') === 0) {
+        $value = mikhmonDecryptSecret($value);
+        if ($value === false) continue;
+      }
+      $fields[$field] = $value;
     }
   }
   return $fields;

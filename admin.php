@@ -15,6 +15,10 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+if (session_status() === PHP_SESSION_NONE) {
+  session_set_cookie_params(array('lifetime' => 0, 'path' => '/', 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', 'httponly' => true, 'samesite' => 'Lax'));
+  ini_set('session.use_strict_mode', '1');
+}
 session_start();
 // hide all error
 error_reporting(0);
@@ -63,11 +67,11 @@ if ($_SESSION['theme'] == "") {
 
 
 // load config
-include_once('./include/headhtml.php');
 include('./include/config.php');
 include('./include/readcfg.php');
 include_once('./include/access.php');
 include_once('./include/systemlog.php');
+include_once('./include/headhtml.php');
 
 include_once('./lib/routeros_api.class.php');
 include_once('./lib/formatbytesbites.php');
@@ -80,6 +84,7 @@ if ($id == "login" || substr($url, -1) == "p") {
     $user = trim((string) $_POST['user']);
     $pass = (string) $_POST['pass'];
     if ($user == $useradm && $pass == decrypt($passadm)) {
+      session_regenerate_id(true);
       mikhmonSetLoginSession(array('username' => $user, 'name' => 'Administrator'), 'admin');
       $target = mikhmonAdminLandingUrl($data);
       mikhmonSystemLog('success', 'Autentikasi', 'Administrator berhasil login.', mikhmonSystemLogCurrentUser(array('session' => mikhmonDefaultRouterSession($data))));
@@ -87,6 +92,7 @@ if ($id == "login" || substr($url, -1) == "p") {
     } else {
       $staff = mikhmonLoginStaff($user, $pass);
       if ($staff) {
+        session_regenerate_id(true);
         mikhmonSetLoginSession($staff);
         if ($staff['role'] === 'admin') {
           $target = mikhmonAdminLandingUrl($data);
@@ -111,6 +117,9 @@ if ($id == "login" || substr($url, -1) == "p") {
   
 
   include_once('./include/login.php');
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && !mikhmonValidCsrf($_POST['_csrf'] ?? '')) {
+  http_response_code(403);
+  exit('Invalid request.');
 } elseif (!isset($_SESSION["mikhmon"])) {
   echo "<script>window.location='./admin.php?id=login'</script>";
 } elseif (!mikhmonRefreshStaffSession()) {
@@ -222,6 +231,7 @@ if ($id == "login" || substr($url, -1) == "p") {
 } elseif ($id == "shutdown"  && !empty($session)) {
   include_once('./process/shutdown.php');
 } elseif ($id == "remove-session" && $session != "") {
+  if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !mikhmonValidCsrf($_POST['_csrf'] ?? '')) { http_response_code(403); exit('Invalid request.'); }
   include_once('./include/menu.php');
   $fc = file("./include/config.php" );
   $f = fopen("./include/config.php", "w");
@@ -242,10 +252,10 @@ if ($id == "login" || substr($url, -1) == "p") {
   session_destroy();
   echo "<script>window.location='./admin.php?id=login'</script>";
 } elseif ($id == "remove-logo" && $logo != ""  && !empty($session)) {
+  if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !mikhmonValidCsrf($_POST['_csrf'] ?? '')) { http_response_code(403); exit('Invalid request.'); }
   include_once('./include/menu.php');
-  $logopath = "./img/";
-  $remlogo = $logopath . $logo;
-  unlink("$remlogo");
+  $logo = basename((string) $logo);
+  if (preg_match('/^logo-[A-Za-z0-9_-]+\.png$/', $logo)) @unlink(__DIR__ . '/img/' . $logo);
   echo "<script>window.location='./admin.php?id=uplogo&session=" . $session . "'</script>";
 } elseif ($id == "editor"  && !empty($session)) {
   include_once('./include/menu.php');

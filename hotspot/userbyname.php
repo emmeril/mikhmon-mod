@@ -342,14 +342,14 @@ include('./voucher/printbt.php');
 				<option>all</option>
 				<?php $TotalReg = count($srvlist);
     for ($i = 0; $i < $TotalReg; $i++) {
-      echo "<option>" . $srvlist[$i]['name'] . "</option>";
+    echo "<option>" . htmlspecialchars($srvlist[$i]['name'], ENT_QUOTES) . "</option>";
     }
     ?>
 			</select>
 		</td>
 	</tr>
   <tr>
-    <td class="align-middle"><?= $_name ?></td><td><input id="name" class="form-control" type="text" autocomplete="off" name="name" value="<?= $uname; ?>"></td>
+    <td class="align-middle"><?= $_name ?></td><td><input id="name" class="form-control" type="text" autocomplete="off" name="name" value="<?= htmlspecialchars($uname, ENT_QUOTES); ?>"></td>
   </tr>
   <tr>
     <td class="align-middle"><?= $_password ?></td><td>
@@ -368,10 +368,10 @@ include('./voucher/printbt.php');
   <tr>
     <td class="align-middle"><?= $_profile ?></td><td>
 			<select class="form-control" name="profile" required="1">
-				<option><?= $uprofile; ?></option>
+					<option><?= htmlspecialchars($uprofile, ENT_QUOTES); ?></option>
 				<?php $TotalReg = count($getprofile);
     for ($i = 0; $i < $TotalReg; $i++) {
-      echo "<option>" . $getprofile[$i]['name'] . "</option>";
+      echo "<option>" . htmlspecialchars($getprofile[$i]['name'], ENT_QUOTES) . "</option>";
     }
     ?>
 			</select>
@@ -415,7 +415,7 @@ include('./voucher/printbt.php');
     </td>
   </tr>
   <tr>
-    <td class="align-middle"><?= $_tcomment ?></td><td><input class="form-control" type="text" id="comment" autocomplete="off" name="comment" title="No special characters" value="<?= $ucomment; ?>" <?= $commt ?>><input type="hidden" name="h_comment" value="<?= $ucomment ?>"></td>
+	    <td class="align-middle"><?= $_tcomment ?></td><td><input class="form-control" type="text" id="comment" autocomplete="off" name="comment" title="No special characters" value="<?= htmlspecialchars($ucomment, ENT_QUOTES); ?>" <?= $commt ?>><input type="hidden" name="h_comment" value="<?= htmlspecialchars($ucomment, ENT_QUOTES); ?>"></td>
   </tr>
   <tr>
   <tr <?=$display?>>

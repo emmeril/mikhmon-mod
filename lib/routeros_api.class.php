@@ -1,4 +1,5 @@
 <?php
+require_once dirname(__DIR__) . '/include/crypto.php';
 /*****************************
  *
  * RouterOS PHP API class v1.6
@@ -445,9 +446,11 @@ class RouterosAPI
     }
 }
 
-// encrypt decript
-
+// Encrypt new secrets with authenticated encryption while retaining support
+// for legacy Mikhmon values already present in config.php.
 function encrypt($string, $key=128) {
+	$encrypted = mikhmonEncryptSecret($string);
+	if ($encrypted !== false) return $encrypted;
 	$result = '';
 	for($i=0, $k= strlen($string); $i<$k; $i++) {
 		$char = substr($string, $i, 1);
@@ -458,6 +461,10 @@ function encrypt($string, $key=128) {
 	return base64_encode($result);
 }
 function decrypt($string, $key=128) {
+	if (strpos((string) $string, 'v2:') === 0 && function_exists('openssl_decrypt')) {
+		$plaintext = mikhmonDecryptSecret($string);
+		return $plaintext === false ? '' : $plaintext;
+	}
 	$result = '';
 	$string = base64_decode($string);
 	for($i=0, $k=strlen($string); $i< $k ; $i++) {

@@ -2,6 +2,20 @@
 
 include_once(__DIR__ . '/database.php');
 
+function mikhmonCsrfToken() {
+  if (empty($_SESSION['mikhmon_csrf'])) $_SESSION['mikhmon_csrf'] = bin2hex(random_bytes(32));
+  return (string) $_SESSION['mikhmon_csrf'];
+}
+
+function mikhmonValidCsrf($token) {
+  return isset($_SESSION['mikhmon_csrf']) && is_string($token)
+    && hash_equals((string) $_SESSION['mikhmon_csrf'], $token);
+}
+
+function mikhmonCsrfField() {
+  return '<input type="hidden" name="_csrf" value="' . htmlspecialchars(mikhmonCsrfToken(), ENT_QUOTES) . '">';
+}
+
 function mikhmonRole() {
   return isset($_SESSION['mikhmon_role']) ? $_SESSION['mikhmon_role'] : 'admin';
 }
