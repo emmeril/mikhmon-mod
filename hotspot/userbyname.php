@@ -139,17 +139,14 @@ if (!isset($_SESSION["mikhmon"])) {
     } else {
       $waprice = $_price . " : *" . $currency . " " . number_format((float)$getprice) . "* %0A";
     }
-    $btprice = $getprice;
   }else if($getsprice != ""){
     if ($currency == in_array($currency, $cekindo['indo'])) {
       $waprice = $_price." : *" . $currency . " " . number_format((float)$getsprice, 0, ",", ".") . "* %0A";
     } else {
       $waprice = $_price . " : *" . $currency . " " . number_format((float)$getsprice) . "* %0A";
     }
-    $btprice = $getsprice;
   }else if ($getsprice == "") {
     $waprice = "";
-    $btprice = "";
   }
 
   $shareWAUP = "
@@ -182,41 +179,6 @@ Login : *http://" . $dnsname . "* %0A
   } else {
     $shareWA = $shareWAUP;
   }
-
-// quick bt
-include('./include/quickbt.php');
-
-// Print BT
-  $chl = urlencode("http://$dnsname/login?username=$uname&password=$upass");
-	$qrcode = 'https://chart.googleapis.com/chart?cht=qr&chs=100x100&chld=L|0&chl=' . $chl . '&choe=utf-8';
-  //$qrcode = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='.$chl;
- 
-
-
-if ($currency == in_array($currency, $cekindo['indo'])) {
-  $pricebt = $currency . " " . number_format((float)$btprice, 0, ",", ".");
-  if (substr($getvalid, -1) == "d") {
-    $validity = substr($getvalid, 0, -1) . "Hari";
-  } else if (substr($getvalid, -1) == "h") {
-    $validity = substr($getvalid, 0, -1) . "Jam";
-  } else if (substr($getvalid, -1) == "m") {
-    $validity = substr($getvalid, 0, -1) . "Menit";
-  }
-  if (substr($utimelimit, -1) == "d" & strlen($utimelimit) > 3) {
-    $timelimit = ((substr($utimelimit, 0, -1) * 7) + substr($utimelimit, 2, 1)) . "Hari";
-  } else if (substr($utimelimit, -1) == "d") {
-    $timelimit = substr($utimelimit, 0, -1) . "Hari";
-  } else if (substr($utimelimit, -1) == "h") {
-    $timelimit = substr($utimelimit, 0, -1) . "Jam";
-  } else if (substr($utimelimit, -1) == "w") {
-    $timelimit = (substr($utimelimit, 0, -1) * 7) . "Hari";
-  }
-  } else {
-    $pricebt = $currency . " " . number_format((float)$btprice);
-    $timelimit = $utimelimit;
-    $validity = $getvalid;
-  }
-
 
   if (isset($_POST['name'])) {
     $server = ($_POST['server']);
@@ -270,7 +232,6 @@ if ($currency == in_array($currency, $cekindo['indo'])) {
     echo "<script>window.location='./?hotspot-user=" . $uid . "&session=" . $session . "'</script>";
   }
 }
-include('./voucher/printbt.php');
 ?>
 
 <script>
@@ -281,7 +242,6 @@ include('./voucher/printbt.php');
     } else {
     x.type = 'password';
     }}
-    var _0x7baa=["\x63\x6C\x69\x63\x6B","\x2E\x70\x72\x69\x6E\x74\x42\x54","\x72\x65\x61\x64\x79"];$(document)[_0x7baa[2]](function(){$(_0x7baa[1])[_0x7baa[0]](function(){printBT()})})
 </script>
 <div class="row">
 <div class="col-12"></div>
@@ -291,34 +251,6 @@ include('./voucher/printbt.php');
 </div>
 <div class="card-body">
 <form autocomplete="new-password" method="post" action="">
-  <div>
-    <?php if ($_SESSION['ubp'] != "") {
-      echo "    <a class='btn bg-warning' href='./?hotspot=users&profile=" . $_SESSION['ubp'] . "&session=" . $session . "'><i class='fa fa-close'></i> ".$_close."</a>";
-    } elseif ($_SESSION['ubc'] != "") {
-      echo "    <a class='btn bg-warning' href='./?hotspot=users&comment=" . $_SESSION['ubc'] . "&session=" . $session . "'><i class='fa fa-close'></i> ".$_close."</a>";
-    } elseif ($_SESSION['hua'] != "") {
-      $_SESSION['ubn'] = "";
-      echo "    <a class='btn bg-warning' href='./?hotspot=active&session=" . $session . "'><i class='fa fa-close'></i> ".$_close."</a>";
-      $_SESSION['hua'] = "";
-    } elseif ($_SESSION['ubn'] != "") {
-      echo "    <a class='btn bg-warning' href='./?hotspot=users&profile=all&session=" . $session . "'><i class='fa fa-close'></i> ".$_close."</a>";
-      $_SESSION['ubn'] = "";
-    } else {
-      echo "    <a class='btn bg-warning' href='./?hotspot=users&profile=all&session=" . $session . "'><i class='fa fa-close'></i> ".$_close."</a>";
-    }
-    ?>
-    <button type="submit" name="save" class="btn bg-primary" > <i class="fa fa-save"></i> <?= $_save ?></button>
-    <div class="btn bg-danger"  onclick="if(confirm('Are you sure to delete username (<?= $uname; ?>)?')){loadpage('./?remove-hotspot-user=<?= $uid; ?>&session=<?= $session; ?>')}else{}" title='Remove <?= $uname; ?>'><i class='fa fa-minus-square'></i> <?= $_remove ?></div>
-    <a class="btn bg-secondary"  title="Print" href="javascript:window.open('./voucher/print.php?user=<?= $usermode . "-" . $uname; ?>&qr=no&session=<?= $session; ?>','_blank','width=310,height=450').print();"> <i class="fa fa-print"></i> <?= $_print ?></a>
-    <a class="btn bg-info"  title="Print QR" href="javascript:window.open('./voucher/print.php?user=<?= $usermode . "-" . $uname; ?>&qr=yes&session=<?= $session; ?>','_blank','width=310,height=450').print();"> <i class="fa fa-qrcode"></i> <?= $_print_qr ?></a>
-    <a class="btn bg-primary"  title="Print Small" href="javascript:window.open('./voucher/print.php?user=<?= $usermode . "-" . $uname; ?>&small=yes&session=<?= $session; ?>','_blank','width=310,height=450').print();"> <i class="fa fa-print"></i> <?= $_print_small ?></a>
-    <?php if ($utimelimit == "1s") {
-      echo '<a class="btn bg-info"  href="./?reset-hotspot-user=' . $uid . '&session=' . $session . '"> <i class="fa fa-retweet"></i> Reset</a>';
-    } ?>
-    <a id="shareWA" class="btn bg-green" title="Share WhatsApp" href="whatsapp://send?text=<?= $shareWA; ?>"> <i class="fa fa-whatsapp"></i> <?= $_share ?></a>
-    <!--<div id="shareWA" class="btn bg-blue printBT" title="Print Bluetooth"><i class="fa fa-bluetooth"></i> <?= $_print ?> BT</div>-->
-    <div id="shareWA" class="btn bg-blue" onclick="sendToQuickPrinterChrome()" title="Print Bluetooth"><i class="fa fa-bluetooth"></i> <?= $_print ?> BT</div><br>
-  </div>
 <table class="table">
   <tr>
     <td class="align-middle">Enabled</td>
@@ -460,6 +392,27 @@ include('./voucher/printbt.php');
     </td>
   </tr>
 </table>
+<div class="user-edit-actions" style="margin-top:15px;">
+  <button type="submit" name="save" class="btn bg-primary"><i class="fa fa-save"></i> <?= $_save ?></button>
+  <?php if ($_SESSION['ubp'] != "") {
+    echo "<a class='btn bg-warning' href='./?hotspot=users&profile=" . rawurlencode($_SESSION['ubp']) . "&session=" . rawurlencode($session) . "'><i class='fa fa-close'></i> ".$_close."</a>";
+  } elseif ($_SESSION['ubc'] != "") {
+    echo "<a class='btn bg-warning' href='./?hotspot=users&comment=" . rawurlencode($_SESSION['ubc']) . "&session=" . rawurlencode($session) . "'><i class='fa fa-close'></i> ".$_close."</a>";
+  } elseif ($_SESSION['hua'] != "") {
+    $_SESSION['ubn'] = "";
+    echo "<a class='btn bg-warning' href='./?hotspot=active&session=" . rawurlencode($session) . "'><i class='fa fa-close'></i> ".$_close."</a>";
+  } elseif ($_SESSION['ubn'] != "") {
+    echo "<a class='btn bg-warning' href='./?hotspot=users&profile=all&session=" . rawurlencode($session) . "'><i class='fa fa-close'></i> ".$_close."</a>";
+    $_SESSION['ubn'] = "";
+  } else {
+    echo "<a class='btn bg-warning' href='./?hotspot=users&profile=all&session=" . rawurlencode($session) . "'><i class='fa fa-close'></i> ".$_close."</a>";
+  }
+  ?>
+  <?php if ($utimelimit == "1s") {
+    echo '<a class="btn bg-info" href="./?reset-hotspot-user=' . rawurlencode($uid) . '&session=' . rawurlencode($session) . '"><i class="fa fa-retweet"></i> Reset</a>';
+  } ?>
+  <a class="btn bg-green" title="Kirim WhatsApp" href="whatsapp://send?text=<?= htmlspecialchars($shareWA, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Kirim WhatsApp</a>
+</div>
 </form>
 </div>
 </div>
