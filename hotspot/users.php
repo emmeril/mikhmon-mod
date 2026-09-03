@@ -26,12 +26,12 @@ if (!isset($_SESSION["mikhmon"])) {
   header("Location:../admin.php?id=login");
 } else {
   if ($prof == "all") {
-    $getuser = $API->comm("/ip/hotspot/user/print", array('.proplist' => 'server,name,password,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total'));
+    $getuser = $API->comm("/ip/hotspot/user/print", array('.proplist' => '.id,server,name,password,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total'));
     $TotalReg = count($getuser);
 
   } elseif ($prof != "all") {
     $getuser = $API->comm("/ip/hotspot/user/print", array(
-      '.proplist' => 'server,name,password,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total',
+      '.proplist' => '.id,server,name,password,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total',
       "?profile" => "$prof",
     ));
     $TotalReg = count($getuser);
@@ -39,7 +39,7 @@ if (!isset($_SESSION["mikhmon"])) {
   }
   if ($comm != "") {
     $getuser = $API->comm("/ip/hotspot/user/print", array(
-      '.proplist' => 'server,name,password,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total',
+      '.proplist' => '.id,server,name,password,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total',
       "?comment" => "$comm",
     //"?uptime" => "00:00:00"
     ));
@@ -49,7 +49,7 @@ if (!isset($_SESSION["mikhmon"])) {
   $exp = $_GET['exp'];
   if ($exp != "") {
     $getuser = $API->comm("/ip/hotspot/user/print", array(
-      '.proplist' => 'server,name,password,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total',
+      '.proplist' => '.id,server,name,password,profile,mac-address,uptime,bytes-in,bytes-out,comment,disabled,limit-uptime,limit-bytes-total',
       "?limit-uptime" => "1s",
     ));
     
