@@ -75,7 +75,7 @@ if (!isset($_SESSION["mikhmon"])) {
     http_response_code(403);
     exit('Invalid request.');
   }
-  $mutationKeys = array('remove-user-active','remove-host','remove-cookie','remove-ip-binding','remove-hotspot-user','remove-hotspot-users','remove-user-profile','reset-hotspot-user','remove-hotspot-user-by-comment','remove-hotspot-user-expired','enable-hotspot-user','disable-hotspot-user','enable-ip-binding','disable-ip-binding','remove-report','remove-pppsecret','enable-pppsecret','disable-pppsecret','remove-pprofile','remove-pactive','remove-scheduler','enable-scheduler','disable-scheduler');
+  $mutationKeys = array('remove-user-active','remove-host','remove-cookie','remove-ip-binding','remove-hotspot-user','send-fonnte-voucher','remove-hotspot-users','remove-user-profile','reset-hotspot-user','remove-hotspot-user-by-comment','remove-hotspot-user-expired','enable-hotspot-user','disable-hotspot-user','enable-ip-binding','disable-ip-binding','remove-report','remove-pppsecret','enable-pppsecret','disable-pppsecret','remove-pprofile','remove-pactive','remove-scheduler','enable-scheduler','disable-scheduler');
   foreach ($mutationKeys as $mutationKey) {
     if (isset($_GET[$mutationKey]) && (string) $_GET[$mutationKey] !== '' && !mikhmonValidCsrf($_POST['_csrf'] ?? ($_GET['_csrf'] ?? ''))) {
       http_response_code(403); exit('Invalid request.');
@@ -121,6 +121,7 @@ if (!isset($_SESSION["mikhmon"])) {
   $removecookie = $_GET['remove-cookie'];
   $removeipbinding = $_GET['remove-ip-binding'];
   $removehotspotuser = $_GET['remove-hotspot-user'];
+  $sendfonntevoucher = $_GET['send-fonnte-voucher'];
   $removehotspotusers = $_GET['remove-hotspot-users'];
   $removeuserprofile = $_GET['remove-user-profile'];
   $resethotspotuser = $_GET['reset-hotspot-user'];
@@ -184,6 +185,7 @@ if (!isset($_SESSION["mikhmon"])) {
   elseif ($admin == 'database') $requestedRoute = 'admin-database';
   elseif ($hotspotuser == 'generate') $requestedRoute = 'hotspot-generate';
   elseif ($hotspotuser != '' && $hotspotuser != 'add') $requestedRoute = 'hotspot-user-edit';
+  elseif ($sendfonntevoucher != '') $requestedRoute = 'hotspot-user-mutate';
   elseif ($removehotspotuser != '') $requestedRoute = 'hotspot-user-mutate';
   elseif ($hotspot == 'print-center') $requestedRoute = 'hotspot-print-center';
   elseif ($hotspot == 'active') $requestedRoute = 'hotspot-active';
@@ -214,6 +216,11 @@ if (!isset($_SESSION["mikhmon"])) {
       $identity = isset($getidentity[0]['name']) ? $getidentity[0]['name'] : '';
       mikhmonSynchronizeRouterData($API, $session);
     }
+  }
+
+  if ($sendfonntevoucher != '') {
+    include_once('./process/sendfonntevoucher.php');
+    exit;
   }
 
 

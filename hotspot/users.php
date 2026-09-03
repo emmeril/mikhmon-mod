@@ -17,6 +17,7 @@
  */
 
 include_once(__DIR__ . '/../lib/billing_profile.php');
+include_once(__DIR__ . '/../lib/fonnte.php');
 
 // hide all error
 error_reporting(0);
@@ -62,6 +63,20 @@ if (!isset($_SESSION["mikhmon"])) {
   foreach ($getprofile as $profileRow) {
     $voucherProfiles[(string) $profileRow['name']] = true;
   }
+  $voucherProfileDetails = array();
+  foreach ($getprofile as $profileRow) $voucherProfileDetails[(string) $profileRow['name']] = $profileRow;
+  $fonnteConfig = mikhmonFonnteReadConfig();
+  $fonnteStatus = isset($_GET['fonnte']) ? (string) $_GET['fonnte'] : '';
+  $fonnteMessage = isset($_GET['message']) ? (string) $_GET['message'] : '';
+  $fonntePhoneByUsername = array();
+  $visibleFonnteCustomers = function_exists('mikhmonVisibleCustomers') ? mikhmonVisibleCustomers($session) : mikhmonGetCustomers($session);
+  foreach ($visibleFonnteCustomers as $customerRow) {
+    $customerPhone = mikhmonCustomerPhone($customerRow['phone'] ?? '');
+    if ($customerPhone === '') continue;
+    foreach (mikhmonCustomerServices($customerRow) as $customerService) {
+      if (($customerService['service'] ?? '') === 'hotspot' && !empty($customerService['username'])) $fonntePhoneByUsername[(string) $customerService['username']] = $customerPhone;
+    }
+  }
   $getuser = array_values(array_filter((array) $getuser, function ($hotspotUser) use ($voucherProfiles) {
     return isset($hotspotUser['profile']) && isset($voucherProfiles[(string) $hotspotUser['profile']]);
   }));
@@ -99,6 +114,7 @@ if (!isset($_SESSION["mikhmon"])) {
     
 </div>
 <div class="card-body">
+  <?php if ($fonnteMessage !== ''): ?><div class="<?= $fonnteStatus === 'success' ? 'bg-success' : 'bg-danger'; ?> pd-10 radius-3 mr-b-10"><i class="fa <?= $fonnteStatus === 'success' ? 'fa-check' : 'fa-ban'; ?>"></i> <?= htmlspecialchars($fonnteMessage, ENT_QUOTES); ?></div><?php endif; ?>
   <div class="row">
    <div class="col-6 pd-t-5 pd-b-5">
   <div class="input-group">
@@ -201,13 +217,29 @@ for ($i = 0; $i < $TotalReg; $i++) {
   $udisabled = $userdetails['disabled'];
   $editUrl = './?hotspot-user=' . rawurlencode($uid) . '&session=' . rawurlencode($session);
   $deleteMessage = 'Are you sure to delete username (' . $uname . ')?';
-  $utimelimit = $userdetails['limit-uptime'];
+  $rawTimeLimit = (string) ($userdetails['limit-uptime'] ?? '');
+  $rawDataLimit = (string) ($userdetails['limit-bytes-total'] ?? '');
+  $profileRow = isset($voucherProfileDetails[(string) $uprofile]) ? $voucherProfileDetails[(string) $uprofile] : array();
+  $profileLogin = explode(',', (string) ($profileRow['on-login'] ?? ''));
+  $profileValidity = isset($profileLogin[3]) ? trim((string) $profileLogin[3]) : '';
+  $waLines = array();
+  $waLines[] = $uname === $upassword ? 'Voucher: *' . $uname . '*' : 'Username: *' . $uname . '*';
+  $waLines[] = 'Password: *' . $upassword . '*';
+  if ($profileValidity !== '') $waLines[] = 'Validity: *' . $profileValidity . '*';
+  if ($rawTimeLimit !== '' && $rawTimeLimit !== '0') $waLines[] = 'Time Limit: *' . $rawTimeLimit . '*';
+  if ($rawDataLimit !== '' && $rawDataLimit !== '0') $waLines[] = 'Data Limit: *' . formatBytes($rawDataLimit, 2) . '*';
+  $waLines[] = 'Login: *http://' . $dnsname . '*';
+  $waMessage = '*' . $hotspotname . "*\n\n" . implode("\n", $waLines);
+  $waUrl = 'whatsapp://send?text=' . rawurlencode($waMessage);
+  $fonntePhone = isset($fonntePhoneByUsername[(string) $uname]) ? $fonntePhoneByUsername[(string) $uname] : '';
+  $canSendFonnte = !empty($fonnteConfig['enabled']) && !empty($fonnteConfig['token']) && $fonntePhone !== '';
+  $utimelimit = $rawTimeLimit;
   if ($utimelimit == '1s') {
     $utimelimit = ' expired';
   } else {
     $utimelimit = ' ' . $utimelimit;
   }
-  $udatalimit = $userdetails['limit-bytes-total'];
+  $udatalimit = $rawDataLimit;
   if ($udatalimit == '') {
     $udatalimit = '';
   } else {
@@ -249,6 +281,13 @@ for ($i = 0; $i < $TotalReg; $i++) {
   <td class="text-center text-nowrap">
     <div class="voucher-actions">
       <a class="btn bg-primary" title="Edit User <?= htmlspecialchars($uname, ENT_QUOTES); ?>" href="<?= htmlspecialchars($editUrl, ENT_QUOTES); ?>"><i class="fa fa-edit"></i> <?= $_edit; ?></a>
+      <a class="btn bg-green" title="Kirim WhatsApp" href="<?= htmlspecialchars($waUrl, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Kirim WhatsApp</a>
+      <?php if ($canSendFonnte): ?>
+      <form method="post" action="./?send-fonnte-voucher=<?= rawurlencode($uid); ?>&amp;session=<?= rawurlencode($session); ?>" onsubmit="return confirm('Kirim voucher ini melalui Fonnte?');">
+        <?= mikhmonCsrfField(); ?>
+        <button type="submit" class="btn bg-info" title="Kirim melalui Fonnte"><i class="fa fa-send"></i> Fonnte</button>
+      </form>
+      <?php endif; ?>
       <form method="post" action="./?remove-hotspot-user=<?= rawurlencode($uid); ?>&amp;session=<?= rawurlencode($session); ?>" onsubmit="return confirm(<?= htmlspecialchars(json_encode($deleteMessage), ENT_QUOTES); ?>);">
         <?= mikhmonCsrfField(); ?>
         <button type="submit" class="btn bg-danger" title="Remove <?= htmlspecialchars($uname, ENT_QUOTES); ?>"><i class="fa fa-trash"></i> <?= $_delete; ?></button>
