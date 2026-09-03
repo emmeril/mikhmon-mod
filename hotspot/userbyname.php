@@ -19,6 +19,8 @@
 // hide all error
 error_reporting(0);
 
+include_once(__DIR__ . '/../lib/billing_profile.php');
+
 if (!isset($_SESSION["mikhmon"])) {
   header("Location:../admin.php?id=login");
 } else {
@@ -26,6 +28,9 @@ if (!isset($_SESSION["mikhmon"])) {
   date_default_timezone_set($_SESSION['timezone']);
 
   $getprofile = $API->comm("/ip/hotspot/user/profile/print");
+  $getprofile = array_values(array_filter((array) $getprofile, function ($profileRow) {
+    return isset($profileRow['name']) && mikhmonBillingProfileExpiredMode('hotspot', $profileRow) !== 'none';
+  }));
   $srvlist = $API->comm("/ip/hotspot/print");
 
   if (substr($hotspotuser, 0, 1) == "*") {
@@ -218,18 +223,24 @@ Login : *http://" . $dnsname . "* %0A
       $comment = $usermode.$comment;
     }
 
-    $API->comm("/ip/hotspot/user/set", array(
-      ".id" => "$uid",
-      "server" => "$server",
-      "name" => "$name",
-      "password" => "$password",
-      "profile" => "$profile",
-      "disabled" => "$disabled",
-      "limit-uptime" => "$timelimit",
-      "limit-bytes-total" => "$datalimit",
-      "comment" => "$comment",
-    ));
-    echo "<script>window.location='./?hotspot-user=" . $uid . "&session=" . $session . "'</script>";
+    $allowedProfiles = array();
+    foreach ($getprofile as $profileRow) $allowedProfiles[(string) $profileRow['name']] = true;
+    if (!isset($allowedProfiles[(string) $profile])) {
+      $profileError = 'Profile harus menggunakan mode expired selain none.';
+    } else {
+      $API->comm("/ip/hotspot/user/set", array(
+        ".id" => "$uid",
+        "server" => "$server",
+        "name" => "$name",
+        "password" => "$password",
+        "profile" => "$profile",
+        "disabled" => "$disabled",
+        "limit-uptime" => "$timelimit",
+        "limit-bytes-total" => "$datalimit",
+        "comment" => "$comment",
+      ));
+      echo "<script>window.location='./?hotspot-user=" . $uid . "&session=" . $session . "'</script>";
+    }
   }
 }
 ?>
@@ -250,6 +261,7 @@ Login : *http://" . $dnsname . "* %0A
     <h3><i class="fa fa-edit"></i> <?php  echo $_edit_user.' '.$uname.' '; if ($utimelimit == "1s") {  echo $_expired;}?></h3>
 </div>
 <div class="card-body">
+<?php if (!empty($profileError)): ?><div class="bg-danger pd-10 radius-3 mr-b-10"><i class="fa fa-ban"></i> <?= htmlspecialchars($profileError, ENT_QUOTES); ?></div><?php endif; ?>
 <form autocomplete="new-password" method="post" action="">
 <table class="table">
   <tr>
@@ -304,12 +316,10 @@ Login : *http://" . $dnsname . "* %0A
   <tr>
     <td class="align-middle"><?= $_profile ?></td><td>
 			<select class="form-control" name="profile" required="1">
-					<option><?= htmlspecialchars($uprofile, ENT_QUOTES); ?></option>
-				<?php $TotalReg = count($getprofile);
-    for ($i = 0; $i < $TotalReg; $i++) {
-      echo "<option>" . htmlspecialchars($getprofile[$i]['name'], ENT_QUOTES) . "</option>";
-    }
-    ?>
+				<option value="">Pilih profile voucher</option>
+				<?php foreach ($getprofile as $profileRow): ?>
+				<option value="<?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?>"<?= (string) $profileRow['name'] === (string) $uprofile ? ' selected' : ''; ?>><?= htmlspecialchars($profileRow['name'], ENT_QUOTES); ?></option>
+				<?php endforeach; ?>
 			</select>
 		</td>
 	</tr>
