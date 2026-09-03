@@ -70,6 +70,10 @@ if ($removehotspotusers != "") {
 	$getuname = $API->comm("/ip/hotspot/user/print", array(
 		"?.id" => "$removehotspotuser",
 	));
+	if (function_exists('mikhmonCanManageHotspotUser') && !mikhmonCanManageHotspotUser($session, isset($getuname[0]) ? $getuname[0] : array())) {
+		http_response_code(403);
+		exit('Akses voucher ditolak.');
+	}
 
 	$name = $getuname[0]['name'];
 

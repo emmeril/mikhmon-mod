@@ -183,6 +183,8 @@ if (!isset($_SESSION["mikhmon"])) {
   elseif ($admin == 'session-settings') $requestedRoute = 'admin-session-settings';
   elseif ($admin == 'database') $requestedRoute = 'admin-database';
   elseif ($hotspotuser == 'generate') $requestedRoute = 'hotspot-generate';
+  elseif ($hotspotuser != '' && $hotspotuser != 'add') $requestedRoute = 'hotspot-user-edit';
+  elseif ($removehotspotuser != '') $requestedRoute = 'hotspot-user-mutate';
   elseif ($hotspot == 'print-center') $requestedRoute = 'hotspot-print-center';
   elseif ($hotspot == 'active') $requestedRoute = 'hotspot-active';
   elseif ($hotspot == 'users-by-profile') $requestedRoute = 'hotspot-vouchers';

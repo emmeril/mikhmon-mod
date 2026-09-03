@@ -72,6 +72,11 @@ roleTestAssert(mikhmonCanOpenMainRoute('hotspot-generate'), 'mitra can generate 
 roleTestAssert(mikhmonCanOpenMainRoute('hotspot-active'), 'mitra can view active users');
 roleTestAssert(mikhmonCanOpenMainRoute('hotspot-vouchers'), 'mitra can view own vouchers');
 roleTestAssert(mikhmonCanOpenMainRoute('hotspot-print-center'), 'mitra can open print center');
+roleTestAssert(mikhmonCanOpenMainRoute('hotspot-user-edit'), 'mitra can open an owned voucher for editing');
+roleTestAssert(mikhmonCanOpenMainRoute('hotspot-user-mutate'), 'mitra can submit an owned voucher action');
+roleTestAssert(mikhmonCanManageHotspotUser('router-a', array('name' => 'cust-a')), 'mitra can manage an assigned customer hotspot user');
+roleTestAssert(mikhmonCanManageHotspotUser('router-a', array('name' => 'voucher-a', 'comment' => mikhmonOwnerTag())), 'mitra can manage an owned voucher');
+roleTestAssert(!mikhmonCanManageHotspotUser('router-a', array('name' => 'cust-b')), 'mitra cannot manage another mitra hotspot user');
 roleTestAssert(mikhmonCanOpenMainRoute('pppoe-users'), 'mitra can view assigned PPPoE users');
 roleTestAssert(mikhmonCanOpenMainRoute('pppoe-active'), 'mitra can view assigned PPPoE active sessions');
 roleTestAssert(mikhmonCanOpenMainRoute('billing'), 'mitra can open billing for assigned customers');

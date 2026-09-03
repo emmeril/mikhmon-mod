@@ -200,7 +200,6 @@ for ($i = 0; $i < $TotalReg; $i++) {
   $ucomment = $userdetails['comment'];
   $udisabled = $userdetails['disabled'];
   $editUrl = './?hotspot-user=' . rawurlencode($uid) . '&session=' . rawurlencode($session);
-  $deleteUrl = './?remove-hotspot-user=' . rawurlencode($uid) . '&session=' . rawurlencode($session);
   $deleteMessage = 'Are you sure to delete username (' . $uname . ')?';
   $utimelimit = $userdetails['limit-uptime'];
   if ($utimelimit == '1s') {
@@ -250,7 +249,10 @@ for ($i = 0; $i < $TotalReg; $i++) {
   <td class="text-center text-nowrap">
     <div class="voucher-actions">
       <a class="btn bg-primary" title="Edit User <?= htmlspecialchars($uname, ENT_QUOTES); ?>" href="<?= htmlspecialchars($editUrl, ENT_QUOTES); ?>"><i class="fa fa-edit"></i> <?= $_edit; ?></a>
-      <button type="button" class="btn bg-danger" onclick="if(confirm(<?= htmlspecialchars(json_encode($deleteMessage), ENT_QUOTES); ?>)){loadpage(<?= htmlspecialchars(json_encode($deleteUrl), ENT_QUOTES); ?>)}" title="Remove <?= htmlspecialchars($uname, ENT_QUOTES); ?>"><i class="fa fa-trash"></i> <?= $_delete; ?></button>
+      <form method="post" action="./?remove-hotspot-user=<?= rawurlencode($uid); ?>&amp;session=<?= rawurlencode($session); ?>" onsubmit="return confirm(<?= htmlspecialchars(json_encode($deleteMessage), ENT_QUOTES); ?>);">
+        <?= mikhmonCsrfField(); ?>
+        <button type="submit" class="btn bg-danger" title="Remove <?= htmlspecialchars($uname, ENT_QUOTES); ?>"><i class="fa fa-trash"></i> <?= $_delete; ?></button>
+      </form>
     </div>
   </td>
   <?php

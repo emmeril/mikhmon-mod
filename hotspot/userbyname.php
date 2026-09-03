@@ -42,6 +42,10 @@ if (!isset($_SESSION["mikhmon"])) {
     "?.id" => "$hotspotuser",
   ));
   $userdetails = $getuser[0];
+  if (function_exists('mikhmonCanManageHotspotUser') && !mikhmonCanManageHotspotUser($session, $userdetails)) {
+    http_response_code(403);
+    exit('Akses voucher ditolak.');
+  }
   $uid = $userdetails['.id'];
   $userver = $userdetails['server'];
   $uname = $userdetails['name'];
