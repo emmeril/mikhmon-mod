@@ -979,7 +979,60 @@ function mikhmonSynchronizeRouterData($API, $session, $force = false) {
   $routerDatabase = mikhmonReadRouterDatabase();
   $routerDatabase['routers'][$session] = $record;
   mikhmonWriteRouterDatabase($routerDatabase);
+  mikhmonLinkCustomersFromRouterSnapshot($session, $current);
   return array('status' => 'backed-up', 'record' => $record);
+}
+
+// Link existing MikroTik users to identities when the generated customer
+// comment is present. This repairs delayed syncs without guessing from names.
+function mikhmonLinkCustomersFromRouterSnapshot($session, $snapshot) {
+  $database = mikhmonReadDatabase();
+  if (!isset($database['customers'][$session]) || !is_array($database['customers'][$session])) return 0;
+  $rowsByType = array(
+    'hotspot' => isset($snapshot['hotspot_users']) && is_array($snapshot['hotspot_users']) ? $snapshot['hotspot_users'] : array(),
+    'pppoe' => isset($snapshot['ppp_secrets']) && is_array($snapshot['ppp_secrets']) ? $snapshot['ppp_secrets'] : array(),
+  );
+  $owned = array();
+  foreach ($database['customers'][$session] as $customer) {
+    foreach (mikhmonCustomerServices($customer) as $service) {
+      $key = ($service['service'] ?? 'hotspot') . '|' . strtolower((string) ($service['username'] ?? ''));
+      if (substr($key, -1) !== '|') $owned[$key] = true;
+    }
+  }
+  $linked = 0;
+  foreach ($database['customers'][$session] as $customerIndex => $customer) {
+    $customerName = trim((string) ($customer['name'] ?? ''));
+    if ($customerName === '') continue;
+    $services = mikhmonCustomerServices($customer);
+    foreach ($rowsByType as $serviceType => $rows) {
+      $expected = $serviceType === 'pppoe' ? $customerName : 'up-' . $customerName;
+      foreach ($rows as $row) {
+        if (!is_array($row) || empty($row['name'])) continue;
+        $comment = trim((string) ($row['comment'] ?? ''));
+        $comment = trim(preg_replace('/\s+\[mitra:[^\]]+\]\s*$/i', '', $comment));
+        if ($comment === '' || strcasecmp($comment, $expected) !== 0) continue;
+        $username = trim(strip_tags((string) $row['name']));
+        $key = $serviceType . '|' . strtolower($username);
+        if ($username === '' || isset($owned[$key])) continue;
+        $services[] = array(
+          'id' => 'service-' . uniqid(),
+          'service' => $serviceType,
+          'username' => $username,
+          'profile' => trim(strip_tags((string) ($row['profile'] ?? ''))),
+          'server' => trim(strip_tags((string) ($row['server'] ?? 'all'))) ?: 'all',
+        );
+        $owned[$key] = true;
+        $linked++;
+        break;
+      }
+    }
+    if (count($services) === count(mikhmonCustomerServices($customer))) continue;
+    $customer['services'] = $services;
+    $customer['updated_at'] = time();
+    $database['customers'][$session][$customerIndex] = mikhmonNormalizeCustomer($customer);
+  }
+  if ($linked > 0) mikhmonWriteDatabase($database);
+  return $linked;
 }
 
 function mikhmonRestoreRouterData($API, $session, $type = 'all', $version = 'latest') {
