@@ -48,13 +48,18 @@ foreach (mikhmonGetUsers('mitra', $session) as $mitra) {
 }
 $identityServiceCounts = array();
 $identityServiceFilterOptions = array();
+$identityMitraFilterOptions = array();
 foreach ($identities as $identity) {
   $identityId = isset($identity['id']) ? (string) $identity['id'] : '';
   $serviceCount = count(mikhmonCustomerServices($identity));
   $identityServiceCounts[$identityId] = $serviceCount;
   $identityServiceFilterOptions[$serviceCount] = $serviceCount;
+  $mitraId = (string) ($identity['mitra_id'] ?? '');
+  $mitraName = $mitraId !== '' && isset($identityMitraNames[$mitraId]) ? $identityMitraNames[$mitraId] : 'Belum ditetapkan';
+  $identityMitraFilterOptions[$mitraName === 'Belum ditetapkan' ? '' : $mitraId] = $mitraName;
 }
 ksort($identityServiceFilterOptions, SORT_NUMERIC);
+asort($identityMitraFilterOptions, SORT_NATURAL | SORT_FLAG_CASE);
 ?>
 <style>
   .identity-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
@@ -72,10 +77,10 @@ ksort($identityServiceFilterOptions, SORT_NUMERIC);
   <div class="card-body">
     <?php if ($identityMessage !== ''): ?><div class="box bg-success"><i class="fa fa-check"></i> <?= htmlspecialchars($identityMessage, ENT_QUOTES); ?></div><?php endif; ?>
     <?php if ($identityError !== ''): ?><div class="box bg-danger"><i class="fa fa-warning"></i> <?= htmlspecialchars($identityError, ENT_QUOTES); ?></div><?php endif; ?>
-    <div class="identity-toolbar"><div class="identity-filter-controls"><input id="identitySearch" type="text" class="form-control" placeholder="Cari nama, nomor HP, alamat, atau mitra"><select id="identityServiceFilter" class="form-control"><option value="all">Jumlah Layanan: Semua</option><?php foreach ($identityServiceFilterOptions as $serviceCount): ?><option value="<?= $serviceCount; ?>"><?= $serviceCount; ?> Layanan</option><?php endforeach; ?></select><button id="identityReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button></div><a class="btn bg-primary" href="./?customer=identity-add&session=<?= rawurlencode($session); ?>"><i class="fa fa-user-plus"></i> Tambah Identitas</a></div>
+    <div class="identity-toolbar"><div class="identity-filter-controls"><input id="identitySearch" type="text" class="form-control" placeholder="Cari nama, nomor HP, alamat, atau mitra"><select id="identityServiceFilter" class="form-control"><option value="all">Jumlah Layanan: Semua</option><?php foreach ($identityServiceFilterOptions as $serviceCount): ?><option value="<?= $serviceCount; ?>"><?= $serviceCount; ?> Layanan</option><?php endforeach; ?></select><select id="identityMitraFilter" class="form-control"><option value="all">Mitra: Semua</option><?php foreach ($identityMitraFilterOptions as $mitraId => $mitraName): ?><option value="<?= htmlspecialchars($mitraId, ENT_QUOTES); ?>"><?= htmlspecialchars($mitraName, ENT_QUOTES); ?></option><?php endforeach; ?></select><button id="identityReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button></div><a class="btn bg-primary" href="./?customer=identity-add&session=<?= rawurlencode($session); ?>"><i class="fa fa-user-plus"></i> Tambah Identitas</a></div>
     <div class="overflow box-bordered"><table id="identityTable" class="table table-bordered table-hover identity-table"><thead><tr><th>No</th><th>Nama Pelanggan</th><th>Nomor HP</th><th>Alamat</th><th>Mitra</th><th>Jumlah Layanan</th><th>Aksi</th></tr></thead><tbody>
-      <?php foreach ($identities as $index => $identity): $identityId = isset($identity['id']) ? (string) $identity['id'] : ''; $serviceCount = isset($identityServiceCounts[$identityId]) ? $identityServiceCounts[$identityId] : 0; $identityMitraId = (string) ($identity['mitra_id'] ?? ''); $identityMitraName = $identityMitraId !== '' && isset($identityMitraNames[$identityMitraId]) ? $identityMitraNames[$identityMitraId] : 'Belum ditetapkan'; ?>
-        <tr class="identity-row" data-service-count="<?= $serviceCount; ?>"><td><?= $index + 1; ?></td><td><?= htmlspecialchars($identity['name'] ?? '', ENT_QUOTES); ?></td><td><?= htmlspecialchars($identity['phone'] ?? '', ENT_QUOTES); ?></td><td><?= htmlspecialchars($identity['address'] ?? '', ENT_QUOTES); ?></td><td><?= htmlspecialchars($identityMitraName, ENT_QUOTES); ?></td><td class="identity-service-count"><?= $serviceCount; ?></td><td><a class="btn bg-primary" href="./?customer=identity-edit&customer-id=<?= rawurlencode($identity['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-edit"></i> Edit</a> <a class="btn bg-secondary" href="./?customer=service-add&customer-id=<?= rawurlencode($identity['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-link"></i> Tambah Layanan</a> <form method="post" style="display:inline" onsubmit="return confirm('Hapus identitas pelanggan<?= $serviceCount > 0 ? ' beserta ' . $serviceCount . ' layanan MikroTik' : ''; ?>? Tindakan ini tidak dapat dibatalkan tanpa restore backup.');"><input type="hidden" name="identity_action" value="delete"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($identity['id'], ENT_QUOTES); ?>"><button class="btn bg-danger" type="submit"><i class="fa fa-trash"></i> Hapus</button></form></td></tr>
+      <?php foreach ($identities as $index => $identity): $identityId = isset($identity['id']) ? (string) $identity['id'] : ''; $serviceCount = isset($identityServiceCounts[$identityId]) ? $identityServiceCounts[$identityId] : 0; $identityMitraId = (string) ($identity['mitra_id'] ?? ''); $identityMitraName = $identityMitraId !== '' && isset($identityMitraNames[$identityMitraId]) ? $identityMitraNames[$identityMitraId] : 'Belum ditetapkan'; $identityMitraFilterId = $identityMitraName === 'Belum ditetapkan' ? '' : $identityMitraId; ?>
+        <tr class="identity-row" data-service-count="<?= $serviceCount; ?>" data-mitra-id="<?= htmlspecialchars($identityMitraFilterId, ENT_QUOTES); ?>"><td><?= $index + 1; ?></td><td><?= htmlspecialchars($identity['name'] ?? '', ENT_QUOTES); ?></td><td><?= htmlspecialchars($identity['phone'] ?? '', ENT_QUOTES); ?></td><td><?= htmlspecialchars($identity['address'] ?? '', ENT_QUOTES); ?></td><td><?= htmlspecialchars($identityMitraName, ENT_QUOTES); ?></td><td class="identity-service-count"><?= $serviceCount; ?></td><td><a class="btn bg-primary" href="./?customer=identity-edit&customer-id=<?= rawurlencode($identity['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-edit"></i> Edit</a> <a class="btn bg-secondary" href="./?customer=service-add&customer-id=<?= rawurlencode($identity['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-link"></i> Tambah Layanan</a> <form method="post" style="display:inline" onsubmit="return confirm('Hapus identitas pelanggan<?= $serviceCount > 0 ? ' beserta ' . $serviceCount . ' layanan MikroTik' : ''; ?>? Tindakan ini tidak dapat dibatalkan tanpa restore backup.');"><input type="hidden" name="identity_action" value="delete"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($identity['id'], ENT_QUOTES); ?>"><button class="btn bg-danger" type="submit"><i class="fa fa-trash"></i> Hapus</button></form></td></tr>
       <?php endforeach; ?>
       <?php if (!$identities): ?><tr><td colspan="7" class="identity-empty">Belum ada identitas pelanggan.</td></tr><?php endif; ?><tr id="identityNoResults" style="display:none"><td colspan="7" class="identity-empty">Identitas pelanggan tidak ditemukan.</td></tr>
     </tbody></table></div>
@@ -84,9 +89,9 @@ ksort($identityServiceFilterOptions, SORT_NUMERIC);
 <script>
 $(function(){
   function filterIdentities(){
-    var query=$('#identitySearch').val().toLowerCase(), serviceCount=$('#identityServiceFilter').val(), visible=0;
+    var query=$('#identitySearch').val().toLowerCase(), serviceCount=$('#identityServiceFilter').val(), mitraId=$('#identityMitraFilter').val(), visible=0;
     $('.identity-row').each(function(){
-      var row=$(this), matchesSearch=row.text().toLowerCase().indexOf(query)>-1, matchesCount=serviceCount==='all'||String(row.data('service-count'))===serviceCount, show=matchesSearch&&matchesCount;
+      var row=$(this), matchesSearch=row.text().toLowerCase().indexOf(query)>-1, matchesCount=serviceCount==='all'||String(row.data('service-count'))===serviceCount, matchesMitra=mitraId==='all'||String(row.data('mitra-id'))===mitraId, show=matchesSearch&&matchesCount&&matchesMitra;
       row.toggle(show);
       if(show) visible++;
     });
@@ -95,7 +100,8 @@ $(function(){
   }
   $('#identitySearch').on('input',filterIdentities);
   $('#identityServiceFilter').on('change',filterIdentities);
-  $('#identityReset').on('click',function(){ $('#identitySearch').val(''); $('#identityServiceFilter').val('all'); filterIdentities(); });
+  $('#identityMitraFilter').on('change',filterIdentities);
+  $('#identityReset').on('click',function(){ $('#identitySearch').val(''); $('#identityServiceFilter').val('all'); $('#identityMitraFilter').val('all'); filterIdentities(); });
   filterIdentities();
 });
 </script>
