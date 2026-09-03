@@ -170,6 +170,14 @@ function mikhmonCustomerNameKey($name) {
   return function_exists('mb_strtoupper') ? mb_strtoupper($name, 'UTF-8') : strtoupper($name);
 }
 
+// Names are not unique in the field; use the phone when it distinguishes
+// otherwise identical customer names while retaining name-only legacy rows.
+function mikhmonCustomerIdentityKey($name, $phone = '') {
+  $nameKey = mikhmonCustomerNameKey($name);
+  $phone = trim((string) $phone);
+  return $nameKey . ($phone !== '' && $phone !== '-' ? '|' . $phone : '');
+}
+
 function mikhmonCustomerValueIsEmpty($value) {
   $value = trim((string) $value);
   return $value === '' || $value === '-';
@@ -177,17 +185,25 @@ function mikhmonCustomerValueIsEmpty($value) {
 
 function mikhmonMergeCustomersByName($customers, $invoices = array()) {
   $merged = array();
-  $indexesByName = array();
+  $indexesByIdentity = array();
   $replacedIds = array();
   foreach ((array) $customers as $customer) {
     $customer = mikhmonNormalizeCustomer($customer);
     $nameKey = mikhmonCustomerNameKey($customer['name'] ?? '');
-    if ($nameKey === '' || !isset($indexesByName[$nameKey])) {
-      $indexesByName[$nameKey] = count($merged);
+    $phone = $customer['phone'] ?? '';
+    $identityKey = mikhmonCustomerIdentityKey($customer['name'] ?? '', $phone);
+    // A blank-phone legacy row can still be enriched by a named row, but two
+    // populated phone numbers represent separate identities.
+    $targetIndex = isset($indexesByIdentity[$identityKey]) ? $indexesByIdentity[$identityKey] : null;
+    if ($targetIndex === null && ($phone === '' || $phone === '-')) {
+      $targetIndex = isset($indexesByIdentity[$nameKey]) ? $indexesByIdentity[$nameKey] : null;
+    }
+    if ($nameKey === '' || $targetIndex === null) {
+      $indexesByIdentity[$identityKey] = count($merged);
+      if ($phone === '' || $phone === '-') $indexesByIdentity[$nameKey] = count($merged);
       $merged[] = $customer;
       continue;
     }
-    $targetIndex = $indexesByName[$nameKey];
     $target = $merged[$targetIndex];
     if (!empty($customer['id']) && !empty($target['id'])) $replacedIds[(string) $customer['id']] = (string) $target['id'];
     $serviceKeys = array();
@@ -502,13 +518,21 @@ function mikhmonSaveCustomerIdentity($session, $id, $name, $phone, $address, $mi
 
   $existingCustomer = array();
   $nameKey = mikhmonCustomerNameKey($name);
+  $identityKey = mikhmonCustomerIdentityKey($name, $phone);
   foreach ($database['customers'][$session] as $existing) {
-    if ($nameKey === '' || mikhmonCustomerNameKey($existing['name'] ?? '') !== $nameKey) continue;
+    $existingNameKey = mikhmonCustomerNameKey($existing['name'] ?? '');
+    if ($nameKey === '' || $existingNameKey !== $nameKey) continue;
+    $existingPhone = trim((string) ($existing['phone'] ?? ''));
+    $existingIdentityKey = mikhmonCustomerIdentityKey($existing['name'] ?? '', $existingPhone);
+    if ($existingIdentityKey !== $identityKey && $phone !== '' && $phone !== '-' && $existingPhone !== '' && $existingPhone !== '-') continue;
     if ($id !== '' && (string) ($existing['id'] ?? '') !== (string) $id) return false;
   }
   if ($id === '') {
     foreach ($database['customers'][$session] as $existing) {
-      if ($nameKey !== '' && mikhmonCustomerNameKey($existing['name'] ?? '') === $nameKey) {
+      $existingPhone = trim((string) ($existing['phone'] ?? ''));
+      $existingNameMatches = $nameKey !== '' && mikhmonCustomerNameKey($existing['name'] ?? '') === $nameKey;
+      $identityMatches = $existingNameMatches && mikhmonCustomerIdentityKey($existing['name'] ?? '', $existingPhone) === $identityKey;
+      if ($identityMatches || ($existingNameMatches && ($phone === '' || $phone === '-') && ($existingPhone === '' || $existingPhone === '-'))) {
         $id = (string) ($existing['id'] ?? '');
         $existingCustomer = mikhmonNormalizeCustomer($existing);
         break;
@@ -639,8 +663,12 @@ function mikhmonSaveCustomerWithServices($session, $id, $name, $phone, $address,
   $matchedByName = false;
   if ($id === '') {
     $nameKey = mikhmonCustomerNameKey($name);
+    $identityKey = mikhmonCustomerIdentityKey($name, $phone);
     foreach ($database['customers'][$session] as $existing) {
-      if ($nameKey !== '' && mikhmonCustomerNameKey($existing['name'] ?? '') === $nameKey) {
+      $existingPhone = trim((string) ($existing['phone'] ?? ''));
+      $nameMatches = $nameKey !== '' && mikhmonCustomerNameKey($existing['name'] ?? '') === $nameKey;
+      $identityMatches = $nameMatches && mikhmonCustomerIdentityKey($existing['name'] ?? '', $existingPhone) === $identityKey;
+      if ($identityMatches || ($nameMatches && ($phone === '' || $phone === '-') && ($existingPhone === '' || $existingPhone === '-'))) {
         $id = (string) $existing['id'];
         $existingCustomer = mikhmonNormalizeCustomer($existing);
         $matchedByName = true;

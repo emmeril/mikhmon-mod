@@ -17,10 +17,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['identity_action'])) {
   $mitraId = mikhmonIsAdmin() ? trim((string) ($_POST['mitra_id'] ?? '')) : (mikhmonIsMitra() ? mikhmonUserId() : ($identityCustomer['mitra_id'] ?? ''));
   $mitra = $mitraId !== '' ? mikhmonFindUser($mitraId) : false;
   $sameNameCustomer = false;
-  foreach (mikhmonGetCustomers($session) as $candidate) if (mikhmonCustomerNameKey($candidate['name'] ?? '') === mikhmonCustomerNameKey($name)) { $sameNameCustomer = $candidate; break; }
+  $nameKey = mikhmonCustomerNameKey($name);
+  $phoneKey = trim($phone);
+  foreach (mikhmonGetCustomers($session) as $candidate) {
+    if (mikhmonCustomerNameKey($candidate['name'] ?? '') !== $nameKey) continue;
+    $candidatePhone = trim((string) ($candidate['phone'] ?? ''));
+    $sameIdentity = mikhmonCustomerIdentityKey($candidate['name'] ?? '', $candidatePhone) === mikhmonCustomerIdentityKey($name, $phoneKey);
+    $legacyBlankMatch = ($phoneKey === '' || $phoneKey === '-') && ($candidatePhone === '' || $candidatePhone === '-');
+    if ($sameIdentity || $legacyBlankMatch) { $sameNameCustomer = $candidate; break; }
+  }
   if ($name === '') $identityError = 'Nama pelanggan wajib diisi.';
-  elseif ($sameNameCustomer && (!$identityEdit || (string) $sameNameCustomer['id'] !== (string) $identityCustomer['id']) && !mikhmonCanManageCustomer($sameNameCustomer)) $identityError = 'Nama pelanggan sudah digunakan oleh identitas lain yang tidak dapat Anda kelola.';
-  elseif ($identityEdit && $sameNameCustomer && (string) $sameNameCustomer['id'] !== (string) $identityCustomer['id']) $identityError = 'Nama pelanggan sudah digunakan oleh identitas lain.';
+  elseif ($sameNameCustomer && (!$identityEdit || (string) $sameNameCustomer['id'] !== (string) $identityCustomer['id']) && !mikhmonCanManageCustomer($sameNameCustomer)) $identityError = 'Identitas dengan nama dan nomor HP tersebut tidak dapat Anda kelola.';
+  elseif ($identityEdit && $sameNameCustomer && (string) $sameNameCustomer['id'] !== (string) $identityCustomer['id']) $identityError = 'Nama dan nomor HP tersebut sudah digunakan oleh identitas lain.';
   elseif ($mitraId !== '' && (!$mitra || $mitra['role'] !== 'mitra' || $mitra['session'] !== $session)) $identityError = 'Mitra yang dipilih tidak valid untuk router ini.';
   else {
     $savedId = mikhmonSaveCustomerIdentity($session, $identityEdit ? $identityCustomer['id'] : '', $name, $phone, $address, $mitraId);
