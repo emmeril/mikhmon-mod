@@ -75,10 +75,7 @@ include('../lang/'.$langid.'.php');
     ));
     $TotalRHr = count($getSRHr);
     $_SESSION[$session.'totalHr'] = $TotalRHr;*/
-    $getSRBl = $API->comm("/system/script/print", array(
-      "?owner" => "$idbl",
-    ));
-    $getSRBl = mikhmonFilterReportRecords($getSRBl);
+	$getSRBl = mikhmonReportFetchRecords($API, $session, '', $idbl);
 	$getSRBl = mikhmonReportMergeBillingRows($session, $getSRBl, '', $idbl);
     if (mikhmonIsMitra()) {
       $mitraUsernames = mikhmonMitraUsernames($session);

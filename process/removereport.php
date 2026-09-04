@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 session_start();
+include_once(dirname(__DIR__) . '/include/database.php');
 // hide all error
 error_reporting(0);
 
@@ -24,13 +25,7 @@ error_reporting(0);
 	
 		$nuids = count($uids);
 	
-		for ($i = 0; $i < $nuids; $i++) {
-	
-			$API->comm("/system/script/remove", array(
-				".id" => "$uids[$i]",
-			));
-	
-		}
+		mikhmonDeleteReportRecords($session, '', '', $uids);
 		$_SESSION[$session.'idhr'] = "";
 	}
 	echo "<script>window.location='./?report=selling".$_SESSION['report']."&session=" . $session . "'</script>";

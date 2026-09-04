@@ -11,6 +11,17 @@ function reportBillingTestAssert($condition, $message) {
   }
 }
 
+class ReportImportFakeApi {
+  public $scripts;
+  public $removed = array();
+  function __construct($scripts) { $this->scripts = $scripts; }
+  function comm($command, $args = array()) {
+    if ($command === '/system/script/print') return array_values($this->scripts);
+    if ($command === '/system/script/remove') { $this->removed[] = $args['.id'] ?? ''; return array(); }
+    return array();
+  }
+}
+
 $databasePath = tempnam(sys_get_temp_dir(), 'mikhmon-report-');
 putenv('MIKHMON_DATABASE_PATH=' . $databasePath);
 $paidAt = strtotime('2026-08-15 10:20:30');
@@ -58,6 +69,13 @@ reportBillingTestAssert($income === 395000.0, 'merged income contains billing, o
 
 $profit = mikhmonReportNetProfit($billingRows[0], array('hotspot|monthly-hotspot' => 60000));
 reportBillingTestAssert($profit === 40000.0, 'billing transactions use profile cost for net profit');
+
+$importApi = new ReportImportFakeApi(array(array(
+  '.id' => '*1', 'name' => 'sep/04/2026-|-10:00:00-|-legacy-user-|-100-|-10.0.0.7-|-AA:AA-|-1d-|-voucher-|-sale-|-hotspot-|-50',
+  'source' => 'sep/04/2026', 'owner' => 'sep2026',
+)));
+reportBillingTestAssert(mikhmonSynchronizeReportRecords($importApi, 'router-a') === 1, 'router report records are imported and removed after saving');
+reportBillingTestAssert(count(mikhmonGetReportRecords('router-a')) === 1 && $importApi->removed === array('*1'), 'imported report records are stored in the local database');
 
 @unlink($databasePath);
 echo 'report-billing-tests: OK' . PHP_EOL;

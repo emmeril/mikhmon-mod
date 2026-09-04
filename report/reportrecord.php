@@ -28,6 +28,23 @@ if (!function_exists('mikhmonFilterReportRecords')) {
 	}
 }
 
+if (!function_exists('mikhmonReportFetchRecords')) {
+	function mikhmonReportFetchRecords($API, $session, $idhr = '', $idbl = '')
+	{
+		if (function_exists('mikhmonSynchronizeReportRecords')) mikhmonSynchronizeReportRecords($API, $session);
+		$rows = function_exists('mikhmonGetReportRecords') ? mikhmonGetReportRecords($session) : array();
+		$idhr = strtolower(trim((string) $idhr));
+		$idbl = strtolower(trim((string) $idbl));
+		if ($idhr === '' && $idbl === '') return mikhmonFilterReportRecords($rows);
+		return array_values(array_filter($rows, function ($row) use ($idhr, $idbl) {
+			$parts = mikhmonReportParts($row);
+			$date = strtolower((string) ($row['source'] ?? ($parts[0] ?? '')));
+			$owner = strtolower((string) ($row['owner'] ?? ''));
+			return ($idhr !== '' && $date === $idhr) || ($idbl !== '' && $owner === $idbl);
+		}));
+	}
+}
+
 if (!function_exists('mikhmonReportBillingInvoiceServices')) {
 	function mikhmonReportBillingInvoiceServices($invoice)
 	{

@@ -56,14 +56,14 @@ function mikhmonReadDatabase() {
     return $GLOBALS['_mikhmon_database_cache'];
   }
   if (!is_file($path)) {
-    $empty = array('version' => 5, 'customers' => array(), 'invoices' => array(), 'users' => array(), 'customer_auth' => array());
+    $empty = array('version' => 5, 'customers' => array(), 'invoices' => array(), 'report_records' => array(), 'users' => array(), 'customer_auth' => array());
     $GLOBALS['_mikhmon_database_cache'] = $empty;
     $GLOBALS['_mikhmon_database_cache_path'] = $path;
     return $empty;
   }
   $data = json_decode((string) @file_get_contents($path), true);
   if (!is_array($data)) {
-    $empty = array('version' => 5, 'customers' => array(), 'invoices' => array(), 'users' => array(), 'customer_auth' => array());
+    $empty = array('version' => 5, 'customers' => array(), 'invoices' => array(), 'report_records' => array(), 'users' => array(), 'customer_auth' => array());
     $GLOBALS['_mikhmon_database_cache'] = $empty;
     $GLOBALS['_mikhmon_database_cache_path'] = $path;
     return $empty;
@@ -87,6 +87,9 @@ function mikhmonReadDatabase() {
   }
   if (!isset($data['invoices']) || !is_array($data['invoices'])) {
     $data['invoices'] = array();
+  }
+  if (!isset($data['report_records']) || !is_array($data['report_records'])) {
+    $data['report_records'] = array();
   }
   if (!isset($data['users']) || !is_array($data['users'])) {
     $data['users'] = array();
@@ -463,6 +466,73 @@ function mikhmonGetInvoices($session) {
   $database = mikhmonReadDatabase();
   $invoices = isset($database['invoices'][$session]) && is_array($database['invoices'][$session]) ? $database['invoices'][$session] : array();
   return array_values($invoices);
+}
+
+function mikhmonGetReportRecords($session) {
+  $database = mikhmonReadDatabase();
+  $records = isset($database['report_records'][$session]) && is_array($database['report_records'][$session]) ? $database['report_records'][$session] : array();
+  return array_values(array_filter($records, function ($row) {
+    return is_array($row) && isset($row['name']) && count(explode('-|-', (string) $row['name'])) >= 9;
+  }));
+}
+
+function mikhmonSaveReportRecords($session, $records) {
+  $database = mikhmonReadDatabase();
+  if (!isset($database['report_records']) || !is_array($database['report_records'])) $database['report_records'] = array();
+  $existing = isset($database['report_records'][$session]) && is_array($database['report_records'][$session]) ? $database['report_records'][$session] : array();
+  $byName = array();
+  foreach ($existing as $row) if (is_array($row) && isset($row['name'])) $byName[(string) $row['name']] = $row;
+  foreach ((array) $records as $row) {
+    if (!is_array($row) || !isset($row['name']) || count(explode('-|-', (string) $row['name'])) < 9) continue;
+    $name = (string) $row['name'];
+    $parts = explode('-|-', $name);
+    if (empty($row['source']) && !empty($parts[0])) $row['source'] = $parts[0];
+    if (empty($row['owner']) && preg_match('/^([a-z]{3})\/\d{1,2}\/([0-9]{4})$/i', (string) ($parts[0] ?? ''), $dateMatch)) {
+      $row['owner'] = strtolower($dateMatch[1] . $dateMatch[2]);
+    }
+    $row['.id'] = 'report-' . sha1($name);
+    if (!isset($byName[$name])) $byName[$name] = $row;
+  }
+  $database['report_records'][$session] = array_values($byName);
+  return mikhmonWriteDatabase($database);
+}
+
+function mikhmonDeleteReportRecords($session, $idhr = '', $idbl = '', $ids = array()) {
+  $database = mikhmonReadDatabase();
+  $records = isset($database['report_records'][$session]) && is_array($database['report_records'][$session]) ? $database['report_records'][$session] : array();
+  $idhr = strtolower(trim((string) $idhr));
+  $idbl = strtolower(trim((string) $idbl));
+  $ids = array_map('strval', (array) $ids);
+  $kept = array();
+  foreach ($records as $row) {
+    $parts = explode('-|-', (string) ($row['name'] ?? ''));
+    $date = strtolower((string) ($row['source'] ?? ($parts[0] ?? '')));
+    $owner = strtolower((string) ($row['owner'] ?? ''));
+    $match = in_array((string) ($row['.id'] ?? ''), $ids, true)
+      || ($idhr !== '' && $date === $idhr) || ($idbl !== '' && $owner === $idbl);
+    if (!$match) $kept[] = $row;
+  }
+  $database['report_records'][$session] = array_values($kept);
+  return mikhmonWriteDatabase($database);
+}
+
+function mikhmonSynchronizeReportRecords($API, $session) {
+  if (!is_object($API) || !method_exists($API, 'comm')) return 0;
+  $rows = $API->comm('/system/script/print');
+  if (!is_array($rows) || isset($rows['!trap']) || isset($rows['!fatal'])) return 0;
+  $records = array();
+  foreach ($rows as $row) {
+    if (!is_array($row) || !isset($row['name']) || count(explode('-|-', (string) $row['name'])) < 9) continue;
+    $records[] = $row;
+  }
+  if (!$records || !mikhmonSaveReportRecords($session, $records)) return 0;
+  $removed = 0;
+  foreach ($records as $row) {
+    if (empty($row['.id'])) continue;
+    $response = $API->comm('/system/script/remove', array('.id' => $row['.id']));
+    if (!is_array($response) || (!isset($response['!trap']) && !isset($response['!fatal']))) $removed++;
+  }
+  return $removed;
 }
 
 function mikhmonSaveInvoice($session, $invoice) {
@@ -920,6 +990,7 @@ function mikhmonStoreSnapshot(&$record, $snapshot) {
 }
 
 function mikhmonBackupRouterData($API, $session, $force = false) {
+  mikhmonSynchronizeReportRecords($API, $session);
   $record = mikhmonGetRouterRecord(array(), $session);
   $interval = max(30, (int) $record['settings']['interval']);
   if (!$force && $record['last_checked_at'] > 0 && (time() - $record['last_checked_at']) < $interval) {
@@ -991,6 +1062,8 @@ function mikhmonRestoreSnapshot($API, $snapshot, $type = 'all') {
 }
 
 function mikhmonSynchronizeRouterData($API, $session, $force = false) {
+  // Move transient report scripts into local storage on every connected request.
+  mikhmonSynchronizeReportRecords($API, $session);
   if (!mikhmonRouterSyncDue($session, $force)) {
     return array('status' => 'throttled', 'record' => array());
   }

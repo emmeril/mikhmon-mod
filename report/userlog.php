@@ -29,35 +29,19 @@ if (!isset($_SESSION["mikhmon"])) {
 
 
 	if (strlen($idhr) > "0") {
-		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-			$ARRAY = $API->comm('/system/script/print', array(
-				'?source' => $idhr,
-			));
-			$API->disconnect();
-		}
 		$filedownload = $idhr;
 		$shf = "hidden";
 		$shd = "text";
 	} elseif (strlen($idbl) > "0") {
-		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-			$ARRAY = $API->comm('/system/script/print', array(
-				'?owner' => $idbl,
-			));
-			$API->disconnect();
-		}
 		$filedownload = $idbl;
 		$shf = "hidden";
 		$shd = "text";
 	} elseif ($idhr == "" || $idbl == "") {
-		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-			$ARRAY = $API->comm('/system/script/print');
-			$API->disconnect();
-		}
 		$filedownload = "all";
 		$shf = "text";
 		$shd = "hidden";
 	}
-	$ARRAY = mikhmonFilterReportRecords($ARRAY);
+	$ARRAY = mikhmonReportFetchRecords($API, $session, $idhr, $idbl);
 }
 ?>
 		<script>

@@ -46,41 +46,9 @@ if (!isset($_SESSION["mikhmon"])) {
 	date_default_timezone_set($timezone);
 
 	if (isset($remdata) && mikhmonIsAdmin()) {
-		if (strlen($idhr) > "0") {
-			if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-				$API->write('/system/script/print', false);
-				$API->write('?source=' . $idhr . '', false);
-				$API->write('=.proplist=.id,name');
-				$ARREMD = $API->read();
-				for ($i = 0; $i < count($ARREMD); $i++) {
-					if (!mikhmonIsReportRecord($ARREMD[$i])) {
-						continue;
-					}
-					$API->write('/system/script/remove', false);
-					$API->write('=.id=' . $ARREMD[$i]['.id']);
-					$READ = $API->read();
-
-				}
-			}
-		} elseif (strlen($idbl) > "0") {
-			if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-				$API->write('/system/script/print', false);
-				$API->write('?owner=' . $idbl . '', false);
-				$API->write('=.proplist=.id,name');
-				$ARREMD = $API->read();
-				for ($i = 0; $i < count($ARREMD); $i++) {
-					if (!mikhmonIsReportRecord($ARREMD[$i])) {
-						continue;
-					}
-					$API->write('/system/script/remove', false);
-					$API->write('=.id=' . $ARREMD[$i]['.id']);
-					$READ = $API->read();
-
-				}
-			}
-
-		}
+		mikhmonDeleteReportRecords($session, $idhr, $idbl);
 		echo "<script>window.location='./?report=selling&session=" . $session . "'</script>";
+		exit;
 	}
 
 	if ($prefix != "") {
@@ -89,42 +57,24 @@ if (!isset($_SESSION["mikhmon"])) {
 		$fprefix = "";
 	}
 	if (strlen($idhr) > "0") {
-		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-			$getData = $API->comm("/system/script/print", array(
-				"?source" => "$idhr",
-			));
-		}
 		$filedownload = $idhr;
 		$shf = "hidden";
 		$shd = "inline-block";
 	} elseif (strlen($idbl) > "0") {
-		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-			$getData = $API->comm("/system/script/print", array(
-				"?owner" => "$idbl",
-			));
-		}
 		$filedownload = $idbl;
 		$shf = "hidden";
 		$shd = "inline-block";
 	} elseif ($idhr == "" || $idbl == "") {
-		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-			$getData = $API->comm("/system/script/print");
-		}
 		$filedownload = "all";
 		$shf = "text";
 		$shd = "none";
 	} elseif (strlen($idbl) > "0" ) {
-		if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-			$getData = $API->comm("/system/script/print", array(
-				"?owner" => "$idbl",
-			));
-		}
 		$filedownload = $idbl;
 		$shf = "hidden";
 		$shd = "inline-block";
 	}
 
-	$getData = mikhmonFilterReportRecords($getData);
+	$getData = mikhmonReportFetchRecords($API, $session, $idhr, $idbl);
 	$getData = mikhmonReportMergeBillingRows($session, $getData, $idhr, $idbl);
 	if (mikhmonIsMitra()) {
 		$mitraUsernames = mikhmonMitraUsernames($session);
