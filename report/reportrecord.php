@@ -127,6 +127,29 @@ if (!function_exists('mikhmonReportBillingServiceStarts')) {
 	}
 }
 
+if (!function_exists('mikhmonReportBillingServiceKeys')) {
+	function mikhmonReportBillingServiceKeys($session)
+	{
+		$keys = array();
+		$addServices = function ($services) use (&$keys) {
+			foreach ((array) $services as $service) {
+				$type = ($service['service'] ?? '') === 'pppoe' ? 'pppoe' : 'hotspot';
+				$username = strtolower(trim((string) ($service['username'] ?? '')));
+				if ($username !== '') $keys[$type . '|' . $username] = true;
+			}
+		};
+		if (function_exists('mikhmonGetInvoices')) {
+			foreach ((array) mikhmonGetInvoices($session) as $invoice) $addServices(mikhmonReportBillingInvoiceServices($invoice));
+		}
+		if (function_exists('mikhmonGetCustomers')) {
+			foreach ((array) mikhmonGetCustomers($session) as $customer) {
+				$addServices(function_exists('mikhmonCustomerServices') ? mikhmonCustomerServices($customer) : array());
+			}
+		}
+		return $keys;
+	}
+}
+
 if (!function_exists('mikhmonReportRowTimestamp')) {
 	function mikhmonReportRowTimestamp($row)
 	{
@@ -147,10 +170,15 @@ if (!function_exists('mikhmonReportMergeBillingRows')) {
 		// A paid Billing invoice is the authoritative transaction for that customer
 		// from its first payment onward; omit profile-login records to prevent duplicates.
 		$billingStarts = mikhmonReportBillingServiceStarts($session);
+		// Billing services are not sales while their first invoice is unpaid (or has
+		// not been created yet). This is especially important for PPPoE profiles,
+		// whose on-up script records every login regardless of payment status.
+		$billingServices = mikhmonReportBillingServiceKeys($session);
 		$filtered = array();
 		foreach ((array) $rows as $row) {
 			$key = mikhmonReportServiceKey($row);
 			$rowAt = mikhmonReportRowTimestamp($row);
+			if ($key !== '' && isset($billingServices[$key]) && !isset($billingStarts[$key])) continue;
 			if ($key !== '' && $rowAt > 0 && isset($billingStarts[$key]) && $rowAt >= $billingStarts[$key]) continue;
 			$filtered[] = $row;
 		}
