@@ -67,15 +67,17 @@ if (isset($_POST['fonnte_template_save'])) {
 	} elseif (!mikhmonFonnteValidCsrf($_POST['fonnte_csrf'] ?? '')) {
 		$fonnteTemplateError = 'Sesi formulir tidak valid. Muat ulang halaman lalu coba lagi.';
 	} else {
-		$fonnteConfig['templates'] = array(
-			'reminder' => trim((string) ($_POST['template_reminder'] ?? '')),
-			'isolation' => trim((string) ($_POST['template_isolation'] ?? '')),
-			'payment' => trim((string) ($_POST['template_payment'] ?? '')),
-		);
-		if (mikhmonFonnteWriteConfig($fonnteConfig)) {
-			$fonnteConfig = mikhmonFonnteReadConfig();
-			$fonnteTemplateMessage = 'Template pesan WhatsApp berhasil disimpan.';
+		$templateKey = (string) ($_POST['fonnte_template_key'] ?? '');
+		$templateFields = array('reminder' => 'template_reminder', 'isolation' => 'template_isolation', 'payment' => 'template_payment');
+		if (!isset($templateFields[$templateKey])) {
+			$fonnteTemplateError = 'Template pesan tidak valid.';
 		} else {
+			$fonnteConfig['templates'][$templateKey] = trim((string) ($_POST[$templateFields[$templateKey]] ?? ''));
+		}
+		if ($fonnteTemplateError === '' && mikhmonFonnteWriteConfig($fonnteConfig)) {
+			$fonnteConfig = mikhmonFonnteReadConfig();
+			$fonnteTemplateMessage = 'Template ' . ($templateKey === 'reminder' ? 'pengingat' : ($templateKey === 'isolation' ? 'isolir' : 'pembayaran')) . ' berhasil disimpan.';
+		} elseif ($fonnteTemplateError === '') {
 			$fonnteTemplateError = 'Template pesan WhatsApp gagal disimpan.';
 		}
 	}
@@ -108,12 +110,45 @@ textarea{
 }
 .fonnte-template-card label {
   display: block;
-  margin-bottom: 15px;
+  margin: 0;
   font-weight: 600;
 }
 .fonnte-template-card label textarea {
-  margin-top: 6px;
+  display: block;
+  width: 100%;
+  min-height: 155px;
+  margin-top: 8px;
+  box-sizing: border-box;
+  resize: vertical;
   font-weight: 400;
+}
+.fonnte-template-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  margin: -6px;
+}
+.fonnte-template-item {
+  display: flex;
+  width: 50%;
+  padding: 6px;
+  box-sizing: border-box;
+}
+.fonnte-template-item form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(127,127,127,.25);
+  border-radius: 4px;
+}
+.fonnte-template-item .btn {
+  align-self: flex-start;
+  margin-top: auto;
+}
+@media (max-width: 700px) {
+  .fonnte-template-item { width: 100%; }
 }
 .fonnte-template-row {
   display: flex;
@@ -219,23 +254,38 @@ textarea{
 			<div class="card-body">
 				<?php if ($fonnteTemplateMessage !== ''): ?><div class="bg-success pd-10 radius-3 mr-b-10"><i class="fa fa-check"></i> <?= htmlspecialchars($fonnteTemplateMessage, ENT_QUOTES); ?></div><?php endif; ?>
 				<?php if ($fonnteTemplateError !== ''): ?><div class="bg-danger pd-10 radius-3 mr-b-10"><i class="fa fa-ban"></i> <?= htmlspecialchars($fonnteTemplateError, ENT_QUOTES); ?></div><?php endif; ?>
-				<form autocomplete="off" method="post" action="">
-					<input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>">
-					<div class="row">
-						<div class="col-6 col-box-12">
-							<label style="display:block">Pengingat H-<?= (int) ($fonnteConfig['reminder_days'] ?? 7); ?>
+				<div class="fonnte-template-grid">
+					<div class="fonnte-template-item">
+						<form autocomplete="off" method="post" action="">
+							<input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>">
+							<input type="hidden" name="fonnte_template_key" value="reminder">
+							<label>Pengingat H-<?= (int) ($fonnteConfig['reminder_days'] ?? 7); ?>
 								<textarea class="form-control" name="template_reminder" rows="7" required><?= htmlspecialchars($fonnteConfig['templates']['reminder'] ?? '', ENT_QUOTES); ?></textarea>
 							</label>
-							<label style="display:block">Pesan Isolir
-								<textarea class="form-control" name="template_isolation" rows="6" required><?= htmlspecialchars($fonnteConfig['templates']['isolation'] ?? '', ENT_QUOTES); ?></textarea>
-							</label>
-							<label style="display:block">Konfirmasi Pembayaran &amp; Aktif Kembali
-								<textarea class="form-control" name="template_payment" rows="6" required><?= htmlspecialchars($fonnteConfig['templates']['payment'] ?? '', ENT_QUOTES); ?></textarea>
-							</label>
-						</div>
+							<button class="btn bg-primary" type="submit" name="fonnte_template_save"><i class="fa fa-save"></i> Simpan Pengingat</button>
+						</form>
 					</div>
-					<button class="btn bg-primary" type="submit" name="fonnte_template_save"><i class="fa fa-save"></i> Simpan Template WhatsApp</button>
-				</form>
+					<div class="fonnte-template-item">
+						<form autocomplete="off" method="post" action="">
+							<input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>">
+							<input type="hidden" name="fonnte_template_key" value="isolation">
+							<label>Pesan Isolir
+								<textarea class="form-control" name="template_isolation" rows="7" required><?= htmlspecialchars($fonnteConfig['templates']['isolation'] ?? '', ENT_QUOTES); ?></textarea>
+							</label>
+							<button class="btn bg-primary" type="submit" name="fonnte_template_save"><i class="fa fa-save"></i> Simpan Isolir</button>
+						</form>
+					</div>
+					<div class="fonnte-template-item">
+						<form autocomplete="off" method="post" action="">
+							<input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>">
+							<input type="hidden" name="fonnte_template_key" value="payment">
+							<label>Konfirmasi Pembayaran &amp; Aktif Kembali
+								<textarea class="form-control" name="template_payment" rows="7" required><?= htmlspecialchars($fonnteConfig['templates']['payment'] ?? '', ENT_QUOTES); ?></textarea>
+							</label>
+							<button class="btn bg-primary" type="submit" name="fonnte_template_save"><i class="fa fa-save"></i> Simpan Pembayaran</button>
+						</form>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
