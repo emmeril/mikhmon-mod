@@ -48,15 +48,19 @@ $fonnteVariables = array(
 
 $url = $_SERVER['REQUEST_URI'];
 $telplate = $_GET['template'];
-if ($telplate == "default" || $telplate == "rdefault") {
+$previewUrl = './voucher/vpreview.php?usermode=up&qr=no&session=' . rawurlencode($session);
+if ($telplate == "default" || $telplate == "rdefault" || $telplate == "qr" || $telplate == "rqr") {
 	$telplatet = "template";
+	$previewUrl = './voucher/vpreview.php?usermode=up&qr=' . (($telplate === 'qr' || $telplate === 'rqr') ? 'yes' : 'no') . '&session=' . rawurlencode($session);
 	$popup = "javascript:window.open('./voucher/vpreview.php?usermode=up&qr=no&session=" . $session . "','_blank','width=310,height=310')";
 	$popupQR = "javascript:window.open('./voucher/vpreview.php?usermode=up&qr=yes&session=" . $session . "','_blank','width=310,height=310')";
 } elseif ($telplate == "thermal" || $telplate == "rthermal") {
+	$previewUrl = './voucher/vpreview.php?usermode=up&user=m&qr=no&session=' . rawurlencode($session);
 	$telplatet = "template-thermal";
 	$popup = "javascript:window.open('./voucher/vpreview.php?usermode=up&user=m&qr=no&session=" . $session . "','_blank','width=310,height=310')";
 	$popupQR = "javascript:window.open('./voucher/vpreview.php?usermode=up&user=m&qr=yes&session=" . $session . "','_blank','width=310,height=310')";
 } elseif ($telplate == "small" || $telplate == "rsmall") {
+	$previewUrl = './voucher/vpreview.php?usermode=up&small=yes&qr=no&session=' . rawurlencode($session);
 	$telplatet = "template-small";
 	$popup = "javascript:window.open('./voucher/vpreview.php?usermode=up&small=yes&qr=no&session=" . $session . "','_blank','width=310,height=310')";
 	$popupQR = "javascript:window.open('./voucher/vpreview.php?usermode=up&small=yes&qr=yes&session=" . $session . "','_blank','width=310,height=310')";
@@ -161,49 +165,103 @@ textarea{
 .fonnte-template-row .card {
   width: 100%;
 }
+.voucher-editor-layout > [class*="col-"] { display: flex; }
+.voucher-editor-layout .card { width: 100%; }
+.voucher-preview-frame {
+  display: block;
+  width: 100%;
+  min-height: 505px;
+  border: 1px solid #2f353a;
+  background: #fff;
+}
+.voucher-preview-note {
+  margin: 0 0 8px;
+  color: #73818f;
+  font-size: 12px;
+}
+.voucher-template-selector {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.voucher-template-selector::after {
+  display: none;
+}
+.voucher-template-selector > .input-group-3 {
+  float: none;
+  width: auto;
+}
+.voucher-template-selector > .input-group-3:first-child {
+  flex: 0 0 90px;
+}
+.voucher-template-selector > .input-group-3:last-child {
+  flex: 1;
+}
+.voucher-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.voucher-editor-toolbar::after {
+  display: none;
+}
+.voucher-editor-toolbar > [class*="col-"] {
+  float: none;
+  width: auto;
+  padding: 0;
+}
+.voucher-editor-toolbar > [class*="col-"]:first-child {
+  flex: 0 0 auto;
+}
+.voucher-editor-toolbar > [class*="col-"]:last-child {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+.voucher-editor-toolbar .btn {
+  margin: 0;
+}
+@media (max-width: 1100px) {
+  .voucher-editor-layout > [class*="col-"] { width: 50%; }
+  .voucher-editor-layout > [class*="col-"]:last-child { width: 100%; }
+}
+@media (max-width: 750px) {
+  .voucher-editor-layout > [class*="col-"] { width: 100%; }
+}
+@media (max-width: 600px) {
+  .voucher-editor-toolbar { flex-direction: column; align-items: stretch; }
+  .voucher-editor-toolbar > [class*="col-"] { width: 100%; }
+}
 </style>
 
 
-		<div class="row">
-	    	<div class="col-9">
+		<div class="row voucher-editor-layout">
+	    <div class="col-4 col-box-12">
 	    		<div class="card">
 					<div class="card-header">
-						<h3><i class="fa fa-edit"></i> <?= $_template_editor ?></h3>
+						<h3><i class="fa fa-edit"></i> Template Voucher</h3>
 					</div>
 			<div class="card-body">
 				<form autocomplete="off" method="post" action="">
 					<table class="table">
 						<tr>
 							<td>
-							<div class="row">
+							<div class="row voucher-editor-toolbar">
 								<div class="col-4 col-box-12">
 								<button type="submit" title="Save template" class="btn bg-primary" name="save"><i class="fa fa-save"></i> <?= $_save ?></button>
-								<a class="btn bg-green" href="<?= $popup?>" title="View voucher with Logo"><i class="fa fa-image"></i> </a>
-								<a class="btn bg-green" href="<?= $popupQR?>" title="View voucher with  QR"><i class="fa fa-qrcode"></i> </a>
 								</div>
 								<div class="col-8 pd-t-5 pd-b-5 col-box-12">
-								<div class="input-group">
+								<div class="input-group voucher-template-selector">
             					<div class="input-group-3">
             						<div class="group-item group-item-l pd-2p5 text-center">Template</div>
             					</div>
 								<div class="input-group-3">
 									<select style="padding:4.2px;"  class="group-item group-item-m" onchange="window.location.href=this.value+'&session=<?= $session; ?>';">
-	    								<option><?= ucfirst($telplate); ?></option>
-	    								<option value="./admin.php?id=editor&template=default">Default</option>
-	    								<option value="./admin.php?id=editor&template=thermal">Thermal</option>
-	    								<option value="./admin.php?id=editor&template=small">Small</option>
-	    							</select>
-	    						</div>
-								
-								<div class="input-group-3">
-            						<div class="group-item group-item-m pd-2p5 text-center">Reset</div>
-            					</div>
-	    						<div class="input-group-3">
-	    							<select style="padding:4.2px;"  class="group-item group-item-r" onchange="window.location.href=this.value+'&session=<?= $session; ?>';">
-	    								<option><?= ucfirst($telplate); ?></option>
-	    								<option value="./admin.php?id=editor&template=rdefault">Default</option>
-	    								<option value="./admin.php?id=editor&template=rthermal">Thermal</option>
-	    								<option value="./admin.php?id=editor&template=rsmall">Small</option>
+									<option value="./admin.php?id=editor&template=default" <?= ($telplate === 'default' || $telplate === 'rdefault') ? 'selected' : ''; ?>>Printer Standar</option>
+									<option value="./admin.php?id=editor&template=qr" <?= ($telplate === 'qr' || $telplate === 'rqr') ? 'selected' : ''; ?>>QR</option>
+									<option value="./admin.php?id=editor&template=small" <?= ($telplate === 'small' || $telplate === 'rsmall') ? 'selected' : ''; ?>>Kecil</option>
 	    							</select>
 	    						</div>
 								</div>
@@ -213,13 +271,13 @@ textarea{
 						</tr>
 						</table>
 	        	<textarea class="bg-dark" id="editorMikhmon" name="editor" style="width:100%" height="700">
-						<?php if ($telplate == "default") {
+						<?php if ($telplate == "default" || $telplate == "qr") {
 						echo file_get_contents('./voucher/template.php');
 					} elseif ($telplate == "thermal") {
 						echo file_get_contents('./voucher/template-thermal.php');
 					} elseif ($telplate == "small") {
 						echo file_get_contents('./voucher/template-small.php');
-					} elseif ($telplate == "rdefault") {
+					} elseif ($telplate == "rdefault" || $telplate == "rqr") {
 						echo file_get_contents('./voucher/default.php');
 					} elseif ($telplate == "rthermal") {
 						echo file_get_contents('./voucher/default-thermal.php');
@@ -231,7 +289,18 @@ textarea{
 			</div>
 		</div>
 		</div>
-		<div class="col-3">
+		<div class="col-4 col-box-12">
+			<div class="card">
+				<div class="card-header">
+					<h3><i class="fa fa-eye"></i> Preview</h3>
+				</div>
+				<div class="card-body">
+					<p class="voucher-preview-note">Preview menggunakan renderer voucher asli dengan data contoh.</p>
+					<iframe id="voucherPreview" class="voucher-preview-frame" title="Preview template voucher" src="<?= htmlspecialchars($previewUrl, ENT_QUOTES); ?>"></iframe>
+				</div>
+			</div>
+		</div>
+		<div class="col-4 col-box-12">
 			<div class="card">
 				<div class="card-header">
 					<h3>Variable</h3>
