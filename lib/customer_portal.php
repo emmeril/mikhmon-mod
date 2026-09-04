@@ -52,6 +52,16 @@ function mikhmonCustomerPortalVoucherProfiles($api) {
   return $profiles;
 }
 
+function mikhmonCustomerPortalVoucherValidityLabel($validity) {
+  $validity = trim((string) $validity);
+  if ($validity === '') return '';
+  if (preg_match('/^(\d+)\s*(m|min|minute|minutes)$/i', $validity, $match)) return $match[1] . ' menit';
+  if (preg_match('/^(\d+)\s*(h|hr|hour|hours|jam)$/i', $validity, $match)) return $match[1] . ' jam';
+  if (preg_match('/^(\d+)\s*(d|day|days|hari)$/i', $validity, $match)) return $match[1] . ' hari';
+  if (preg_match('/^(\d+)\s*(w|week|weeks|minggu)$/i', $validity, $match)) return $match[1] . ' minggu';
+  return $validity;
+}
+
 function mikhmonCustomerPortalVoucherAvailable($api, $username) {
   $username = trim((string) $username);
   if ($username === '' || !is_object($api) || !method_exists($api, 'comm')) return false;
@@ -103,7 +113,17 @@ function mikhmonCustomerPortalActiveGateway($config = null) {
 
 function mikhmonCustomerPortalSyncPayments($session, $customer, $api = null) {
   $config = mikhmonPaymentGatewayReadConfig();
-  $result = array('checked' => 0, 'paid' => 0, 'activated' => 0, 'vouchers_created' => 0, 'errors' => array());
+  $result = array('checked' => 0, 'paid' => 0, 'activated' => 0, 'vouchers_created' => 0, 'voucher_notifications' => 0, 'errors' => array());
+  // Voucher delivery is independent from the billing cron. Retrying when the
+  // customer opens the portal covers a temporary Fonnte failure or webhook race.
+  foreach (mikhmonGetInvoices($session) as $paidVoucher) {
+    if ((string) ($paidVoucher['customer_id'] ?? '') !== (string) ($customer['id'] ?? '')) continue;
+    if (($paidVoucher['kind'] ?? '') !== 'voucher' || ($paidVoucher['status'] ?? '') !== 'paid' || empty($paidVoucher['voucher_username'])) continue;
+    if (!empty($paidVoucher['automation']['voucher_notification_sent_at'])) continue;
+    $notification = mikhmonCustomerPortalSendVoucherPaymentNotification($session, $paidVoucher, $customer);
+    if (!empty($notification['sent'])) $result['voucher_notifications']++;
+    elseif (empty($notification['deferred']) && empty($notification['skipped'])) $result['errors'][] = $notification['message'] ?? 'Notifikasi voucher gagal dikirim.';
+  }
   foreach (mikhmonGetInvoices($session) as $invoice) {
     if ((string) ($invoice['customer_id'] ?? '') !== (string) ($customer['id'] ?? '') || ($invoice['status'] ?? '') !== 'unpaid') continue;
     if (($invoice['payment_gateway'] ?? '') !== 'midtrans' || empty($invoice['payment_order_id'])) continue;
@@ -130,11 +150,53 @@ function mikhmonCustomerPortalSyncPayments($session, $customer, $api = null) {
       : mikhmonPaymentActivationProcess($session, $invoice['id'], $api, array('actor_name' => 'Otomatis MIDTRANS'));
     if (!empty($activation['success'])) {
       $result['activated']++;
-      if (($invoice['kind'] ?? 'monthly') === 'voucher') $result['vouchers_created']++;
+      if (($invoice['kind'] ?? 'monthly') === 'voucher') {
+        $result['vouchers_created']++;
+        if (!empty($activation['notification_sent'])) $result['voucher_notifications']++;
+        if (!empty($activation['notification_error'])) $result['errors'][] = $activation['notification_error'];
+      }
     }
     else $result['errors'][] = $activation['message'] ?? 'Aktivasi pembayaran gagal.';
   }
   return $result;
+}
+
+function mikhmonCustomerPortalVoucherPaymentMessage($invoice, $customer) {
+  $paidAt = (int) ($invoice['paid_at'] ?? $invoice['gateway_paid_at'] ?? time());
+  $code = trim((string) ($invoice['voucher_username'] ?? ''));
+  $name = trim((string) ($customer['name'] ?? $invoice['customer_name'] ?? 'Pelanggan')) ?: 'Pelanggan';
+  $validity = mikhmonCustomerPortalVoucherValidityLabel($invoice['voucher_validity'] ?? '');
+  $validityLine = $validity !== '' ? "\nMasa Berlaku: " . $validity : '';
+  return "Pembayaran invoice " . ($invoice['number'] ?? $invoice['id'] ?? '') . " telah diterima.\n\n"
+    . "Nama: " . $name . "\n"
+    . "Total Dibayar: Rp " . number_format((float) ($invoice['amount'] ?? 0), 0, ',', '.') . "\n"
+    . "Tanggal Bayar: " . date('Y-m-d H:i:s', $paidAt) . "\n\n"
+    . "Kode Voucher: " . $code . $validityLine . "\n\n"
+    . "Voucher Anda sudah aktif dan siap digunakan.";
+}
+
+function mikhmonCustomerPortalSendVoucherPaymentNotification($session, &$invoice, $customer) {
+  if (!empty($invoice['automation']['voucher_notification_sent_at'])) return array('sent' => true, 'already_sent' => true);
+  $now = time();
+  $lastAttemptAt = (int) ($invoice['automation']['voucher_notification_last_attempt_at'] ?? 0);
+  if ($lastAttemptAt > 0 && $lastAttemptAt + 60 > $now) return array('sent' => false, 'deferred' => true, 'message' => 'Menunggu percobaan notifikasi voucher berikutnya.');
+  $config = mikhmonFonnteReadConfig();
+  if (empty($config['enabled']) || empty($config['payment_enabled']) || trim((string) ($config['token'] ?? '')) === '') {
+    return array('sent' => false, 'skipped' => true, 'message' => 'Notifikasi voucher dilewati karena Fonnte atau notifikasi pembayaran tidak aktif.');
+  }
+  $message = mikhmonCustomerPortalVoucherPaymentMessage($invoice, $customer);
+  $invoice['automation']['voucher_notification_last_attempt_at'] = $now;
+  $send = mikhmonFonnteSend($customer['phone'] ?? '', $message, $config);
+  if (!empty($send['status'])) {
+    $invoice['automation']['voucher_notification_sent_at'] = $now;
+    unset($invoice['automation']['voucher_notification_last_error'], $invoice['automation']['voucher_notification_last_attempt_at']);
+    if (mikhmonSaveInvoice($session, $invoice) === false) return array('sent' => false, 'message' => 'Voucher terkirim, tetapi status notifikasi gagal disimpan.');
+    return array('sent' => true, 'detail' => $send['detail'] ?? 'Notifikasi voucher berhasil dikirim.');
+  }
+  $reason = (string) ($send['reason'] ?? 'Notifikasi voucher gagal dikirim melalui Fonnte.');
+  $invoice['automation']['voucher_notification_last_error'] = substr($reason, 0, 500);
+  mikhmonSaveInvoice($session, $invoice);
+  return array('sent' => false, 'message' => $reason);
 }
 
 function mikhmonCustomerPortalReturnUrl() {
@@ -155,7 +217,7 @@ function mikhmonCustomerPortalCreateVoucherInvoice($session, $customer, $profile
   $invoice = array(
     'id' => 'invoice-' . bin2hex(random_bytes(8)), 'number' => $number,
     'customer_id' => $customer['id'], 'customer_name' => $customer['name'] ?? 'Pelanggan',
-    'kind' => 'voucher', 'voucher_profile' => $details['name'], 'voucher_username' => '', 'voucher_password' => '',
+    'kind' => 'voucher', 'voucher_profile' => $details['name'], 'voucher_validity' => $details['validity'], 'voucher_username' => '', 'voucher_password' => '',
     'services' => array(), 'service_count' => 0, 'amount' => $details['selling_price'],
     'due_date' => date('Y-m-d H:i:s', time() + 86400), 'status' => 'unpaid', 'created_at' => time(),
   );
@@ -208,19 +270,26 @@ function mikhmonCustomerPortalCreateMonthlyInvoice($session, $customer, $api) {
 function mikhmonCustomerPortalFulfillVoucher($session, $invoiceId, $api = null) {
   $invoice = array(); foreach (mikhmonGetInvoices($session) as $row) if ((string) ($row['id'] ?? '') === (string) $invoiceId) { $invoice = $row; break; }
   if (!$invoice || ($invoice['kind'] ?? '') !== 'voucher') return array('success' => false, 'message' => 'Invoice voucher tidak ditemukan.');
-  if (($invoice['status'] ?? '') === 'paid' && !empty($invoice['voucher_username'])) return array('success' => true, 'already_paid' => true, 'invoice' => $invoice);
+  if (($invoice['status'] ?? '') === 'paid' && !empty($invoice['voucher_username'])) {
+    $customer = mikhmonFindCustomer($session, $invoice['customer_id'] ?? '');
+    if (!$customer) return array('success' => false, 'message' => 'Pelanggan tidak ditemukan.');
+    $notification = mikhmonCustomerPortalSendVoucherPaymentNotification($session, $invoice, $customer);
+    return array('success' => true, 'already_paid' => true, 'invoice' => $invoice, 'notification_sent' => !empty($notification['sent']), 'notification_error' => $notification['message'] ?? '');
+  }
   $customer = mikhmonFindCustomer($session, $invoice['customer_id'] ?? '');
   if (!$customer) return array('success' => false, 'message' => 'Pelanggan tidak ditemukan.');
   if (!is_object($api) || !method_exists($api, 'comm')) { $connection = mikhmonPaymentActivationConnect($session); if (!$connection['api']) return array('success' => false, 'message' => $connection['error']); $api = $connection['api']; }
   $profileRows = $api->comm('/ip/hotspot/user/profile/print', array('?name' => (string) ($invoice['voucher_profile'] ?? '')));
   $profile = $profileRows[0] ?? array();
   if (!$profile || mikhmonBillingProfileExpiredMode('hotspot', $profile) === 'none') return array('success' => false, 'message' => 'Profile voucher tidak tersedia.');
+  if (empty($invoice['voucher_validity'])) $invoice['voucher_validity'] = mikhmonCustomerPortalProfileDetails($profile)['validity'] ?? '';
   $code = strtoupper(substr(bin2hex(random_bytes(5)), 0, 10));
   $response = $api->comm('/ip/hotspot/user/add', array('server' => 'all', 'name' => $code, 'password' => $code, 'profile' => $invoice['voucher_profile'], 'comment' => 'vc-portal-' . ($customer['name'] ?? 'Pelanggan')));
   if (mikhmonPaymentActivationApiError($response) !== '') return array('success' => false, 'message' => 'Voucher gagal dibuat di router.');
   $invoice['status'] = 'paid'; $invoice['paid_at'] = (int) ($invoice['gateway_paid_at'] ?? time()); $invoice['voucher_username'] = $code; $invoice['voucher_password'] = $code; $invoice['activation_status'] = 'success'; $invoice['gateway_payment_received'] = true;
-  mikhmonSaveInvoice($session, $invoice);
-  return array('success' => true, 'invoice' => $invoice, 'voucher_username' => $code, 'voucher_password' => $code);
+  if (mikhmonSaveInvoice($session, $invoice) === false) return array('success' => false, 'message' => 'Voucher dibuat, tetapi invoice gagal disimpan.');
+  $notification = mikhmonCustomerPortalSendVoucherPaymentNotification($session, $invoice, $customer);
+  return array('success' => true, 'invoice' => $invoice, 'voucher_username' => $code, 'voucher_password' => $code, 'notification_sent' => !empty($notification['sent']), 'notification_error' => $notification['message'] ?? '');
 }
 
 function mikhmonCustomerPortalChangeHotspotPassword($session, $customer, $username, $newPassword, $api = null) {

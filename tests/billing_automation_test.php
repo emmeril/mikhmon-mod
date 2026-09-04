@@ -67,6 +67,12 @@ billingAutomationTestAssert(date('Y-m-d H:i:s', mikhmonBillingAutomationNextDueT
 $futureDue = strtotime('2026-10-05 00:00:00');
 billingAutomationTestAssert(!mikhmonBillingAutomationPaymentWindowOpen($futureDue, 7, strtotime('2026-09-20 12:00:00')), 'future invoice stays outside the payment window');
 billingAutomationTestAssert(mikhmonBillingAutomationPaymentWindowOpen($futureDue, 7, strtotime('2026-09-28 00:00:00')), 'payment window opens on the reminder date');
+billingAutomationTestAssert(!mikhmonBillingAutomationIsMonthlyInvoice(array('kind' => 'voucher', 'status' => 'unpaid')), 'voucher invoices are excluded from monthly automation');
+billingAutomationTestAssert(mikhmonBillingAutomationIsMonthlyInvoice(array('kind' => 'monthly', 'status' => 'unpaid')), 'monthly invoices remain eligible for automation');
+billingAutomationTestAssert(
+  mikhmonBillingAutomationLatestUnpaid(array(array('kind' => 'voucher', 'status' => 'unpaid', 'customer_id' => 'voucher-customer')), 'voucher-customer') === array(),
+  'voucher invoices are not selected as monthly cron invoices'
+);
 
 $bootstrapCustomerId = mikhmonSaveCustomer('router-a', '', 'Bootstrap Customer', '', '', 'hotspot', 'bootstrap-user', 'basic');
 $bootstrapCustomer = mikhmonFindCustomer('router-a', $bootstrapCustomerId);

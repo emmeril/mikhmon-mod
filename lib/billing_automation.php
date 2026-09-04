@@ -133,6 +133,10 @@ function mikhmonBillingAutomationApiError($response) {
   return '';
 }
 
+function mikhmonBillingAutomationIsMonthlyInvoice($invoice) {
+  return ($invoice['kind'] ?? 'monthly') !== 'voucher';
+}
+
 function mikhmonBillingAutomationInvoiceServices($invoice, $customer) {
   if (!empty($invoice['services']) && is_array($invoice['services'])) return $invoice['services'];
   if (!empty($invoice['username'])) return array(array(
@@ -270,6 +274,7 @@ function mikhmonBillingAutomationRemoveScheduler($api, $customer) {
 function mikhmonBillingAutomationLatestUnpaid($invoices, $customerId) {
   $latest = array();
   foreach ((array) $invoices as $invoice) {
+    if (!mikhmonBillingAutomationIsMonthlyInvoice($invoice)) continue;
     if (($invoice['status'] ?? '') !== 'unpaid' || (string) ($invoice['customer_id'] ?? '') !== (string) $customerId) continue;
     if (!$latest || (int) ($invoice['created_at'] ?? 0) > (int) ($latest['created_at'] ?? 0)) $latest = $invoice;
   }
@@ -279,6 +284,7 @@ function mikhmonBillingAutomationLatestUnpaid($invoices, $customerId) {
 function mikhmonBillingAutomationLatestPaid($invoices, $customerId) {
   $latest = array();
   foreach ((array) $invoices as $invoice) {
+    if (!mikhmonBillingAutomationIsMonthlyInvoice($invoice)) continue;
     if (($invoice['status'] ?? '') !== 'paid' || (string) ($invoice['customer_id'] ?? '') !== (string) $customerId) continue;
     if (!$latest || (int) ($invoice['paid_at'] ?? $invoice['created_at'] ?? 0) >= (int) ($latest['paid_at'] ?? $latest['created_at'] ?? 0)) $latest = $invoice;
   }
@@ -412,6 +418,7 @@ function mikhmonBillingAutomationReconcilePaymentNotifications($session, &$invoi
   if (empty($fonnteConfig['enabled']) || empty($fonnteConfig['payment_enabled']) || trim((string) ($fonnteConfig['token'] ?? '')) === '') return 0;
   $queued = 0;
   foreach ($invoices as $index => $invoice) {
+    if (!mikhmonBillingAutomationIsMonthlyInvoice($invoice)) continue;
     if (($invoice['status'] ?? '') !== 'paid') continue;
     $automation = isset($invoice['automation']) && is_array($invoice['automation']) ? $invoice['automation'] : array();
     if (!empty($automation['payment_sent_at']) || !empty($automation['payment_notification_pending']) || !empty($automation['payment_notification_skipped_at'])) continue;
@@ -501,6 +508,7 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
     }
   }
   if ($workHours && !empty($fonnteConfig['payment_enabled'])) foreach ($invoices as $invoice) {
+    if (!mikhmonBillingAutomationIsMonthlyInvoice($invoice)) continue;
     if (($invoice['status'] ?? '') !== 'paid' || empty($invoice['automation']['payment_notification_pending'])) continue;
     $customerId = (string) ($invoice['customer_id'] ?? '');
     if (!isset($customersById[$customerId])) { $result['errors']++; continue; }

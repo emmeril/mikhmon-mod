@@ -80,4 +80,6 @@ paymentNotificationRespond(200, array(
   'paid' => $paid,
   'activation_success' => !empty($activation['success']),
   'activation_message' => $activation['message'] ?? '',
+  'voucher_notification_sent' => !empty($activation['notification_sent']),
+  'voucher_notification_error' => $activation['notification_error'] ?? '',
 ));
