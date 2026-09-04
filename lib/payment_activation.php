@@ -247,7 +247,10 @@ function mikhmonPaymentActivationProcess($session, $invoiceId, $api = null, $opt
     }
     $invoice['next_invoice_id'] = $nextInvoice['id'];
     $fonnteConfig = mikhmonFonnteReadConfig();
-    if (!empty($fonnteConfig['enabled']) && !empty($fonnteConfig['payment_enabled']) && $fonnteConfig['token'] !== '') $invoice['automation']['payment_notification_pending'] = true;
+    if (!empty($fonnteConfig['enabled']) && !empty($fonnteConfig['payment_enabled']) && $fonnteConfig['token'] !== '') {
+      $invoice['automation']['payment_notification_pending'] = true;
+      $invoice['automation']['payment_notification_queued_at'] = $now;
+    }
     $database['invoices'][$session][$rows['invoiceIndex']] = $invoice;
     $database['customers'][$session][$rows['customerIndex']]['due_date'] = $nextDueDate;
     $database['customers'][$session][$rows['customerIndex']]['updated_at'] = $now;

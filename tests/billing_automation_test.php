@@ -106,6 +106,49 @@ $secondSetSeen = false;
 foreach ($secondApi->commands as $command) if ($command[0] === '/ip/hotspot/user/set') $secondSetSeen = true;
 billingAutomationTestAssert(!$secondSetSeen, 'duplicate run does not disable the service again');
 
+$paidInvoiceId = mikhmonSaveInvoice('router-a', array(
+  'id' => 'invoice-paid', 'number' => 'INV-PAID', 'customer_id' => $customerId,
+  'customer_name' => 'Pelanggan A', 'amount' => 10000, 'due_date' => date('Y-m-d H:i:s', time() - 86400),
+  'status' => 'paid', 'paid_at' => time(), 'created_at' => time() - 7200,
+));
+$reconcileInvoices = mikhmonGetInvoices('router-a');
+$reconcileConfig = mikhmonFonnteReadConfig();
+$reconcileConfig['enabled'] = true;
+$reconcileConfig['payment_enabled'] = true;
+$reconcileConfig['token'] = 'test-token';
+$queuedPayments = mikhmonBillingAutomationReconcilePaymentNotifications(
+  'router-a',
+  $reconcileInvoices,
+  array($customerId => mikhmonFindCustomer('router-a', $customerId)),
+  $reconcileConfig
+);
+billingAutomationTestAssert($queuedPayments === 1, 'recent paid invoice missing its flag is recovered into the payment queue');
+$queuedPaymentsAgain = mikhmonBillingAutomationReconcilePaymentNotifications(
+  'router-a',
+  $reconcileInvoices,
+  array($customerId => mikhmonFindCustomer('router-a', $customerId)),
+  $reconcileConfig
+);
+billingAutomationTestAssert($queuedPaymentsAgain === 0, 'payment queue reconciliation is idempotent');
+$oldPaidInvoice = array(
+  'id' => 'invoice-old-paid', 'number' => 'INV-OLD-PAID', 'customer_id' => $customerId,
+  'status' => 'paid', 'paid_at' => time() - (8 * 86400),
+);
+$oldPaidInvoices = array($oldPaidInvoice);
+$oldQueuedPayments = mikhmonBillingAutomationReconcilePaymentNotifications(
+  'router-a',
+  $oldPaidInvoices,
+  array($customerId => mikhmonFindCustomer('router-a', $customerId)),
+  $reconcileConfig
+);
+billingAutomationTestAssert($oldQueuedPayments === 0, 'legacy paid invoices outside the recovery window are not messaged');
+$paidApi = new BillingAutomationFakeApi();
+$paidOnlyResult = mikhmonBillingAutomationProcessSession($paidApi, 'router-a', $routerConfig, array_merge($reconcileConfig, array('enabled' => false)));
+$paidSetSeen = false;
+foreach ($paidApi->commands as $command) if ($command[0] === '/ip/hotspot/user/set' && ($command[1]['disabled'] ?? '') === 'yes') $paidSetSeen = true;
+billingAutomationTestAssert(!$paidSetSeen, 'paid invoices are never isolated by the automation worker');
+billingAutomationTestAssert($paidOnlyResult['reminders'] === 0, 'paid invoices never receive an unpaid reminder');
+
 $rendered = mikhmonBillingAutomationMessage('Halo {{nama_pelanggan}} {{total_tagihan}} {{detail_layanan}}', mikhmonFindCustomer('router-a', $customerId), $savedInvoice, 'Rp', 'Mikhmon', $savedInvoice['due_date']);
 billingAutomationTestAssert(strpos($rendered, 'Pelanggan A') !== false && strpos($rendered, 'Rp 10.000') !== false, 'template variables are rendered');
 $savedInvoice['payment_url'] = 'https://app.midtrans.com/snap/v2/vtweb/test-token';

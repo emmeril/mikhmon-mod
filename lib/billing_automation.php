@@ -402,6 +402,37 @@ function mikhmonBillingAutomationClearFailure(&$invoice, $event) {
   unset($invoice['automation']['last_error_event'], $invoice['automation']['last_error'], $invoice['automation']['last_error_at']);
 }
 
+/**
+ * Recover recent paid invoices that bypassed the normal activation flow.
+ * The age limit prevents legacy payments from suddenly sending notifications
+ * after an upgrade, while still covering outages and bulk updates.
+ */
+function mikhmonBillingAutomationReconcilePaymentNotifications($session, &$invoices, $customersById, $fonnteConfig, $now = null, $maxAgeSeconds = 604800) {
+  $now = $now === null ? time() : (int) $now;
+  if (empty($fonnteConfig['enabled']) || empty($fonnteConfig['payment_enabled']) || trim((string) ($fonnteConfig['token'] ?? '')) === '') return 0;
+  $queued = 0;
+  foreach ($invoices as $index => $invoice) {
+    if (($invoice['status'] ?? '') !== 'paid') continue;
+    $automation = isset($invoice['automation']) && is_array($invoice['automation']) ? $invoice['automation'] : array();
+    if (!empty($automation['payment_sent_at']) || !empty($automation['payment_notification_pending']) || !empty($automation['payment_notification_skipped_at'])) continue;
+    $paidAt = (int) ($invoice['paid_at'] ?? 0);
+    if ($paidAt <= 0 || $paidAt > $now + 300 || $paidAt < $now - max(3600, (int) $maxAgeSeconds)) continue;
+    $customerId = (string) ($invoice['customer_id'] ?? '');
+    $customer = $customersById[$customerId] ?? array();
+    if (preg_replace('/[^0-9]/', '', (string) ($customer['phone'] ?? '')) === '') continue;
+    $invoice['automation']['payment_notification_pending'] = true;
+    $invoice['automation']['payment_notification_queued_at'] = $now;
+    // A payment supersedes any stale reminder/isolation delivery failure.
+    if (in_array($invoice['automation']['last_error_event'] ?? '', array('reminder', 'isolation', 'isolation_message'), true)) {
+      unset($invoice['automation']['last_error_event'], $invoice['automation']['last_error'], $invoice['automation']['last_error_at']);
+    }
+    if (mikhmonSaveInvoice($session, $invoice) === false) continue;
+    $invoices[$index] = $invoice;
+    $queued++;
+  }
+  return $queued;
+}
+
 function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $fonnteConfig) {
   $customers = mikhmonGetCustomers($session);
   $invoices = mikhmonGetInvoices($session);
@@ -412,10 +443,11 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
   $paymentGatewayConfig = mikhmonPaymentGatewayReadConfig();
   $now = time();
   $workHours = mikhmonBillingAutomationIsWorkHour($now);
-  $result = array('invoices' => 0, 'payment_links' => 0, 'reminders' => 0, 'isolated' => 0, 'payments' => 0, 'errors' => 0);
+  $result = array('invoices' => 0, 'payment_links' => 0, 'reminders' => 0, 'isolated' => 0, 'payments_queued' => 0, 'payments' => 0, 'errors' => 0);
   $customersById = array();
+  foreach ($customers as $customer) $customersById[(string) ($customer['id'] ?? '')] = $customer;
+  $result['payments_queued'] = mikhmonBillingAutomationReconcilePaymentNotifications($session, $invoices, $customersById, $fonnteConfig, $now);
   foreach ($customers as $customer) {
-    $customersById[(string) ($customer['id'] ?? '')] = $customer;
     if (!empty($fonnteConfig['automation_enabled'])) mikhmonBillingAutomationRemoveScheduler($api, $customer);
     $invoice = mikhmonBillingAutomationLatestUnpaid($invoices, $customer['id'] ?? '');
     if (!$invoice) {
