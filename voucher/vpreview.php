@@ -49,7 +49,7 @@ if (!isset($_SESSION["mikhmon"])) {
   }
 
  
-  $username = "mikhmon";
+  $username = "user";
   $password = "1234";
   $timelimit = "6h";
   $getdatalimit = "1073741824";

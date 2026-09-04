@@ -33,6 +33,8 @@ include_once(dirname(__DIR__) . '/lib/fonnte.php');
 $fonnteConfig = mikhmonFonnteReadConfig();
 $fonnteTemplateMessage = '';
 $fonnteTemplateError = '';
+$voucherTemplateMessage = '';
+$voucherTemplateError = '';
 $fonnteVariables = array(
 	'{{nama_pelanggan}}' => 'Nama pelanggan',
 	'{{nama_brand}}' => 'Nama brand atau usaha',
@@ -65,6 +67,15 @@ if ($telplate == "default" || $telplate == "rdefault" || $telplate == "qr" || $t
 	$popup = "javascript:window.open('./voucher/vpreview.php?usermode=up&small=yes&qr=no&session=" . $session . "','_blank','width=310,height=310')";
 	$popupQR = "javascript:window.open('./voucher/vpreview.php?usermode=up&small=yes&qr=yes&session=" . $session . "','_blank','width=310,height=310')";
 }
+$template = './voucher/' . $telplatet . '.php';
+$defaultTemplate = './voucher/default' . ($telplatet === 'template' ? '' : substr($telplatet, 8)) . '.php';
+if (isset($_POST['reset_default'])) {
+	if (is_file($defaultTemplate) && @copy($defaultTemplate, $template)) {
+		$voucherTemplateMessage = 'Template voucher berhasil dikembalikan ke default.';
+	} else {
+		$voucherTemplateError = 'Template voucher gagal dikembalikan ke default.';
+	}
+}
 if (isset($_POST['fonnte_template_save'])) {
 	if (!function_exists('mikhmonIsAdmin') || !mikhmonIsAdmin()) {
 		$fonnteTemplateError = 'Hanya administrator yang dapat mengubah template WhatsApp.';
@@ -87,7 +98,6 @@ if (isset($_POST['fonnte_template_save'])) {
 	}
 }
 if (isset($_POST['save'])) {
-	$template = './voucher/' . $telplatet . '.php';
 	$handle = fopen($template, 'w') or die('Cannot open file:  ' . $template);
 
 	$data = ($_POST['editor']);
@@ -244,6 +254,8 @@ textarea{
 						<h3><i class="fa fa-edit"></i> Template Voucher</h3>
 					</div>
 			<div class="card-body">
+				<?php if ($voucherTemplateMessage !== ''): ?><div class="bg-success pd-10 radius-3 mr-b-10"><i class="fa fa-check"></i> <?= htmlspecialchars($voucherTemplateMessage, ENT_QUOTES); ?></div><?php endif; ?>
+				<?php if ($voucherTemplateError !== ''): ?><div class="bg-danger pd-10 radius-3 mr-b-10"><i class="fa fa-ban"></i> <?= htmlspecialchars($voucherTemplateError, ENT_QUOTES); ?></div><?php endif; ?>
 				<form autocomplete="off" method="post" action="">
 					<table class="table">
 						<tr>
@@ -251,6 +263,7 @@ textarea{
 							<div class="row voucher-editor-toolbar">
 								<div class="col-4 col-box-12">
 								<button type="submit" title="Save template" class="btn bg-primary" name="save"><i class="fa fa-save"></i> <?= $_save ?></button>
+								<button type="submit" title="Kembalikan template ke default" class="btn bg-warning" name="reset_default" onclick="return confirm('Kembalikan template ini ke default? Perubahan saat ini akan ditimpa.');"><i class="fa fa-refresh"></i> Reset Default</button>
 								</div>
 								<div class="col-8 pd-t-5 pd-b-5 col-box-12">
 								<div class="input-group voucher-template-selector">
