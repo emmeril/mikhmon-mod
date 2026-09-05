@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 session_start();
+require_once dirname(__DIR__) . '/include/preferences.php';
 // hide all error
 error_reporting(0);
 
@@ -29,11 +30,7 @@ if (empty($getlang)) {
 } else {
     if (!empty($isocodelang[$getlang])) {
         include_once('./include/headhtml.php');
-        $gen = '<?php $langid="' . $getlang . '";?>';
-        $slang = './include/lang-active.php';
-        $handle = fopen($slang, 'w') or die('Cannot open file:  ' . $slang);
-        $data = $gen;
-        fwrite($handle, $data);
+        mikhmonSaveUserPreference('language', $getlang);
         $_SESSION['lang'] = $getlang;
         echo '<center><div style="padding-top:10%;"><i class="fa fa-circle-o-notch fa-spin" style="font-size:40px"></i></div><h3>Load '.$getlang.' lang...</h3></center>';
         echo "<script>window.location='" . $url2 . "'</script>";
