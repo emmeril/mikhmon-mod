@@ -49,6 +49,22 @@ function mikhmonDefaultSyncSettings() {
   );
 }
 
+function mikhmonPruneExpiredRouterBackups($data, $now = null) {
+  $cutoff = ($now === null ? time() : (int) $now) - 7 * 86400;
+  foreach ((array) ($data['routers'] ?? array()) as $session => $record) {
+    $record = mikhmonNormalizeRouterRecord($record, $session);
+    if ($record['latest']['updated_at'] < $cutoff) {
+      $record['latest'] = mikhmonSnapshotCore(array('session' => $session));
+      $record['last_checked_at'] = 0;
+    }
+    $record['history'] = array_values(array_filter($record['history'], function ($snapshot) use ($cutoff) {
+      return is_array($snapshot) && (int) ($snapshot['updated_at'] ?? 0) >= $cutoff;
+    }));
+    $data['routers'][$session] = $record;
+  }
+  return $data;
+}
+
 function mikhmonReadDatabase() {
   $path = mikhmonBackupPath();
   if (isset($GLOBALS['_mikhmon_database_cache'], $GLOBALS['_mikhmon_database_cache_path'])
@@ -127,12 +143,16 @@ function mikhmonReadRouterDatabase() {
   $path = mikhmonRouterBackupPath();
   if (isset($GLOBALS['_mikhmon_router_database_cache'], $GLOBALS['_mikhmon_router_database_cache_path'])
     && is_array($GLOBALS['_mikhmon_router_database_cache']) && $GLOBALS['_mikhmon_router_database_cache_path'] === $path) {
-    return $GLOBALS['_mikhmon_router_database_cache'];
+    $data = mikhmonPruneExpiredRouterBackups($GLOBALS['_mikhmon_router_database_cache']);
+    if ($data !== $GLOBALS['_mikhmon_router_database_cache']) mikhmonWriteRouterDatabase($data);
+    return $data;
   }
   $data = is_file($path) ? json_decode((string) @file_get_contents($path), true) : array();
   if (!is_array($data)) $data = array();
   if (!isset($data['routers']) || !is_array($data['routers'])) $data['routers'] = array();
-  $changed = false;
+  $pruned = mikhmonPruneExpiredRouterBackups($data);
+  $changed = $pruned !== $data;
+  $data = $pruned;
   foreach ($data['routers'] as $session => $record) {
     foreach (array('latest') as $snapshotKey) {
       if (!isset($record[$snapshotKey]) || !is_array($record[$snapshotKey])) continue;
@@ -837,6 +857,7 @@ function mikhmonWriteDatabase($data) {
 }
 
 function mikhmonWriteRouterDatabase($data) {
+  $data = mikhmonPruneExpiredRouterBackups($data);
   $path = mikhmonRouterBackupPath();
   $tmp = $path . '.tmp.' . getmypid();
   $data['version'] = 5;

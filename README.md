@@ -41,6 +41,11 @@ Backup is one-way (`MikroTik -> local database`). Restore is always manual
 from `Settings > Database Backup`; automatic recovery is intentionally disabled
 so expired or intentionally deleted users are not recreated.
 
+Router snapshots are retained for 7 days, based on their capture time. Older
+snapshots (including an expired latest backup) are removed from the shared JSON
+backup file when backups are read or written and at the start of the daily cron,
+even if routers are offline. The active customer/invoice database is unaffected.
+
 #### Automatic billing reminders and isolation
 
 After enabling Billing Automation in `Settings > WhatsApp Gateway`, run the

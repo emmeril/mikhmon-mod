@@ -12,6 +12,9 @@ require_once dirname(__DIR__) . '/lib/routeros_api.class.php';
 require_once dirname(__DIR__) . '/include/database.php';
 require_once dirname(__DIR__) . '/include/systemlog.php';
 
+// Apply retention even when none of the routers can be reached.
+mikhmonReadRouterDatabase();
+
 $total = 0;
 foreach ((array) $data as $session => $config) {
   if ($session === 'mikhmon' || !is_array($config) || count($config) < 4) {

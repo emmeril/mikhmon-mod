@@ -42,6 +42,7 @@ $updatedAt = !empty($snapshot['updated_at']) ? date('Y-m-d H:i:s', (int) $snapsh
     <?php if ($backupMessage !== ''): ?><div class="box bg-success"><?= htmlspecialchars($backupMessage, ENT_QUOTES); ?></div><?php endif; ?>
     <?php if ($backupError !== ''): ?><div class="box bg-danger"><?= htmlspecialchars($backupError, ENT_QUOTES); ?></div><?php endif; ?>
     <p>Backup otomatis membaca data dari MikroTik satu kali setiap hari. Data tidak pernah dikembalikan ke router tanpa menekan tombol Restore.</p>
+    <p>Masa simpan backup 7 hari. Snapshot yang berumur lebih dari 7 hari otomatis dihapus, termasuk backup terakhir yang sudah kedaluwarsa.</p>
     <p><strong>Backup terakhir:</strong> <?= htmlspecialchars($updatedAt, ENT_QUOTES); ?> &nbsp; | &nbsp; Hotspot: <?= count($snapshot['hotspot_users']); ?> &nbsp; | &nbsp; PPPoE: <?= count($snapshot['ppp_secrets']); ?> &nbsp; | &nbsp; <strong>Auto-backup harian:</strong> Aktif</p>
     <form method="post" style="display:inline-block;margin-right:8px"><input type="hidden" name="database_action" value="backup"><button class="btn bg-primary" type="submit"><i class="fa fa-save"></i> Backup Sekarang</button></form>
     <form method="post" style="display:inline-block;margin-right:8px"><input type="hidden" name="database_action" value="sync"><button class="btn bg-orange" type="submit"><i class="fa fa-refresh"></i> Sync Backup Sekarang</button></form>
