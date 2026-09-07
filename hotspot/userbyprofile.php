@@ -29,7 +29,7 @@ $userRows = is_array($userRows) ? $userRows : array();
 $recordRows = array();
 foreach ($profileRows as $profile) {
   if (isset($profile['name']) && in_array(mikhmonBillingProfileExpiredMode('hotspot', $profile), array('remc', 'ntfc'), true)) {
-    $recordRows = $API->comm('/system/script/print');
+    $recordRows = mikhmonReportFetchRecords($API, $session);
     break;
   }
 }
