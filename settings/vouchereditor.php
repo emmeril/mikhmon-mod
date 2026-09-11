@@ -175,14 +175,29 @@ textarea{
 .fonnte-template-row .card {
   width: 100%;
 }
-.voucher-editor-layout > [class*="col-"] { display: flex; }
-.voucher-editor-layout .card { width: 100%; }
+.voucher-editor-layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+.voucher-editor-layout > [class*="col-"] {
+  display: flex;
+  min-width: 0;
+}
+.voucher-editor-layout .card {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: auto;
+  min-width: 0;
+}
 .voucher-preview-frame {
   display: block;
   width: 100%;
   min-height: 505px;
   border: 1px solid #2f353a;
   background: #fff;
+  box-sizing: border-box;
 }
 .voucher-preview-note {
   margin: 0 0 8px;
