@@ -45,6 +45,11 @@ $fonnteVariables = array(
 	'{{tanggal_bayar}}' => 'Tanggal pembayaran diterima',
 	'{{jatuh_tempo_berikutnya}}' => 'Jatuh tempo berikutnya',
 );
+$fonnteVariableHelp = '';
+foreach ($fonnteVariables as $variable => $description) {
+	$fonnteVariableHelp .= $description . " :\n" . $variable . "\n\n";
+}
+$fonnteVariableHelp = rtrim($fonnteVariableHelp);
 
 
 
@@ -392,7 +397,7 @@ textarea{
 				<h3>Variable</h3>
 			</div>
 			<div class="card-body">
-				<textarea class="bg-dark" readonly rows="39" style="width:100%" disabled><?= htmlspecialchars(implode("\n", array_keys($fonnteVariables)), ENT_QUOTES); ?></textarea>
+				<textarea class="bg-dark" readonly rows="39" style="width:100%" disabled><?= htmlspecialchars($fonnteVariableHelp, ENT_QUOTES); ?></textarea>
 			</div>
 		</div>
 	</div>
