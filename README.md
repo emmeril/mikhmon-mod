@@ -24,6 +24,31 @@ or port before starting PM2 when needed:
 MIKHMON_HOST=127.0.0.1 MIKHMON_PORT=9000 pm2 start ecosystem.config.js --env production
 ```
 
+The PM2 configuration enables OPcache for the long-running PHP process and
+automatically uses up to 8 CPU workers (4 workers on a 4-core server). Override
+the worker count or per-worker PHP memory limit when the server needs a
+different balance:
+
+```bash
+MIKHMON_WORKERS=2 MIKHMON_PHP_MEMORY_LIMIT=192M \
+  pm2 start ecosystem.config.js --env production
+```
+
+After changing these values, reload the process and persist the effective PM2
+configuration:
+
+```bash
+pm2 restart ecosystem.config.js --env production --update-env
+pm2 save
+```
+
+Keep PM2 access/error logs bounded with the native system log rotation (run
+once for the account that owns the PM2 process):
+
+```bash
+sudo pm2 logrotate -u "$USER"
+```
+
 Run `pm2 startup` and follow the command it prints if the application should
 start automatically after a server reboot.
 
