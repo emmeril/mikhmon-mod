@@ -726,7 +726,8 @@ if ($livereport == "enable" || $livereport == "") {
   $(document).ready(function(){
     var interval = "' . ($areload * 1000) . '";
     setInterval(function() {
-    $("#reloadHotspotActive").load("./hotspot/hotspotactive.php?server=' . $serveractive . '&session=' . $session . '"); }, interval);})
+    if ($("#reloadHotspotActive .hotspot-active-toolbar :focus").length) return;
+    $("#reloadHotspotActive").load("./hotspot/hotspotactive.php?server=' . rawurlencode($serveractive) . '&session=' . rawurlencode($session) . '"); }, interval);})
 </script>
 ';
 } elseif ($hotspot == "active" && $serveractive == "") {
@@ -734,7 +735,8 @@ if ($livereport == "enable" || $livereport == "") {
   $(document).ready(function(){
     var interval = "' . ($areload * 1000) . '";
     setInterval(function() {
-    $("#reloadHotspotActive").load("./hotspot/hotspotactive.php?session=' . $session . '"); }, interval);})
+    if ($("#reloadHotspotActive .hotspot-active-toolbar :focus").length) return;
+    $("#reloadHotspotActive").load("./hotspot/hotspotactive.php?session=' . rawurlencode($session) . '"); }, interval);})
 </script>
 ';
 } elseif ($userprofile == "add" || substr($userprofile, 0, 1) == "*" || $userprofile != "") {
