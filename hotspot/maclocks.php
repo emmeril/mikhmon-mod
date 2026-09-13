@@ -53,6 +53,7 @@ if (!$routerConnected) {
 
 $lockedUsers = array();
 $activeUsers = array();
+$lockedProfileOptions = array();
 if ($routerConnected) {
   $lockProfiles = array();
   $profileRows = $API->comm('/ip/hotspot/user/profile/print', array('.proplist' => 'name,on-login'));
@@ -83,6 +84,12 @@ if ($routerConnected) {
     usort($lockedUsers, function ($left, $right) {
       return strnatcasecmp((string) ($left['name'] ?? ''), (string) ($right['name'] ?? ''));
     });
+    foreach ($lockedUsers as $lockedUser) {
+      $lockedProfileName = trim((string) ($lockedUser['profile'] ?? ''));
+      if ($lockedProfileName !== '') $lockedProfileOptions[$lockedProfileName] = true;
+    }
+    $lockedProfileOptions = array_keys($lockedProfileOptions);
+    natcasesort($lockedProfileOptions);
   }
 
   $activeRows = $API->comm('/ip/hotspot/active/print', array('.proplist' => 'user'));
@@ -98,7 +105,7 @@ if ($routerConnected) {
   <div class="col-12">
     <div class="card">
       <div class="card-header">
-        <h3><i class="fa fa-unlock-alt"></i> Reset Kunci MAC <small>(<?= count($lockedUsers); ?> pengguna terkunci)</small></h3>
+        <h3><i class="fa fa-unlock-alt"></i> Reset Kunci MAC <small>(<span id="macLockVisibleCount"><?= count($lockedUsers); ?></span> / <?= count($lockedUsers); ?> pengguna terkunci)</small></h3>
       </div>
       <div class="card-body">
         <?php if ($macLockNotice !== ''): ?>
@@ -113,8 +120,31 @@ if ($routerConnected) {
           Reset akan mengosongkan MAC voucher, memutus sesi aktif, dan menghapus cookie lama. Perangkat yang login berikutnya akan menjadi perangkat yang terkunci.
         </div>
 
-        <div class="w-6">
-          <input id="filterTable" type="search" class="form-control" placeholder="Cari username, profil, atau MAC..." autocomplete="off">
+        <style>
+          .mac-lock-toolbar { display:flex; align-items:stretch; gap:8px; }
+          .mac-lock-toolbar .form-control { height:34px; min-height:34px; margin:0; box-sizing:border-box; }
+          #macLockSearch { flex:1; min-width:220px; }
+          #macLockProfileFilter, #macLockStatusFilter { width:190px; }
+          .mac-lock-toolbar .btn { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:34px; margin:0; white-space:nowrap; }
+          @media(max-width:700px) {
+            .mac-lock-toolbar { flex-direction:column; }
+            #macLockSearch, #macLockProfileFilter, #macLockStatusFilter { width:100%; min-width:0; }
+          }
+        </style>
+        <div class="mac-lock-toolbar" role="search" aria-label="Pencarian dan filter kunci MAC">
+          <input id="macLockSearch" type="search" class="form-control" placeholder="Cari username, profil, server, atau MAC..." aria-label="Cari kunci MAC" autocomplete="off">
+          <select id="macLockProfileFilter" class="form-control" aria-label="Filter profil">
+            <option value="all">Semua Profil</option>
+            <?php foreach ($lockedProfileOptions as $lockedProfileOption): ?>
+              <option value="<?= htmlspecialchars($lockedProfileOption, ENT_QUOTES); ?>"><?= htmlspecialchars($lockedProfileOption, ENT_QUOTES); ?></option>
+            <?php endforeach; ?>
+          </select>
+          <select id="macLockStatusFilter" class="form-control" aria-label="Filter status perangkat">
+            <option value="all">Semua Status</option>
+            <option value="active">Aktif</option>
+            <option value="inactive">Tidak aktif</option>
+          </select>
+          <button id="macLockResetFilter" type="button" class="btn bg-secondary" title="Reset filter"><i class="fa fa-refresh"></i> Tampilkan Semua</button>
         </div>
 
         <div class="overflow box-bordered mr-t-10" style="max-height:75vh">
@@ -138,7 +168,7 @@ if ($routerConnected) {
                   $isActive = isset($activeUsers[$lockedName]);
                   $confirmMessage = 'Reset kunci MAC ' . $lockedName . '? Sesi aktif perangkat lama akan diputus.';
                 ?>
-                <tr>
+                <tr class="mac-lock-row" data-profile="<?= htmlspecialchars((string) ($lockedUser['profile'] ?? ''), ENT_QUOTES); ?>" data-status="<?= $isActive ? 'active' : 'inactive'; ?>">
                   <td class="text-center"><?= $index + 1; ?></td>
                   <td><a href="./?hotspot-user=<?= rawurlencode($lockedId); ?>&amp;session=<?= rawurlencode($session); ?>"><i class="fa fa-edit"></i> <?= htmlspecialchars($lockedName, ENT_QUOTES); ?></a></td>
                   <td><?= htmlspecialchars((string) ($lockedUser['profile'] ?? ''), ENT_QUOTES); ?></td>
@@ -156,6 +186,9 @@ if ($routerConnected) {
               <?php if (empty($lockedUsers)): ?>
                 <tr><td colspan="7" class="text-center">Belum ada pengguna dengan kunci MAC.</td></tr>
               <?php endif; ?>
+              <?php if (!empty($lockedUsers)): ?>
+                <tr id="macLockNoResults" style="display:none"><td colspan="7" class="text-center">Kunci MAC tidak ditemukan untuk filter tersebut.</td></tr>
+              <?php endif; ?>
             </tbody>
           </table>
         </div>
@@ -163,3 +196,45 @@ if ($routerConnected) {
     </div>
   </div>
 </div>
+
+<script>
+(function($) {
+  if (!$) return;
+
+  var search = $('#macLockSearch');
+  var profile = $('#macLockProfileFilter');
+  var status = $('#macLockStatusFilter');
+
+  function applyMacLockFilters() {
+    var query = String(search.val() || '').toLowerCase().trim();
+    var selectedProfile = profile.val() || 'all';
+    var selectedStatus = status.val() || 'all';
+    var visible = 0;
+
+    $('#dataTable .mac-lock-row').each(function() {
+      var row = $(this);
+      var matchesQuery = query === '' || row.text().toLowerCase().indexOf(query) !== -1;
+      var matchesProfile = selectedProfile === 'all' || row.attr('data-profile') === selectedProfile;
+      var matchesStatus = selectedStatus === 'all' || row.attr('data-status') === selectedStatus;
+      var show = matchesQuery && matchesProfile && matchesStatus;
+      row.toggle(show);
+      if (show) visible++;
+    });
+
+    $('#macLockVisibleCount').text(visible);
+    $('#macLockNoResults').toggle(visible === 0 && $('#dataTable .mac-lock-row').length > 0);
+  }
+
+  search.on('input', applyMacLockFilters);
+  profile.add(status).on('change', applyMacLockFilters);
+  $('#macLockResetFilter').on('click', function() {
+    search.val('');
+    profile.val('all');
+    status.val('all');
+    applyMacLockFilters();
+    search.trigger('focus');
+  });
+
+  applyMacLockFilters();
+})(window.jQuery);
+</script>
