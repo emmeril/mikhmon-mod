@@ -1,12 +1,32 @@
 <?php
 
 require dirname(__DIR__) . '/lib/hotspot_mac_lock.php';
+require dirname(__DIR__) . '/lib/i18n.php';
 
 function macLockTestAssert($condition, $message) {
   if (!$condition) {
     fwrite(STDERR, 'FAIL: ' . $message . PHP_EOL);
     exit(1);
   }
+}
+
+$requiredTranslations = array(
+  '_reset_mac_lock',
+  '_mac_lock_count',
+  '_mac_lock_description',
+  '_mac_lock_search_placeholder',
+  '_mac_lock_all_profiles',
+  '_mac_lock_all_statuses',
+  '_mac_lock_reset_button',
+  '_mac_lock_reset_confirm',
+);
+foreach (mikhmonI18nLanguages() as $language) {
+  $catalog = mikhmonI18nCatalog($language);
+  foreach ($requiredTranslations as $translationKey) {
+    macLockTestAssert(!empty($catalog[$translationKey]), $language . ' contains ' . $translationKey);
+  }
+  macLockTestAssert(substr_count($catalog['_mac_lock_count'], '%s') === 2, $language . ' count translation keeps both placeholders');
+  macLockTestAssert(substr_count($catalog['_mac_lock_reset_confirm'], '%s') === 1, $language . ' confirmation translation keeps its placeholder');
 }
 
 class HotspotMacLockFakeApi {

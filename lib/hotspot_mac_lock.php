@@ -33,7 +33,7 @@ function mikhmonHotspotMacLockApiError($response) {
 function mikhmonEnsureHotspotProfileMacRebind($API, $profileName) {
   $profileName = trim((string) $profileName);
   if (!is_object($API) || !method_exists($API, 'comm') || $profileName === '') {
-    return array('success' => false, 'message' => 'Profil pengguna tidak valid.');
+    return array('success' => false, 'code' => 'invalid_profile');
   }
 
   $profileRows = $API->comm('/ip/hotspot/user/profile/print', array(
@@ -41,12 +41,12 @@ function mikhmonEnsureHotspotProfileMacRebind($API, $profileName) {
     '.proplist' => '.id,name,on-login',
   ));
   $profileError = mikhmonHotspotMacLockApiError($profileRows);
-  if ($profileError !== '') return array('success' => false, 'message' => 'Gagal membaca profil: ' . $profileError);
-  if (empty($profileRows[0])) return array('success' => false, 'message' => 'Profil pengguna tidak ditemukan.');
+  if ($profileError !== '') return array('success' => false, 'code' => 'read_profile_failed', 'detail' => $profileError);
+  if (empty($profileRows[0])) return array('success' => false, 'code' => 'profile_not_found');
 
   $profile = $profileRows[0];
   if (!mikhmonHotspotProfileUsesMacLock($profile)) {
-    return array('success' => false, 'message' => 'Profil ini tidak mengaktifkan Kunci Pengguna.');
+    return array('success' => false, 'code' => 'profile_lock_disabled');
   }
 
   $onLogin = (string) ($profile['on-login'] ?? '');
@@ -61,7 +61,7 @@ function mikhmonEnsureHotspotProfileMacRebind($API, $profileName) {
     'on-login' => $onLogin,
   ));
   $setError = mikhmonHotspotMacLockApiError($setResponse);
-  if ($setError !== '') return array('success' => false, 'message' => 'Gagal memperbarui penguncian profil: ' . $setError);
+  if ($setError !== '') return array('success' => false, 'code' => 'profile_update_failed', 'detail' => $setError);
 
   return array('success' => true, 'updated' => true);
 }
@@ -74,7 +74,7 @@ function mikhmonResetHotspotMacLock($API, $user) {
   $userId = isset($user['.id']) ? trim((string) $user['.id']) : '';
   $username = isset($user['name']) ? trim((string) $user['name']) : '';
   if (!is_object($API) || !method_exists($API, 'comm') || $userId === '' || $username === '') {
-    return array('success' => false, 'message' => 'Data pengguna tidak valid.');
+    return array('success' => false, 'code' => 'invalid_user');
   }
 
   $setResponse = $API->comm('/ip/hotspot/user/set', array(
@@ -83,7 +83,7 @@ function mikhmonResetHotspotMacLock($API, $user) {
   ));
   $setError = mikhmonHotspotMacLockApiError($setResponse);
   if ($setError !== '') {
-    return array('success' => false, 'message' => 'Gagal mengosongkan MAC: ' . $setError);
+    return array('success' => false, 'code' => 'clear_failed', 'detail' => $setError);
   }
 
   $activeRemoved = 0;
@@ -95,37 +95,36 @@ function mikhmonResetHotspotMacLock($API, $user) {
   $cookieRows = $API->comm('/ip/hotspot/cookie/print', array('?user' => $username));
   $cookieError = mikhmonHotspotMacLockApiError($cookieRows);
   if ($cookieError !== '') {
-    $cleanupErrors[] = 'cookie: ' . $cookieError;
+    $cleanupErrors[] = array('scope' => 'cookie', 'detail' => $cookieError);
   } else {
     foreach ((array) $cookieRows as $cookieRow) {
       if (empty($cookieRow['.id'])) continue;
       $removeResponse = $API->comm('/ip/hotspot/cookie/remove', array('.id' => $cookieRow['.id']));
       $removeError = mikhmonHotspotMacLockApiError($removeResponse);
       if ($removeError === '') $cookieRemoved++;
-      else $cleanupErrors[] = 'cookie: ' . $removeError;
+      else $cleanupErrors[] = array('scope' => 'cookie', 'detail' => $removeError);
     }
   }
 
   $activeRows = $API->comm('/ip/hotspot/active/print', array('?user' => $username));
   $activeError = mikhmonHotspotMacLockApiError($activeRows);
   if ($activeError !== '') {
-    $cleanupErrors[] = 'sesi aktif: ' . $activeError;
+    $cleanupErrors[] = array('scope' => 'active_session', 'detail' => $activeError);
   } else {
     foreach ((array) $activeRows as $activeRow) {
       if (empty($activeRow['.id'])) continue;
       $removeResponse = $API->comm('/ip/hotspot/active/remove', array('.id' => $activeRow['.id']));
       $removeError = mikhmonHotspotMacLockApiError($removeResponse);
       if ($removeError === '') $activeRemoved++;
-      else $cleanupErrors[] = 'sesi aktif: ' . $removeError;
+      else $cleanupErrors[] = array('scope' => 'active_session', 'detail' => $removeError);
     }
   }
 
   return array(
     'success' => true,
-    'message' => 'Kunci MAC berhasil direset.',
     'username' => $username,
     'active_removed' => $activeRemoved,
     'cookie_removed' => $cookieRemoved,
-    'cleanup_errors' => array_values(array_unique($cleanupErrors)),
+    'cleanup_errors' => $cleanupErrors,
   );
 }

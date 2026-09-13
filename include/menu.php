@@ -66,7 +66,7 @@ if (!isset($_SESSION["mikhmon"])) {
     $hamenu = "menu-open";
   } elseif ($hotspot == "mac-locks") {
     $smaclocks = "active";
-    $mpage = "Reset Kunci MAC";
+    $mpage = $_reset_mac_lock;
     $macmenu = "menu-open";
   } elseif ($hotspot == "hosts" || $hotspot == "hostp" || $hotspot == "hosta" || $removehost != "") {
     $shosts = "active";
@@ -419,7 +419,7 @@ include('./info.php');
   <div class="dropdown-btn <?= $sactive . $susersbp . $smaclocks; ?>"><i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $hamenu . $hotspotmenu . $macmenu; ?>">
     <a href="./?hotspot=active&session=<?= $session; ?>" class="<?= $sactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi"></i> <?= $_hotspot_active ?></a>
-    <a href="./?hotspot=mac-locks&session=<?= $session; ?>" class="<?= $smaclocks; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-unlock-alt"></i> Reset Kunci MAC</a>
+    <a href="./?hotspot=mac-locks&session=<?= $session; ?>" class="<?= $smaclocks; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-unlock-alt"></i> <?= $_reset_mac_lock; ?></a>
   </div>
   <div class="dropdown-btn <?= $mppp; ?>"><i class="fa fa-exchange"></i> PPPoE <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $pppmenu; ?>">
@@ -470,7 +470,7 @@ include('./info.php');
   <!--active-->
   <a href="./?hotspot=active&session=<?= $session; ?>" class="menu <?= $sactive; ?>"><i class=" fa fa-wifi"></i> <?= $_hotspot_active ?></a>
   <!--MAC locks-->
-  <a href="./?hotspot=mac-locks&session=<?= $session; ?>" class="menu <?= $smaclocks; ?>"><i class="fa fa-unlock-alt"></i> Reset Kunci MAC</a>
+  <a href="./?hotspot=mac-locks&session=<?= $session; ?>" class="menu <?= $smaclocks; ?>"><i class="fa fa-unlock-alt"></i> <?= $_reset_mac_lock; ?></a>
   <!--hosts-->
   <a href="./?hotspot=hosts&session=<?= $session; ?>" class="menu <?= $shosts; ?>"><i class=" fa fa-laptop"></i> <?= $_hosts ?></a>
   <!--ip bindings-->
