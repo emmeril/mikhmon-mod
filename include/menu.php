@@ -64,6 +64,10 @@ if (!isset($_SESSION["mikhmon"])) {
     $sactive = "active";
     $mpage = $_hotspot_active;
     $hamenu = "menu-open";
+  } elseif ($hotspot == "mac-locks") {
+    $smaclocks = "active";
+    $mpage = "Reset Kunci MAC";
+    $macmenu = "menu-open";
   } elseif ($hotspot == "hosts" || $hotspot == "hostp" || $hotspot == "hosta" || $removehost != "") {
     $shosts = "active";
     $mpage = $_hosts;
@@ -412,9 +416,10 @@ include('./info.php');
     <a href="./?customer=service-add&service=hotspot&session=<?= $session; ?>" class="<?= $sserviceadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_add_user ?></a>
     <a href="./?hotspot-user=generate&session=<?= $session; ?>" class="<?= $sgenuser; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_generate ?></a>
   </div>
-  <div class="dropdown-btn <?= $sactive . $susersbp; ?>"><i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down"></i></div>
-  <div class="dropdown-container <?= $hamenu . $hotspotmenu; ?>">
+  <div class="dropdown-btn <?= $sactive . $susersbp . $smaclocks; ?>"><i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-container <?= $hamenu . $hotspotmenu . $macmenu; ?>">
     <a href="./?hotspot=active&session=<?= $session; ?>" class="<?= $sactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi"></i> <?= $_hotspot_active ?></a>
+    <a href="./?hotspot=mac-locks&session=<?= $session; ?>" class="<?= $smaclocks; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-unlock-alt"></i> Reset Kunci MAC</a>
   </div>
   <div class="dropdown-btn <?= $mppp; ?>"><i class="fa fa-exchange"></i> PPPoE <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $pppmenu; ?>">
@@ -449,10 +454,10 @@ include('./info.php');
     <a href="./?hotspot-user=generate&session=<?= $session; ?>" class="<?= $sgenuser; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_generate ?> </a>
   </div>
   <!--hotspot-->
-  <div class="dropdown-btn <?= $suserprof . $sactive . $shosts . $sipbind . $scookies; ?>"><i class="fa fa-wifi"></i> Hotspot
+  <div class="dropdown-btn <?= $suserprof . $sactive . $smaclocks . $shosts . $sipbind . $scookies; ?>"><i class="fa fa-wifi"></i> Hotspot
     <i class="fa fa-caret-down"></i>
   </div>
-  <div class="dropdown-container <?= $upmenu . $hamenu . $hmenu . $ibmenu . $cmenu; ?>">
+  <div class="dropdown-container <?= $upmenu . $hamenu . $macmenu . $hmenu . $ibmenu . $cmenu; ?>">
   <!--profile-->
   <div class="dropdown-btn <?= $suserprof; ?>"><i class=" fa fa-pie-chart"></i>  <?= $_user_profile ?>
     <i class="fa fa-caret-down"></i>
@@ -464,6 +469,8 @@ include('./info.php');
   </div>
   <!--active-->
   <a href="./?hotspot=active&session=<?= $session; ?>" class="menu <?= $sactive; ?>"><i class=" fa fa-wifi"></i> <?= $_hotspot_active ?></a>
+  <!--MAC locks-->
+  <a href="./?hotspot=mac-locks&session=<?= $session; ?>" class="menu <?= $smaclocks; ?>"><i class="fa fa-unlock-alt"></i> Reset Kunci MAC</a>
   <!--hosts-->
   <a href="./?hotspot=hosts&session=<?= $session; ?>" class="menu <?= $shosts; ?>"><i class=" fa fa-laptop"></i> <?= $_hosts ?></a>
   <!--ip bindings-->

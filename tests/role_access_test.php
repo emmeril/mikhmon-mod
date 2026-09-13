@@ -70,6 +70,7 @@ roleTestAssert(mikhmonCanOpenMainRoute('customer-identity-list'), 'mitra can man
 roleTestAssert(mikhmonCanOpenMainRoute('customer-service-add'), 'mitra can link customer services');
 roleTestAssert(mikhmonCanOpenMainRoute('hotspot-generate'), 'mitra can generate vouchers');
 roleTestAssert(mikhmonCanOpenMainRoute('hotspot-active'), 'mitra can view active users');
+roleTestAssert(mikhmonCanOpenMainRoute('hotspot-mac-locks'), 'mitra can reset MAC locks for owned hotspot users');
 roleTestAssert(mikhmonCanOpenMainRoute('hotspot-vouchers'), 'mitra can view own vouchers');
 roleTestAssert(mikhmonCanOpenMainRoute('hotspot-print-center'), 'mitra can open print center');
 roleTestAssert(mikhmonCanOpenMainRoute('hotspot-user-edit'), 'mitra can open an owned voucher for editing');

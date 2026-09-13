@@ -1,4 +1,5 @@
 <?php
+include_once(__DIR__ . '/../lib/hotspot_mac_lock.php');
 /*
  *  Copyright (C) 2018 Laksamadi Guko.
  *
@@ -121,7 +122,7 @@ if (!isset($_SESSION["mikhmon"])) {
     $reportPrice = mikhmonProfileReportPrice($price, $sprice);
     $getlock = ($_POST['lockunlock']);
     if ($getlock == "Enable") {
-      $lock = '; [:local mac $"mac-address"; /ip hotspot user set mac-address=$mac [find where name=$user]]';
+      $lock = mikhmonHotspotMacLockRebindScript();
     } else {
       $lock = "";
     }
@@ -137,16 +138,16 @@ if (!isset($_SESSION["mikhmon"])) {
     
 
     if ($expmode == "rem") {
-      $onlogin = $onlogin . $lock . "}}";
+      $onlogin = $onlogin . "}}" . $lock;
       $mode = "remove";
     } elseif ($expmode == "ntf") {
-      $onlogin = $onlogin . $lock . "}}";
+      $onlogin = $onlogin . "}}" . $lock;
       $mode = "set limit-uptime=1s";
     } elseif ($expmode == "remc") {
-      $onlogin = $onlogin . $record . $lock . "}}";
+      $onlogin = $onlogin . $record . "}}" . $lock;
       $mode = "remove";
     } elseif ($expmode == "ntfc") {
-      $onlogin = $onlogin . $record . $lock . "}}";
+      $onlogin = $onlogin . $record . "}}" . $lock;
       $mode = "set limit-uptime=1s";
     } elseif ($expmode == "0" && $price != "") {
       $onlogin = ':put (",,' . $price . ',' . $validity . ',' . $sprice . ',noexp,' . $getlock . ',")' . $lock;

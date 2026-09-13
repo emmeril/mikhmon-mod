@@ -186,6 +186,7 @@ if (!isset($_SESSION["mikhmon"])) {
   elseif ($hotspotuser != '' && $hotspotuser != 'add') $requestedRoute = 'hotspot-user-edit';
   elseif ($removehotspotuser != '') $requestedRoute = 'hotspot-user-mutate';
   elseif ($hotspot == 'print-center') $requestedRoute = 'hotspot-print-center';
+  elseif ($hotspot == 'mac-locks') $requestedRoute = 'hotspot-mac-locks';
   elseif ($hotspot == 'active') $requestedRoute = 'hotspot-active';
   elseif ($hotspot == 'users-by-profile') $requestedRoute = 'hotspot-vouchers';
   elseif ($hotspot == 'users') $requestedRoute = 'hotspot-users';
@@ -216,7 +217,7 @@ if (!isset($_SESSION["mikhmon"])) {
     }
   }
 
-  $pagehotspot = array('users','hosts','ipbinding','cookies','log','dhcp-leases');
+  $pagehotspot = array('users','hosts','ipbinding','cookies','log','dhcp-leases','mac-locks');
   $pageppp = array('secrets','profiles','active',);
   $pagereport = array('userlog','selling','systemlog');
 
@@ -508,6 +509,11 @@ elseif ($removeexpiredhotspotuser != "") {
     $_SESSION['hua'] = "hotspotactive";
     $_SESSION['ubc'] = "";
     include_once('./hotspot/hotspotactive.php');
+  }
+
+// reset hotspot user MAC locks
+  elseif ($hotspot == "mac-locks") {
+    include_once('./hotspot/maclocks.php');
   }
 
 // dhcp leases
