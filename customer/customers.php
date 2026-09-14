@@ -8,9 +8,13 @@ if (!isset($_SESSION["mikhmon"])) {
 include_once('./include/database.php');
 include_once('./lib/fonnte.php');
 include_once('./lib/billing_automation.php');
+include_once('./lib/customer_account.php');
 
 $customerMessage = '';
 $customerError = '';
+$customerManualFallbackUrl = '';
+$customerFonnteConfig = mikhmonFonnteReadConfig();
+$customerFonnteReady = !empty($customerFonnteConfig['enabled']) && trim((string) ($customerFonnteConfig['token'] ?? '')) !== '';
 
 function customerListApiError($response) {
   if (!is_array($response)) return '';
@@ -59,7 +63,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $action = isset($_POST['customer_action']) ? $_POST['customer_action'] : '';
   $actionCustomerId = isset($_POST['customer_id']) ? (string) $_POST['customer_id'] : '';
   $actionCustomer = mikhmonFindCustomer($session, $actionCustomerId);
-  if ($action === 'assign_mitra' && mikhmonIsAdmin()) {
+  if ($action === 'send_hotspot_account') {
+    $accountServiceId = isset($_POST['service_id']) ? (string) $_POST['service_id'] : '';
+    $accountService = array();
+    foreach (mikhmonCustomerServices($actionCustomer ?: array()) as $candidateService) {
+      if ((string) ($candidateService['id'] ?? '') === $accountServiceId) { $accountService = $candidateService; break; }
+    }
+    if (!mikhmonFonnteValidCsrf($_POST['fonnte_csrf'] ?? '')) {
+      $customerError = 'Sesi pengiriman WhatsApp tidak valid. Muat ulang halaman lalu coba lagi.';
+    } elseif (!$actionCustomer || !mikhmonCanManageCustomer($actionCustomer)) {
+      $customerError = 'Anda tidak berhak mengirim akun pelanggan ini.';
+    } elseif (!$accountService) {
+      $customerError = 'Layanan pelanggan tidak ditemukan.';
+    } elseif (($accountService['service'] ?? '') !== 'hotspot') {
+      $customerError = 'Pengiriman akun hanya tersedia untuk layanan Hotspot.';
+    } elseif (mikhmonCustomerAccountPhone($actionCustomer['phone'] ?? '', $customerFonnteConfig['country_code'] ?? '62') === '') {
+      $customerError = 'Nomor WhatsApp pelanggan kosong atau tidak valid.';
+    } elseif (empty($routerConnected)) {
+      $customerError = 'Router MikroTik tidak terhubung. Password Hotspot belum dapat dibaca.';
+    } else {
+      $accountUsername = trim((string) ($accountService['username'] ?? ''));
+      $accountRows = $accountUsername !== '' ? $API->comm('/ip/hotspot/user/print', array('?name' => $accountUsername)) : array();
+      $accountApiError = customerListApiError($accountRows);
+      $accountRouterUser = array();
+      foreach ((array) $accountRows as $accountRow) {
+        if (is_array($accountRow) && (string) ($accountRow['name'] ?? '') === $accountUsername) { $accountRouterUser = $accountRow; break; }
+      }
+      $accountPassword = isset($accountRouterUser['password']) ? (string) $accountRouterUser['password'] : '';
+      $accountBrand = isset($brandname) && trim((string) $brandname) !== '' ? trim((string) $brandname) : 'MIKHMON';
+      $accountMessage = mikhmonCustomerAccountMessage($actionCustomer['name'] ?? 'Pelanggan', $accountService, $accountPassword, $accountBrand);
+      if ($accountApiError !== '') {
+        $customerError = 'Gagal membaca akun Hotspot dari MikroTik: ' . $accountApiError;
+      } elseif (!$accountRouterUser) {
+        $customerError = 'User Hotspot ' . $accountUsername . ' tidak ditemukan di MikroTik.';
+      } elseif ($accountMessage === '') {
+        $customerError = 'Username atau password Hotspot belum tersedia.';
+      } else {
+        $customerManualFallbackUrl = mikhmonCustomerAccountWhatsAppUrl($actionCustomer['phone'] ?? '', $accountMessage, $customerFonnteConfig['country_code'] ?? '62');
+        if (!$customerFonnteReady) {
+          $customerError = 'Fonnte tidak aktif atau token belum tersedia. Gunakan pengiriman WhatsApp manual.';
+        } else {
+          $sendResult = mikhmonFonnteSend($actionCustomer['phone'] ?? '', $accountMessage, $customerFonnteConfig);
+          if (!empty($sendResult['status'])) {
+            $customerMessage = 'Akun Hotspot ' . $accountUsername . ' berhasil dikirim melalui Fonnte.';
+            $customerManualFallbackUrl = '';
+          } else {
+            $customerError = (string) ($sendResult['reason'] ?? 'Akun Hotspot gagal dikirim melalui Fonnte.') . ' Anda dapat mengirimnya secara manual.';
+          }
+        }
+      }
+    }
+  } elseif ($action === 'assign_mitra' && mikhmonIsAdmin()) {
     $mitraId = isset($_POST['mitra_id']) ? (string) $_POST['mitra_id'] : '';
     $mitra = $mitraId !== '' ? mikhmonFindUser($mitraId) : false;
     if ($mitraId !== '' && (!$mitra || $mitra['role'] !== 'mitra' || $mitra['session'] !== $session)) {
@@ -164,7 +218,6 @@ foreach ($customerInvoiceCandidates as $customerId => $candidates) {
   $unpaidIsDue = $unpaidDue <= 0 || $unpaidDue <= time();
   $customerInvoices[$customerId] = $paid && !$unpaidIsDue ? $paid : $unpaid;
 }
-$customerFonnteConfig = mikhmonFonnteReadConfig();
 $customerRouterUsers = array('hotspot' => array(), 'pppoe' => array());
 $customerActiveUsers = array('hotspot' => array(), 'pppoe' => array());
 if (!empty($routerConnected)) {
@@ -187,7 +240,7 @@ if (!empty($routerConnected)) {
   <div class="card-header"><h3><i class="fa fa-list"></i> Daftar Pelanggan <span style="font-size:14px">&nbsp;|&nbsp; <span id="customerVisibleCount"><?= count($customers); ?></span> pelanggan</span></h3></div>
   <div class="card-body">
     <?php if ($customerMessage !== ''): ?><div class="box bg-success"><?= htmlspecialchars($customerMessage, ENT_QUOTES); ?></div><?php endif; ?>
-    <?php if ($customerError !== ''): ?><div class="box bg-danger"><?= htmlspecialchars($customerError, ENT_QUOTES); ?></div><?php endif; ?>
+    <?php if ($customerError !== ''): ?><div class="box bg-danger"><?= htmlspecialchars($customerError, ENT_QUOTES); ?><?php if ($customerManualFallbackUrl !== ''): ?> <a class="btn bg-green" target="_blank" rel="noopener" href="<?= htmlspecialchars($customerManualFallbackUrl, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Buka WhatsApp Manual</a><?php endif; ?></div><?php endif; ?>
     <style>
       .customer-toolbar { display:flex; align-items:stretch; justify-content:space-between; gap:10px; margin:5px 0 10px; }
       .customer-filter-controls { display:flex; align-items:stretch; flex:1; gap:8px; min-width:0; }
@@ -205,6 +258,8 @@ if (!empty($routerConnected)) {
       #dataTable .customer-isolation-date { min-width:135px; text-align:center; }
       #dataTable .customer-status { min-width:85px; text-align:center; font-weight:bold; }
       #dataTable .customer-name-cell { white-space:nowrap; }
+      #dataTable .customer-account-send-form { display:inline; }
+      #dataTable .customer-account-send.is-disabled { opacity:.55; cursor:not-allowed; pointer-events:none; }
       #dataTable .customer-online-indicator { display:inline-block; width:9px; height:9px; margin-right:7px; border-radius:50%; vertical-align:middle; background:#dc3545; box-shadow:0 0 0 2px rgba(220,53,69,.15); animation:customer-status-blink 1.5s ease-in-out infinite; }
       #dataTable .customer-online-indicator.is-online { background:#28a745; box-shadow:0 0 0 2px rgba(40,167,69,.15); }
       @keyframes customer-status-blink { 0%, 100% { opacity:1; transform:scale(1); } 50% { opacity:.35; transform:scale(.8); } }
@@ -252,13 +307,18 @@ if (!empty($routerConnected)) {
           $firstCustomerService = isset($customerServices[0]) ? $customerServices[0] : array('username' => '', 'profile' => '');
           $customerServicePasswords = array();
           $customerServiceOnline = array();
+          $customerServiceWaUrls = array();
+          $customerAccountBrand = isset($brandname) && trim((string) $brandname) !== '' ? trim((string) $brandname) : 'MIKHMON';
           foreach ($customerServices as $serviceIndex => $customerService) {
             $serviceType = ($customerService['service'] ?? '') === 'pppoe' ? 'pppoe' : 'hotspot';
             $serviceUsername = (string) ($customerService['username'] ?? '');
             $customerServicePasswords[$serviceIndex] = isset($customerRouterUsers[$serviceType][$serviceUsername]['password']) ? (string) $customerRouterUsers[$serviceType][$serviceUsername]['password'] : '';
             $customerServiceOnline[$serviceIndex] = $serviceUsername !== '' && isset($customerActiveUsers[$serviceType][$serviceUsername]);
+            $customerAccountText = mikhmonCustomerAccountMessage($customerRow['name'] ?? 'Pelanggan', $customerService, $customerServicePasswords[$serviceIndex], $customerAccountBrand);
+            $customerServiceWaUrls[$serviceIndex] = mikhmonCustomerAccountWhatsAppUrl($customerRow['phone'] ?? '', $customerAccountText, $customerFonnteConfig['country_code'] ?? '62');
           }
           $firstCustomerPassword = isset($customerServicePasswords[0]) ? $customerServicePasswords[0] : '';
+          $firstCustomerWaUrl = isset($customerServiceWaUrls[0]) ? $customerServiceWaUrls[0] : '';
           $customerIsOnline = !empty($customerServiceOnline[0]);
           $customerId = (string) ($customerRow['id'] ?? '');
           $customerInvoice = isset($customerInvoices[$customerId]) ? $customerInvoices[$customerId] : array();
@@ -287,8 +347,25 @@ if (!empty($routerConnected)) {
           $customerMitraId = (string) ($customerRow['mitra_id'] ?? '');
           $customerMitraName = $customerMitraId !== '' && isset($customerMitraNames[$customerMitraId]) ? $customerMitraNames[$customerMitraId] : 'Belum ditetapkan';
         ?>
-        <tr class="customer-row" data-search="<?= htmlspecialchars(strtolower($customerSearchData . ' ' . $customerMitraName), ENT_QUOTES); ?>" data-service="<?= htmlspecialchars(strtolower(implode(',', array_map(function ($item) { return $item['service']; }, $customerServices))), ENT_QUOTES); ?>" data-status="<?= $customerIsIsolated ? 'isolir' : 'active'; ?>" data-mitra-id="<?= htmlspecialchars($customerMitraName === 'Belum ditetapkan' ? '' : $customerMitraId, ENT_QUOTES); ?>"><td><?= $customerIndex + 1; ?></td><td class="customer-name-cell"><span class="customer-online-indicator<?= $customerIsOnline ? ' is-online' : ''; ?>" data-online="<?= $customerIsOnline ? 'true' : 'false'; ?>" role="img" title="<?= $customerIsOnline ? 'Layanan online' : 'Layanan offline'; ?>" aria-label="<?= $customerIsOnline ? 'Layanan online' : 'Layanan offline'; ?>"></span><?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['phone']) ? $customerRow['phone'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['address']) ? $customerRow['address'] : '', ENT_QUOTES); ?></td><td class="customer-service-total"><?= count($customerServices); ?></td><td><select class="form-control customer-service-select"><?php foreach ($customerServices as $serviceIndex => $customerService): ?><option value="<?= $serviceIndex; ?>" data-service-id="<?= htmlspecialchars($customerService['id'], ENT_QUOTES); ?>" data-type="<?= htmlspecialchars($customerService['service'], ENT_QUOTES); ?>" data-username="<?= htmlspecialchars($customerService['username'], ENT_QUOTES); ?>" data-online="<?= !empty($customerServiceOnline[$serviceIndex]) ? 'true' : 'false'; ?>" data-password="<?= htmlspecialchars(isset($customerServicePasswords[$serviceIndex]) ? $customerServicePasswords[$serviceIndex] : '', ENT_QUOTES); ?>" data-profile="<?= htmlspecialchars($customerService['profile'], ENT_QUOTES); ?>"><?= strtoupper(htmlspecialchars($customerService['service'], ENT_QUOTES)); ?></option><?php endforeach; ?></select></td><td class="customer-username-cell"><?= htmlspecialchars($firstCustomerService['username'], ENT_QUOTES); ?></td><td class="customer-password-cell" data-password="<?= htmlspecialchars($firstCustomerPassword, ENT_QUOTES); ?>" data-pinned="false" role="button" tabindex="0" aria-label="Tampilkan password" aria-pressed="false" title="Arahkan kursor atau klik untuk melihat password"><span class="customer-password-value">******</span><i class="fa fa-eye"></i></td><td class="customer-profile-cell"><?= htmlspecialchars($firstCustomerService['profile'] !== '' ? $firstCustomerService['profile'] : 'Profile belum diatur', ENT_QUOTES); ?></td><td class="customer-isolation-date"><?= $isolationTimestamp > 0 ? htmlspecialchars(date('d-m-Y H:i', $isolationTimestamp), ENT_QUOTES) : '-'; ?></td><td class="customer-status <?= $customerStatusClass; ?>"><i class="fa <?= $customerIsIsolated ? 'fa-ban' : 'fa-check-circle'; ?>"></i> <?= $customerStatusText; ?></td><td><?= htmlspecialchars($customerMitraName, ENT_QUOTES); ?></td>
-        <td><a class="btn bg-primary" href="./?customer=identity-edit&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-edit"></i> Edit Identitas</a> <a class="btn bg-warning customer-service-edit-link" data-customer-id="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>" href="./?customer=service-edit&customer-id=<?= rawurlencode($customerRow['id']); ?>&service-id=<?= rawurlencode($firstCustomerService['id'] ?? ''); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-pencil"></i> Edit Layanan</a> <a class="btn bg-secondary" href="./?customer=service-add&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-plus"></i> Layanan</a> <button type="button" class="btn bg-danger customer-delete-button" data-customer-id="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>" data-customer-name="<?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?>" data-customer-username="<?= htmlspecialchars($customerUsername, ENT_QUOTES); ?>"><i class="fa fa-trash"></i> Hapus</button></td>
+        <tr class="customer-row" data-search="<?= htmlspecialchars(strtolower($customerSearchData . ' ' . $customerMitraName), ENT_QUOTES); ?>" data-service="<?= htmlspecialchars(strtolower(implode(',', array_map(function ($item) { return $item['service']; }, $customerServices))), ENT_QUOTES); ?>" data-status="<?= $customerIsIsolated ? 'isolir' : 'active'; ?>" data-mitra-id="<?= htmlspecialchars($customerMitraName === 'Belum ditetapkan' ? '' : $customerMitraId, ENT_QUOTES); ?>"><td><?= $customerIndex + 1; ?></td><td class="customer-name-cell"><span class="customer-online-indicator<?= $customerIsOnline ? ' is-online' : ''; ?>" data-online="<?= $customerIsOnline ? 'true' : 'false'; ?>" role="img" title="<?= $customerIsOnline ? 'Layanan online' : 'Layanan offline'; ?>" aria-label="<?= $customerIsOnline ? 'Layanan online' : 'Layanan offline'; ?>"></span><?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['phone']) ? $customerRow['phone'] : '', ENT_QUOTES); ?></td><td><?= htmlspecialchars(isset($customerRow['address']) ? $customerRow['address'] : '', ENT_QUOTES); ?></td><td class="customer-service-total"><?= count($customerServices); ?></td><td><select class="form-control customer-service-select"><?php foreach ($customerServices as $serviceIndex => $customerService): ?><option value="<?= $serviceIndex; ?>" data-service-id="<?= htmlspecialchars($customerService['id'], ENT_QUOTES); ?>" data-type="<?= htmlspecialchars($customerService['service'], ENT_QUOTES); ?>" data-username="<?= htmlspecialchars($customerService['username'], ENT_QUOTES); ?>" data-online="<?= !empty($customerServiceOnline[$serviceIndex]) ? 'true' : 'false'; ?>" data-password="<?= htmlspecialchars(isset($customerServicePasswords[$serviceIndex]) ? $customerServicePasswords[$serviceIndex] : '', ENT_QUOTES); ?>" data-wa-url="<?= htmlspecialchars(isset($customerServiceWaUrls[$serviceIndex]) ? $customerServiceWaUrls[$serviceIndex] : '', ENT_QUOTES); ?>" data-profile="<?= htmlspecialchars($customerService['profile'], ENT_QUOTES); ?>"><?= strtoupper(htmlspecialchars($customerService['service'], ENT_QUOTES)); ?></option><?php endforeach; ?></select></td><td class="customer-username-cell"><?= htmlspecialchars($firstCustomerService['username'], ENT_QUOTES); ?></td><td class="customer-password-cell" data-password="<?= htmlspecialchars($firstCustomerPassword, ENT_QUOTES); ?>" data-pinned="false" role="button" tabindex="0" aria-label="Tampilkan password" aria-pressed="false" title="Arahkan kursor atau klik untuk melihat password"><span class="customer-password-value">******</span><i class="fa fa-eye"></i></td><td class="customer-profile-cell"><?= htmlspecialchars($firstCustomerService['profile'] !== '' ? $firstCustomerService['profile'] : 'Profile belum diatur', ENT_QUOTES); ?></td><td class="customer-isolation-date"><?= $isolationTimestamp > 0 ? htmlspecialchars(date('d-m-Y H:i', $isolationTimestamp), ENT_QUOTES) : '-'; ?></td><td class="customer-status <?= $customerStatusClass; ?>"><i class="fa <?= $customerIsIsolated ? 'fa-ban' : 'fa-check-circle'; ?>"></i> <?= $customerStatusText; ?></td><td><?= htmlspecialchars($customerMitraName, ENT_QUOTES); ?></td>
+        <td>
+          <?php if ($customerFonnteReady): ?>
+            <form method="post" class="customer-account-send-form">
+              <?= mikhmonCsrfField(); ?>
+              <input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>">
+              <input type="hidden" name="customer_action" value="send_hotspot_account">
+              <input type="hidden" name="customer_id" value="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>">
+              <input class="customer-account-service-id" type="hidden" name="service_id" value="<?= htmlspecialchars($firstCustomerService['id'] ?? '', ENT_QUOTES); ?>">
+              <button class="btn bg-green customer-account-send<?= $firstCustomerWaUrl === '' ? ' is-disabled' : ''; ?>" type="submit"<?= $firstCustomerWaUrl === '' ? ' disabled' : ''; ?> title="<?= $firstCustomerWaUrl !== '' ? 'Kirim username dan password melalui Fonnte' : 'Pilih layanan Hotspot yang memiliki nomor HP dan password'; ?>"><i class="fa fa-send"></i> Kirim Akun</button>
+            </form>
+          <?php else: ?>
+            <a class="btn bg-green customer-account-send<?= $firstCustomerWaUrl === '' ? ' is-disabled' : ''; ?>" target="_blank" rel="noopener" href="<?= htmlspecialchars($firstCustomerWaUrl !== '' ? $firstCustomerWaUrl : '#', ENT_QUOTES); ?>"<?= $firstCustomerWaUrl === '' ? ' aria-disabled="true"' : ''; ?> title="<?= $firstCustomerWaUrl !== '' ? 'Kirim username dan password melalui WhatsApp manual' : 'Pilih layanan Hotspot yang memiliki nomor HP dan password'; ?>"><i class="fa fa-whatsapp"></i> Kirim Akun</a>
+          <?php endif; ?>
+          <a class="btn bg-primary" href="./?customer=identity-edit&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-edit"></i> Edit Identitas</a>
+          <a class="btn bg-warning customer-service-edit-link" data-customer-id="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>" href="./?customer=service-edit&customer-id=<?= rawurlencode($customerRow['id']); ?>&service-id=<?= rawurlencode($firstCustomerService['id'] ?? ''); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-pencil"></i> Edit Layanan</a>
+          <a class="btn bg-secondary" href="./?customer=service-add&customer-id=<?= rawurlencode($customerRow['id']); ?>&session=<?= rawurlencode($session); ?>"><i class="fa fa-plus"></i> Layanan</a>
+          <button type="button" class="btn bg-danger customer-delete-button" data-customer-id="<?= htmlspecialchars($customerRow['id'], ENT_QUOTES); ?>" data-customer-name="<?= htmlspecialchars(isset($customerRow['name']) ? $customerRow['name'] : '', ENT_QUOTES); ?>" data-customer-username="<?= htmlspecialchars($customerUsername, ENT_QUOTES); ?>"><i class="fa fa-trash"></i> Hapus</button>
+        </td>
       </tr><?php endforeach; ?>
       <?php if (!$customers): ?><tr class="customer-info-row"><td colspan="13" class="text-center"><?= mikhmonIsMitra() ? 'Belum ada pelanggan yang ditetapkan kepada Anda.' : 'Belum ada data pelanggan.'; ?></td></tr><?php endif; ?>
       <tr id="customerNoResults" style="display:none"><td colspan="13" class="text-center">Data pelanggan tidak ditemukan.</td></tr>
@@ -327,6 +404,16 @@ $(function() {
     row.find('.customer-username-cell').text(option.data('username') || '-');
     row.find('.customer-profile-cell').text(option.data('profile') || 'Profile belum diatur');
     row.find('.customer-service-edit-link').attr('href', './?customer=service-edit&customer-id=' + encodeURIComponent(row.find('.customer-service-edit-link').data('customer-id')) + '&service-id=' + encodeURIComponent(option.attr('data-service-id') || '') + '&session=<?= rawurlencode($session); ?>');
+    row.find('.customer-account-service-id').val(option.attr('data-service-id') || '');
+    var accountSend = row.find('.customer-account-send');
+    var accountWaUrl = option.attr('data-wa-url') || '';
+    var accountAvailable = option.attr('data-type') === 'hotspot' && accountWaUrl !== '';
+    accountSend.toggleClass('is-disabled', !accountAvailable);
+    if (accountSend.is('button')) accountSend.prop('disabled', !accountAvailable);
+    else accountSend.attr('href', accountAvailable ? accountWaUrl : '#').attr('aria-disabled', accountAvailable ? 'false' : 'true');
+    accountSend.attr('title', accountAvailable
+      ? <?= json_encode($customerFonnteReady ? 'Kirim username dan password melalui Fonnte' : 'Kirim username dan password melalui WhatsApp manual'); ?>
+      : 'Pilih layanan Hotspot yang memiliki nomor HP dan password');
     passwordCell.attr('data-password', option.attr('data-password') || '').attr('data-pinned', 'false').attr('aria-pressed', 'false');
     setCustomerPasswordVisibility(passwordCell, false);
   }
