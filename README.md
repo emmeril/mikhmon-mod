@@ -6,6 +6,10 @@ Copy `include/config.example.php` to `include/config.php` before first use.
 The generated `include/config.php` contains administrator and router
 credentials and is intentionally excluded from Git.
 
+For the first login, use username `admin` and password `admin@123`. Create a
+new administrator with a private password from `Settings > User Management`
+before exposing the application to a public network.
+
 Change the navigation brand from `Admin Settings > Brand Name`.
 
 #### Production with PM2
