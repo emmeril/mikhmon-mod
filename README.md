@@ -75,6 +75,21 @@ snapshots (including an expired latest backup) are removed from the shared JSON
 backup file when backups are read or written and at the start of the daily cron,
 even if routers are offline. The active customer/invoice database is unaffected.
 
+#### Customer database recovery from MikroTik
+
+Open `Settings > Database Backup` to store an encrypted copy of the customer
+database in MikroTik System Scripts. This copy includes customer identities,
+phone numbers, addresses, service links, staff assignments, invoices, and local
+report records for the selected router session.
+
+Choose a recovery password of at least 8 characters and keep it outside both
+Mikhmon and MikroTik. A fresh Mikhmon installation can connect to the router,
+open the same page, and use `Pulihkan Database dari MikroTik` to merge the data
+into its local database. The backup is split into inert `mikhmon-db-*` scripts,
+encrypted before upload, and verified with a checksum. When automatic backup is
+enabled, it is refreshed after the local database changes and the router is next
+connected. Losing the recovery password makes the router copy unusable.
+
 #### Automatic billing reminders and isolation
 
 After enabling Billing Automation in `Settings > WhatsApp Gateway`, run the

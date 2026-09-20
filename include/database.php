@@ -1,6 +1,7 @@
 <?php
 // Versioned local snapshots sync automatically from MikroTik; restore is manual.
 require_once __DIR__ . '/crypto.php';
+require_once dirname(__DIR__) . '/lib/router_database_backup.php';
 
 function mikhmonBackupPath() {
   $override = getenv('MIKHMON_DATABASE_PATH');
@@ -1012,6 +1013,7 @@ function mikhmonStoreSnapshot(&$record, $snapshot) {
 
 function mikhmonBackupRouterData($API, $session, $force = false) {
   mikhmonSynchronizeReportRecords($API, $session);
+  mikhmonAutoStoreRouterDatabaseBackup($API, $session);
   $record = mikhmonGetRouterRecord(array(), $session);
   $interval = max(30, (int) $record['settings']['interval']);
   if (!$force && $record['last_checked_at'] > 0 && (time() - $record['last_checked_at']) < $interval) {
@@ -1085,6 +1087,7 @@ function mikhmonRestoreSnapshot($API, $snapshot, $type = 'all') {
 function mikhmonSynchronizeRouterData($API, $session, $force = false) {
   // Move transient report scripts into local storage on every connected request.
   mikhmonSynchronizeReportRecords($API, $session);
+  mikhmonAutoStoreRouterDatabaseBackup($API, $session);
   if (!mikhmonRouterSyncDue($session, $force)) {
     return array('status' => 'throttled', 'record' => array());
   }
