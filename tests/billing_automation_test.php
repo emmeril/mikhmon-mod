@@ -148,6 +148,31 @@ $oldQueuedPayments = mikhmonBillingAutomationReconcilePaymentNotifications(
   $reconcileConfig
 );
 billingAutomationTestAssert($oldQueuedPayments === 0, 'legacy paid invoices outside the recovery window are not messaged');
+$orphanInvoiceId = mikhmonSaveInvoice('router-a', array(
+  'id' => 'invoice-orphan-paid', 'number' => 'INV-ORPHAN', 'customer_id' => 'customer-deleted',
+  'customer_name' => 'Pelanggan Terhapus', 'amount' => 10000, 'due_date' => date('Y-m-d H:i:s', time() - 86400),
+  'status' => 'paid', 'paid_at' => time(), 'created_at' => time() - 7200,
+  'automation' => array('payment_notification_pending' => true),
+));
+billingAutomationTestAssert($orphanInvoiceId !== false, 'orphan paid invoice can be retained for accounting history');
+$orphanInvoices = mikhmonGetInvoices('router-a');
+$orphanSkipped = mikhmonBillingAutomationSkipOrphanPaymentNotifications(
+  'router-a',
+  $orphanInvoices,
+  array($customerId => mikhmonFindCustomer('router-a', $customerId)),
+  $workStart
+);
+billingAutomationTestAssert($orphanSkipped === 1, 'missing customer payment notification is skipped once');
+$orphanSkippedAgain = mikhmonBillingAutomationSkipOrphanPaymentNotifications(
+  'router-a',
+  $orphanInvoices,
+  array($customerId => mikhmonFindCustomer('router-a', $customerId)),
+  $workStart + 60
+);
+billingAutomationTestAssert($orphanSkippedAgain === 0, 'skipped orphan notification does not retry forever');
+$storedOrphan = array();
+foreach (mikhmonGetInvoices('router-a') as $candidateInvoice) if (($candidateInvoice['id'] ?? '') === $orphanInvoiceId) { $storedOrphan = $candidateInvoice; break; }
+billingAutomationTestAssert(empty($storedOrphan['automation']['payment_notification_pending']) && !empty($storedOrphan['automation']['payment_notification_skipped_at']), 'orphan notification skip is persisted');
 $paidApi = new BillingAutomationFakeApi();
 $paidOnlyResult = mikhmonBillingAutomationProcessSession($paidApi, 'router-a', $routerConfig, array_merge($reconcileConfig, array('enabled' => false)));
 $paidSetSeen = false;

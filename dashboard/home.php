@@ -52,16 +52,28 @@ if (!isset($_SESSION["mikhmon"])) {
   $log = array_reverse($getlog);
   $THotspotLog = count($getlog);
 */
-// Count only voucher users; Billing-managed profiles (Expired Mode = None) are excluded.
-  $voucherProfiles = array();
-  foreach ((array) $API->comm("/ip/hotspot/user/profile/print", array('.proplist' => 'name,on-login')) as $profileRow) {
-    if (isset($profileRow['name']) && mikhmonBillingProfileExpiredMode('hotspot', $profileRow) !== 'none') {
-      $voucherProfiles[(string) $profileRow['name']] = true;
+// Counting thousands of users is the slowest dashboard query. Reuse the same
+// short-lived cache as the periodic dashboard endpoint while navigating.
+  $dashboardHotspotCacheTtl = 120;
+  $hotspotCache = isset($_SESSION['dashboard_hotspot_cache'][$session]) ? $_SESSION['dashboard_hotspot_cache'][$session] : array();
+  $hotspotCacheFresh = is_array($hotspotCache) && !empty($hotspotCache['at']) && (time() - (int) $hotspotCache['at']) < $dashboardHotspotCacheTtl;
+  if ($hotspotCacheFresh) {
+    $countallusers = (int) ($hotspotCache['users'] ?? 0);
+    $counthotspotactive = (int) ($hotspotCache['active'] ?? 0);
+  } else {
+    // Count only voucher users; Billing-managed profiles (Expired Mode = None) are excluded.
+    $voucherProfiles = array();
+    foreach ((array) $API->comm("/ip/hotspot/user/profile/print", array('.proplist' => 'name,on-login')) as $profileRow) {
+      if (isset($profileRow['name']) && mikhmonBillingProfileExpiredMode('hotspot', $profileRow) !== 'none') {
+        $voucherProfiles[(string) $profileRow['name']] = true;
+      }
     }
-  }
-  $countallusers = 0;
-  foreach ((array) $API->comm("/ip/hotspot/user/print", array('.proplist' => 'profile')) as $hotspotUser) {
-    if (isset($hotspotUser['profile']) && isset($voucherProfiles[(string) $hotspotUser['profile']])) $countallusers++;
+    $countallusers = 0;
+    foreach ((array) $API->comm("/ip/hotspot/user/print", array('.proplist' => 'profile')) as $hotspotUser) {
+      if (isset($hotspotUser['profile']) && isset($voucherProfiles[(string) $hotspotUser['profile']])) $countallusers++;
+    }
+    $counthotspotactive = $API->comm("/ip/hotspot/active/print", array("count-only" => ""));
+    $_SESSION['dashboard_hotspot_cache'][$session] = array('at' => time(), 'users' => $countallusers, 'active' => (int) $counthotspotactive);
   }
   if ($countallusers < 2) {
     $uunit = "item";
@@ -70,7 +82,6 @@ if (!isset($_SESSION["mikhmon"])) {
   }
 
 // get & counting hotspot active
-  $counthotspotactive = $API->comm("/ip/hotspot/active/print", array("count-only" => ""));
   if ($counthotspotactive < 2) {
     $hunit = "item";
   } elseif ($counthotspotactive > 1) {

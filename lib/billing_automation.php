@@ -440,6 +440,28 @@ function mikhmonBillingAutomationReconcilePaymentNotifications($session, &$invoi
   return $queued;
 }
 
+// A customer may be intentionally deleted while its paid invoice is retained
+// for accounting history. Such an invoice can no longer receive a WhatsApp
+// notification, so mark it once instead of reporting the same error forever.
+function mikhmonBillingAutomationSkipOrphanPaymentNotifications($session, &$invoices, $customersById, $now = null) {
+  $now = $now === null ? time() : (int) $now;
+  $skipped = 0;
+  foreach ($invoices as $index => $invoice) {
+    if (!mikhmonBillingAutomationIsMonthlyInvoice($invoice)) continue;
+    if (($invoice['status'] ?? '') !== 'paid' || empty($invoice['automation']['payment_notification_pending'])) continue;
+    $customerId = (string) ($invoice['customer_id'] ?? '');
+    if ($customerId !== '' && isset($customersById[$customerId])) continue;
+    if (!isset($invoice['automation']) || !is_array($invoice['automation'])) $invoice['automation'] = array();
+    $invoice['automation']['payment_notification_pending'] = false;
+    $invoice['automation']['payment_notification_skipped_at'] = $now;
+    $invoice['automation']['payment_notification_skip_reason'] = 'Pelanggan tidak ditemukan.';
+    if (mikhmonSaveInvoice($session, $invoice) === false) continue;
+    $invoices[$index] = $invoice;
+    $skipped++;
+  }
+  return $skipped;
+}
+
 function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $fonnteConfig) {
   $customers = mikhmonGetCustomers($session);
   $invoices = mikhmonGetInvoices($session);
@@ -454,6 +476,7 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
   $customersById = array();
   foreach ($customers as $customer) $customersById[(string) ($customer['id'] ?? '')] = $customer;
   $result['payments_queued'] = mikhmonBillingAutomationReconcilePaymentNotifications($session, $invoices, $customersById, $fonnteConfig, $now);
+  mikhmonBillingAutomationSkipOrphanPaymentNotifications($session, $invoices, $customersById, $now);
   foreach ($customers as $customer) {
     if (!empty($fonnteConfig['automation_enabled'])) mikhmonBillingAutomationRemoveScheduler($api, $customer);
     $invoice = mikhmonBillingAutomationLatestUnpaid($invoices, $customer['id'] ?? '');
@@ -511,7 +534,7 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
     if (!mikhmonBillingAutomationIsMonthlyInvoice($invoice)) continue;
     if (($invoice['status'] ?? '') !== 'paid' || empty($invoice['automation']['payment_notification_pending'])) continue;
     $customerId = (string) ($invoice['customer_id'] ?? '');
-    if (!isset($customersById[$customerId])) { $result['errors']++; continue; }
+    if (!isset($customersById[$customerId])) continue;
     $paymentResult = mikhmonBillingAutomationProcessPaidNotification($session, $invoices, $customersById, $invoice, $currency, $brand, $fonnteConfig, $now);
     if ($paymentResult === true) $result['payments']++;
     elseif ($paymentResult === false) $result['errors']++;

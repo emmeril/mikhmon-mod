@@ -121,7 +121,7 @@ include('../lang/'.$langid.'.php');
 <?php
 } else if ($load == "hotspot") {
   $cache = isset($_SESSION['dashboard_hotspot_cache'][$session]) ? $_SESSION['dashboard_hotspot_cache'][$session] : array();
-  $cacheFresh = is_array($cache) && !empty($cache['at']) && (time() - (int) $cache['at']) < 30;
+  $cacheFresh = is_array($cache) && !empty($cache['at']) && (time() - (int) $cache['at']) < 120;
   if ($cacheFresh) {
     $countallusers = (int) ($cache['users'] ?? 0);
     $counthotspotactive = (int) ($cache['active'] ?? 0);

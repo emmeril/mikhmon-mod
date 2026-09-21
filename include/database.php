@@ -36,6 +36,51 @@ function mikhmonRouterBackupIndexPath() {
   return mikhmonRouterBackupPath() . '.index';
 }
 
+// Connected pages can arrive concurrently (dashboard polling opens several
+// requests at once). Keep the lightweight maintenance cadence separate from
+// the daily router snapshot so those requests do not all scan RouterOS
+// scripts and hash the application database.
+function mikhmonRouterMaintenancePath() {
+  $override = getenv('MIKHMON_DATABASE_PATH');
+  if ($override !== false && trim($override) !== '') {
+    return $override . '.maintenance.json';
+  }
+  return dirname(__DIR__) . '/data/router-maintenance.json';
+}
+
+function mikhmonClaimRouterMaintenanceWindow($session, $force = false, $interval = 60) {
+  if ($force) return true;
+  $path = mikhmonRouterMaintenancePath();
+  $directory = dirname($path);
+  if (!is_dir($directory) && !@mkdir($directory, 0700, true)) return false;
+  $handle = @fopen($path, 'c+');
+  if (!$handle) return false;
+  if (!@flock($handle, LOCK_EX | LOCK_NB)) {
+    fclose($handle);
+    return false;
+  }
+  rewind($handle);
+  $state = json_decode((string) stream_get_contents($handle), true);
+  if (!is_array($state)) $state = array();
+  if (!isset($state['sessions']) || !is_array($state['sessions'])) $state['sessions'] = array();
+  $now = time();
+  $interval = max(30, (int) $interval);
+  $lastRun = (int) ($state['sessions'][(string) $session] ?? 0);
+  if ($lastRun > 0 && ($now - $lastRun) < $interval) {
+    flock($handle, LOCK_UN);
+    fclose($handle);
+    return false;
+  }
+  $state['sessions'][(string) $session] = $now;
+  $encoded = json_encode($state, JSON_UNESCAPED_SLASHES);
+  $written = $encoded !== false && ftruncate($handle, 0) && rewind($handle) && fwrite($handle, $encoded) !== false;
+  if ($written) fflush($handle);
+  flock($handle, LOCK_UN);
+  fclose($handle);
+  if ($written) @chmod($path, 0600);
+  return $written;
+}
+
 function mikhmonLegacyDatabasePath() {
   $override = getenv('MIKHMON_DATABASE_PATH');
   if ($override !== false && trim($override) !== '') {
@@ -1085,7 +1130,12 @@ function mikhmonRestoreSnapshot($API, $snapshot, $type = 'all') {
 }
 
 function mikhmonSynchronizeRouterData($API, $session, $force = false) {
-  // Move transient report scripts into local storage on every connected request.
+  // Dashboard polling and normal navigation may overlap. Only one request per
+  // maintenance window needs to scan report scripts or check the encrypted
+  // database backup; the daily full router snapshot has its own due check.
+  if (!mikhmonClaimRouterMaintenanceWindow($session, $force)) {
+    return array('status' => 'throttled', 'record' => array());
+  }
   mikhmonSynchronizeReportRecords($API, $session);
   mikhmonAutoStoreRouterDatabaseBackup($API, $session);
   if (!mikhmonRouterSyncDue($session, $force)) {

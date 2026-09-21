@@ -697,7 +697,7 @@ elseif ($ppp == "edit-profile") {
 if (mikhmonIsAdmin() && ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?session")) {
   echo '<script>
     $("#r_3").load("./dashboard/aload.php?session=' . $session . '&load=logs #r_3");  
-    var interval1 = Math.max(30000, ' . ((int) $areload * 1000) . ');
+    var interval1 = Math.max(60000, ' . ((int) $areload * 1000) . ');
     var dashboard = setInterval(function() {
     if (document.hidden) return;
     $("#r_1").load("./dashboard/aload.php?session=' . $session . '&load=sysresource #r_1");
