@@ -40,7 +40,10 @@ if (!isset($_SESSION["mikhmon"])) {
 	include_once('../lib/formatbytesbites.php');
 	$API = new RouterosAPI();
 	$API->debug = false;
-	$API->connect($iphost, $userhost, decrypt($passwdhost));
+	if (!$API->connect($iphost, $userhost, decrypt($passwdhost))) {
+		echo '<div id="reloadHotspotActive" class="router-offline card"><div class="card-body"><i class="fa fa-exclamation-triangle text-warning"></i> Router MikroTik tidak terhubung. Refresh otomatis dihentikan; muat ulang halaman untuk mencoba kembali.</div></div>';
+		exit;
+	}
 
 	if ($serveractive != "") {
 		$gethotspotactive = $API->comm("/ip/hotspot/active/print", array("?server" => "" . $serveractive . ""));

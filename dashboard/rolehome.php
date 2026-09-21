@@ -209,6 +209,7 @@ $pppoeCustomers = count($pppoeCustomerNames);
         var mitraTrafficInterface = <?= json_encode($interfaceName); ?>;
         var mitraTrafficTooltipTitle = <?= json_encode(htmlspecialchars($brandname . ' - ' . $_traffic, ENT_QUOTES, 'UTF-8')); ?>;
         var mitraTrafficTimeLabel = <?= json_encode(htmlspecialchars($_time, ENT_QUOTES, 'UTF-8')); ?>;
+        var mitraTrafficRetryAt = 0;
 
         function formatMitraTrafficRate(value) {
           var rate = Number(value) || 0;
@@ -220,11 +221,15 @@ $pppoeCustomers = count($pppoeCustomerNames);
         }
 
         function requestMitraTraffic() {
-          if (!mitraTrafficChart || !mitraTrafficInterface) return;
+          if (!mitraTrafficChart || !mitraTrafficInterface || Date.now() < mitraTrafficRetryAt) return;
           $.ajax({
             url: './traffic/traffic.php?session=' + encodeURIComponent(mitraTrafficSession) + '&iface=' + encodeURIComponent(mitraTrafficInterface),
             dataType: 'json',
             success: function (data) {
+              if (data && data.offline) {
+                mitraTrafficRetryAt = Date.now() + ((parseInt(data.retry_after, 10) || 30) * 1000);
+                return;
+              }
               if (!Array.isArray(data) || data.length < 2) return;
               var tx = parseInt(data[0].data, 10) || 0;
               var rx = parseInt(data[1].data, 10) || 0;

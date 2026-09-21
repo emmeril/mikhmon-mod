@@ -341,6 +341,7 @@ if (!isset($_SESSION["mikhmon"])) {
                     var trafficTooltipTitle = <?= json_encode(htmlspecialchars($brandname . ' - ' . $_traffic, ENT_QUOTES, 'UTF-8')); ?>;
                     var trafficTimeLabel = <?= json_encode(htmlspecialchars($_time, ENT_QUOTES, 'UTF-8')); ?>;
                     var n = 3000;
+                    var trafficRetryAt = 0;
 
                     function formatDashboardTrafficRate(value) {
                       var rate = Number(value) || 0;
@@ -352,11 +353,16 @@ if (!isset($_SESSION["mikhmon"])) {
                     }
 
                     function requestDatta(session,iface) {
+                      if (Date.now() < trafficRetryAt) return;
                       $.ajax({
                         url: './traffic/traffic.php?session='+session+'&iface='+iface,
-                        datatype: "json",
+                        dataType: "json",
                         success: function(data) {
-                          var midata = JSON.parse(data);
+                          var midata = typeof data === 'string' ? JSON.parse(data) : data;
+                          if (midata && midata.offline) {
+                            trafficRetryAt = Date.now() + ((parseInt(midata.retry_after, 10) || 30) * 1000);
+                            return;
+                          }
                           if( midata.length > 0 ) {
                             var TX=parseInt(midata[0].data);
                             var RX=parseInt(midata[1].data);

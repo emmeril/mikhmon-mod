@@ -25,10 +25,92 @@ class RouterosAPI
     var $timeout   = 3;     //  Connection attempt timeout and data read timeout
     var $attempts  = 5;     //  Connection attempt count
     var $delay     = 3;     //  Delay between connection attempts in seconds
+    var $web_mode  = null;  //  null follows PHP_SAPI; tests may override it
+    var $circuit_skipped = false;
+    var $connection_attempts_made = 0;
 
     var $socket;            //  Variable for storing socket resource
     var $error_no;          //  Variable for storing connection error number, if any
     var $error_str;         //  Variable for storing connection error text, if any
+
+    public function isWebConnection()
+    {
+        return $this->web_mode === null ? PHP_SAPI !== 'cli' : (bool) $this->web_mode;
+    }
+
+    public function connectivityStatePath()
+    {
+        $override = getenv('MIKHMON_ROUTER_STATE_PATH');
+        if ($override !== false && trim((string) $override) !== '') return (string) $override;
+        return dirname(__DIR__) . '/data/router-connectivity.json';
+    }
+
+    public function connectivityKey($ip)
+    {
+        return hash('sha256', strtolower(trim((string) $ip)) . ':' . (int) $this->port . ':' . ($this->ssl ? 'ssl' : 'plain'));
+    }
+
+    public function connectivityCooldown()
+    {
+        $configured = getenv('MIKHMON_ROUTER_OFFLINE_COOLDOWN');
+        return max(5, min(300, $configured === false ? 30 : (int) $configured));
+    }
+
+    public function openConnectivityState($ip)
+    {
+        $path = $this->connectivityStatePath();
+        $directory = dirname($path);
+        if (!is_dir($directory) && !@mkdir($directory, 0700, true)) return null;
+        $handle = @fopen($path, 'c+');
+        if (!$handle) return null;
+        // A healthy RouterOS login normally completes in a few milliseconds.
+        // Briefly wait for that probe so concurrent dashboard sections do not
+        // falsely report offline; abandon a genuinely slow probe quickly.
+        $lockDeadline = microtime(true) + 0.25;
+        $locked = @flock($handle, LOCK_EX | LOCK_NB);
+        while (!$locked && microtime(true) < $lockDeadline) {
+            usleep(20000);
+            $locked = @flock($handle, LOCK_EX | LOCK_NB);
+        }
+        if (!$locked) {
+            fclose($handle);
+            return false;
+        }
+        rewind($handle);
+        $state = json_decode((string) stream_get_contents($handle), true);
+        if (!is_array($state)) $state = array();
+        if (!isset($state['routers']) || !is_array($state['routers'])) $state['routers'] = array();
+        return array('handle' => $handle, 'state' => $state, 'key' => $this->connectivityKey($ip));
+    }
+
+    public function closeConnectivityState($lock, $connected)
+    {
+        if (!is_array($lock) || !isset($lock['handle']) || !is_resource($lock['handle'])) return;
+        $handle = $lock['handle'];
+        $state = isset($lock['state']) && is_array($lock['state']) ? $lock['state'] : array('routers' => array());
+        $key = isset($lock['key']) ? (string) $lock['key'] : '';
+        if (!isset($state['routers']) || !is_array($state['routers'])) $state['routers'] = array();
+        if ($connected) {
+            unset($state['routers'][$key]);
+        } else {
+            $failures = (int) ($state['routers'][$key]['failures'] ?? 0) + 1;
+            $state['routers'][$key] = array(
+                'failed_at' => time(),
+                'retry_after' => time() + $this->connectivityCooldown(),
+                'failures' => $failures,
+            );
+        }
+        $encoded = json_encode($state, JSON_UNESCAPED_SLASHES);
+        if ($encoded !== false) {
+            ftruncate($handle, 0);
+            rewind($handle);
+            fwrite($handle, $encoded);
+            fflush($handle);
+            @chmod($this->connectivityStatePath(), 0600);
+        }
+        flock($handle, LOCK_UN);
+        fclose($handle);
+    }
 
     /* Check, can be var used in foreach  */
     public function isIterable($var)
@@ -95,14 +177,38 @@ class RouterosAPI
      */
     public function connect($ip, $login, $password)
     {
-        for ($ATTEMPT = 1; $ATTEMPT <= $this->attempts; $ATTEMPT++) {
+        $webConnection = $this->isWebConnection();
+        $stateLock = false;
+        $this->circuit_skipped = false;
+        $this->connection_attempts_made = 0;
+        if ($webConnection) {
+            $stateLock = $this->openConnectivityState($ip);
+            if ($stateLock === false) {
+                // Another web request is already probing this router. Do not
+                // make every PHP worker wait on the same offline device.
+                $this->circuit_skipped = true;
+                return false;
+            }
+            $row = is_array($stateLock) ? ($stateLock['state']['routers'][$stateLock['key']] ?? array()) : array();
+            if (is_array($stateLock) && (int) ($row['retry_after'] ?? 0) > time()) {
+                flock($stateLock['handle'], LOCK_UN);
+                fclose($stateLock['handle']);
+                $this->circuit_skipped = true;
+                return false;
+            }
+        }
+        $attempts = $webConnection ? 1 : max(1, (int) $this->attempts);
+        $timeout = $webConnection ? min(2, max(1, (int) $this->timeout)) : max(1, (int) $this->timeout);
+        $delay = $webConnection ? 0 : max(0, (int) $this->delay);
+        for ($ATTEMPT = 1; $ATTEMPT <= $attempts; $ATTEMPT++) {
+            $this->connection_attempts_made++;
             $this->connected = false;
             $PROTOCOL = ($this->ssl ? 'ssl://' : '' );
             $context = stream_context_create(array('ssl' => array('ciphers' => 'ADH:ALL', 'verify_peer' => false, 'verify_peer_name' => false)));
             $this->debug('Connection attempt #' . $ATTEMPT . ' to ' . $PROTOCOL . $ip . ':' . $this->port . '...');
-            $this->socket = @stream_socket_client($PROTOCOL . $ip.':'. $this->port, $this->error_no, $this->error_str, $this->timeout, STREAM_CLIENT_CONNECT,$context);
+            $this->socket = @stream_socket_client($PROTOCOL . $ip.':'. $this->port, $this->error_no, $this->error_str, $timeout, STREAM_CLIENT_CONNECT,$context);
             if ($this->socket) {
-                socket_set_timeout($this->socket, $this->timeout);
+                socket_set_timeout($this->socket, $timeout);
                 $this->write('/login', false);
                 $this->write('=name=' . $login, false);
                 $this->write('=password=' . $password);
@@ -133,8 +239,10 @@ class RouterosAPI
                 }
                 fclose($this->socket);
             }
-            if ($ATTEMPT < $this->attempts) sleep($this->delay);
+            if ($ATTEMPT < $attempts && $delay > 0) sleep($delay);
         }
+
+        if ($webConnection && is_array($stateLock)) $this->closeConnectivityState($stateLock, $this->connected);
 
         if ($this->connected) {
             $this->debug('Connected...');
@@ -410,6 +518,10 @@ class RouterosAPI
      */
     public function comm($com, $arr = array())
     {
+        // Older endpoints do not all check connect() before issuing a read.
+        // Returning an empty result keeps an offline router from causing a
+        // PHP stream TypeError while newer pages render an explicit warning.
+        if (!$this->connected || !is_resource($this->socket)) return array();
         $count = count($arr);
         $this->write($com, !$arr);
         $i = 0;

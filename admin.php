@@ -223,9 +223,10 @@ if ($id == "login" || substr($url, -1) == "p") {
 } elseif ($id == "database"  && !empty($session)) {
   $API = new RouterosAPI();
   $API->debug = false;
-  $API->connect($iphost, $userhost, decrypt($passwdhost));
+  $routerConnected = $API->connect($iphost, $userhost, decrypt($passwdhost));
   include_once('./include/menu.php');
-  include_once('./settings/database.php');
+  if ($routerConnected) include_once('./settings/database.php');
+  else include_once('./dashboard/offline.php');
 } elseif ($id == "reboot"  && !empty($session)) {
   include_once('./process/reboot.php');
 } elseif ($id == "shutdown"  && !empty($session)) {

@@ -46,7 +46,7 @@ include('../lang/'.$langid.'.php');
   include_once('../lib/formatbytesbites.php');
   $API = new RouterosAPI();
   $API->debug = false;
-  $API->connect($iphost, $userhost, decrypt($passwdhost));
+  $routerConnected = $API->connect($iphost, $userhost, decrypt($passwdhost));
 
   if ($livereport == "disable") {
     $logh = "457px";
@@ -75,7 +75,7 @@ include('../lang/'.$langid.'.php');
     ));
     $TotalRHr = count($getSRHr);
     $_SESSION[$session.'totalHr'] = $TotalRHr;*/
-	$getSRBl = mikhmonReportFetchRecords($API, $session, '', $idbl);
+	$getSRBl = mikhmonReportFetchRecords($routerConnected ? $API : null, $session, '', $idbl);
 	$getSRBl = mikhmonReportMergeBillingRows($session, $getSRBl, '', $idbl);
     if (mikhmonIsMitra()) {
       $mitraUsernames = mikhmonMitraUsernames($session);
@@ -84,8 +84,8 @@ include('../lang/'.$langid.'.php');
         return mikhmonRowBelongsToCurrentMitra($row) || (isset($parts[2]) && isset($mitraUsernames[trim($parts[2])]));
       }));
     }
-    $hotspotProfiles = $API->comm('/ip/hotspot/user/profile/print');
-    $pppProfiles = $API->comm('/ppp/profile/print');
+    $hotspotProfiles = $routerConnected ? $API->comm('/ip/hotspot/user/profile/print') : array();
+    $pppProfiles = $routerConnected ? $API->comm('/ppp/profile/print') : array();
     $profileCosts = mikhmonReportProfileCosts($hotspotProfiles, $pppProfiles);
     $profileSellingPrices = mikhmonReportProfileSellingPrices($hotspotProfiles, $pppProfiles);
     $TotalRBl = count($getSRBl);
@@ -146,7 +146,7 @@ include('../lang/'.$langid.'.php');
                             $_SESSION[$session.'dprofit'] = $dprofit;
                             $_SESSION[$session.'mprofit'] = $mprofit;
                           }
-                            echo "<b>" . $_income . "</b><br/>" . "
+                            echo ($routerConnected ? '' : '<small class="text-warning router-offline">Router offline, menampilkan data lokal</small><br>') . "<b>" . $_income . "</b><br/>" . "
                           ".$_today." " . $TotalRHr . " trx : " . $currency . " " . $dincome . "<br/>
                           ".$_this_month." " . $TotalRBl . " trx : " . $currency . " " . $mincome . "<hr style='margin:5px 0;border:0;border-top:1px solid currentColor;opacity:.35'><b>" . $_net_profit . "</b><br/>" . $_today . ": " . $currency . " " . $dprofit . "<br/>" . $_this_month . ": " . $currency . " " . $mprofit;
                           ?>

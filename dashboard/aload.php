@@ -44,14 +44,23 @@ include('../lang/'.$langid.'.php');
   $API = new RouterosAPI();
   $API->debug = false;
 
+  function mikhmonDashboardOfflineFragment($id, $title) {
+    echo '<div id="' . htmlspecialchars($id, ENT_QUOTES) . '" class="router-offline card">'
+      . '<div class="card-header"><h3><i class="fa fa-exclamation-triangle text-warning"></i> '
+      . htmlspecialchars($title, ENT_QUOTES) . '</h3></div>'
+      . '<div class="card-body">Router MikroTik tidak terhubung. Refresh otomatis dihentikan; muat ulang halaman untuk mencoba kembali.</div></div>';
+  }
+
 
 
   if ($load == "sysresource") {
 
-    if ($API->connect($iphost, $userhost, decrypt($passwdhost))) {
-      // Dashboard polling keeps versioned backups current while Mikhmon is open.
-      mikhmonSynchronizeRouterData($API, $session);
+    if (!$API->connect($iphost, $userhost, decrypt($passwdhost))) {
+      mikhmonDashboardOfflineFragment('r_1', 'Status Router');
+      exit;
     }
+    // Dashboard polling keeps versioned backups current while Mikhmon is open.
+    mikhmonSynchronizeRouterData($API, $session);
 
 // get MikroTik system clock
     $getclock = $API->comm("/system/clock/print");
@@ -122,11 +131,16 @@ include('../lang/'.$langid.'.php');
 } else if ($load == "hotspot") {
   $cache = isset($_SESSION['dashboard_hotspot_cache'][$session]) ? $_SESSION['dashboard_hotspot_cache'][$session] : array();
   $cacheFresh = is_array($cache) && !empty($cache['at']) && (time() - (int) $cache['at']) < 120;
+  $routerOffline = false;
   if ($cacheFresh) {
     $countallusers = (int) ($cache['users'] ?? 0);
     $counthotspotactive = (int) ($cache['active'] ?? 0);
   } else {
-    $API->connect($iphost, $userhost, decrypt($passwdhost));
+    $routerOffline = !$API->connect($iphost, $userhost, decrypt($passwdhost));
+    if ($routerOffline) {
+      $countallusers = (int) ($cache['users'] ?? 0);
+      $counthotspotactive = (int) ($cache['active'] ?? 0);
+    } else {
 // Count only voucher users so periodic dashboard refresh matches the initial view.
   $voucherProfiles = array();
   foreach ((array) $API->comm("/ip/hotspot/user/profile/print", array('.proplist' => 'name,on-login')) as $profileRow) {
@@ -141,6 +155,7 @@ include('../lang/'.$langid.'.php');
 // get & counting hotspot active
   $counthotspotactive = $API->comm("/ip/hotspot/active/print", array("count-only" => ""));
     $_SESSION['dashboard_hotspot_cache'][$session] = array('at' => time(), 'users' => $countallusers, 'active' => (int) $counthotspotactive);
+    }
   }
   $uunit = ($countallusers == 1) ? "item" : "items";
   if ($counthotspotactive < 2) {
@@ -152,7 +167,7 @@ include('../lang/'.$langid.'.php');
   ?>
     
             <div id="r_2" class="card">
-              <div class="card-header"><h3><i class="fa fa-wifi"></i> Hotspot</h3></div>
+              <div class="card-header"><h3><i class="fa fa-wifi"></i> Hotspot<?= $routerOffline ? ' <small class="text-warning router-offline">(Router offline, menampilkan cache terakhir)</small>' : ''; ?></h3></div>
                 <div class="card-body">
                   <div class="row">
                     <div class="col-3 col-box-6">
@@ -216,10 +231,14 @@ include('../lang/'.$langid.'.php');
 } else if ($load == "logs") {
   $cache = isset($_SESSION['dashboard_logs_cache'][$session]) ? $_SESSION['dashboard_logs_cache'][$session] : array();
   $cacheFresh = is_array($cache) && !empty($cache['at']) && (time() - (int) $cache['at']) < 30;
+  $routerOffline = false;
   if ($cacheFresh) {
     $log = isset($cache['log']) && is_array($cache['log']) ? $cache['log'] : array();
   } else {
-    $API->connect($iphost, $userhost, decrypt($passwdhost));
+    $routerOffline = !$API->connect($iphost, $userhost, decrypt($passwdhost));
+    if ($routerOffline) {
+      $log = isset($cache['log']) && is_array($cache['log']) ? $cache['log'] : array();
+    } else {
 
   // Configure persistent hotspot logging once per login session.
   if (empty($_SESSION['dashboard_logging_checked'][$session])) {
@@ -234,6 +253,7 @@ include('../lang/'.$langid.'.php');
   $getlog = $API->comm("/log/print", array("?topics" => "hotspot,info,debug", '.proplist' => 'time,message'));
   $log = array_slice(array_reverse((array) $getlog), 0, 20);
     $_SESSION['dashboard_logs_cache'][$session] = array('at' => time(), 'log' => $log);
+    }
   }
   //$THotspotLog = count($getlog);
 
@@ -252,7 +272,7 @@ include('../lang/'.$langid.'.php');
               <div id="r_3" class="row">
               <div class="card">
                 <div class="card-header">
-                  <h3><a href="./?hotspot=log&session=<?= $session; ?>" title="Open Hotspot Log" ><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></a></h3></div>
+                  <h3><a href="./?hotspot=log&session=<?= $session; ?>" title="Open Hotspot Log" ><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></a><?= $routerOffline ? ' <small class="text-warning router-offline">(Router offline, menampilkan cache terakhir)</small>' : ''; ?></h3></div>
                     <div class="card-body">
                       <div style="padding: 5px; max-height: 320px;" class="mr-t-10 overflow">
                         <table class="table table-sm table-bordered table-hover" style="font-size: 12px; td.padding:2px;">

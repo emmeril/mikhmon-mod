@@ -216,6 +216,7 @@ if (!isset($_SESSION["mikhmon"])) {
       mikhmonSynchronizeRouterData($API, $session);
     }
   }
+  $routerUnavailable = !in_array($requestedRoute, $localRoutes, true) && !$routerConnected;
 
   $pagehotspot = array('users','hosts','ipbinding','cookies','log','dhcp-leases','mac-locks');
   $pageppp = array('secrets','profiles','active',);
@@ -234,8 +235,13 @@ if (!isset($_SESSION["mikhmon"])) {
 </script>';
 
 
+// Keep the application responsive and do not execute RouterOS page commands
+// after a failed connection.
+  if ($routerUnavailable) {
+    include_once('./dashboard/offline.php');
+  }
 // logout
-  if ($hotspot == "logout") {
+  elseif ($hotspot == "logout") {
     echo "<b class='cl-w'><i class='fa fa-circle-o-notch fa-spin' style='font-size:24px'></i> Logout...</b>";
 
     mikhmonSystemLog('info', 'Autentikasi', 'Pengguna keluar dari aplikasi.', mikhmonSystemLogCurrentUser(array('session' => $session)));
@@ -694,15 +700,26 @@ elseif ($ppp == "edit-profile") {
 <script src="./js/table-sort.js?t=<?= str_replace(" ","_",date("Y-m-d H:i:s")); ?>"></script>
 
 <?php
-if (mikhmonIsAdmin() && ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?session")) {
+if (!empty($routerConnected) && mikhmonIsAdmin() && ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?session")) {
   echo '<script>
-    $("#r_3").load("./dashboard/aload.php?session=' . $session . '&load=logs #r_3");  
+    var dashboardOffline = false;
+    function loadDashboardSection(selector, url) {
+      if (dashboardOffline) return;
+      $(selector).load(url, function () {
+        if ($(this).is(".router-offline") || $(this).find(".router-offline").length) {
+          dashboardOffline = true;
+          clearInterval(dashboard);
+          if (typeof livereport !== "undefined") clearInterval(livereport);
+        }
+      });
+    }
+    loadDashboardSection("#r_3", "./dashboard/aload.php?session=' . $session . '&load=logs #r_3");
     var interval1 = Math.max(60000, ' . ((int) $areload * 1000) . ');
     var dashboard = setInterval(function() {
     if (document.hidden) return;
-    $("#r_1").load("./dashboard/aload.php?session=' . $session . '&load=sysresource #r_1");
-    $("#r_2").load("./dashboard/aload.php?session=' . $session . '&load=hotspot #r_2");
-    $("#r_3").load("./dashboard/aload.php?session=' . $session . '&load=logs #r_3");
+    loadDashboardSection("#r_1", "./dashboard/aload.php?session=' . $session . '&load=sysresource #r_1");
+    loadDashboardSection("#r_2", "./dashboard/aload.php?session=' . $session . '&load=hotspot #r_2");
+    loadDashboardSection("#r_3", "./dashboard/aload.php?session=' . $session . '&load=logs #r_3");
     
   }, interval1);
 
@@ -731,18 +748,22 @@ if ($livereport == "enable" || $livereport == "") {
   echo '<script>
   $(document).ready(function(){
     var interval = "' . ($areload * 1000) . '";
-    setInterval(function() {
+    var activeRefresh = setInterval(function() {
     if ($("#reloadHotspotActive .hotspot-active-toolbar :focus").length) return;
-    $("#reloadHotspotActive").load("./hotspot/hotspotactive.php?server=' . rawurlencode($serveractive) . '&session=' . rawurlencode($session) . '"); }, interval);})
+    $("#reloadHotspotActive").load("./hotspot/hotspotactive.php?server=' . rawurlencode($serveractive) . '&session=' . rawurlencode($session) . '", function () {
+      if ($(this).is(".router-offline") || $(this).find(".router-offline").length) clearInterval(activeRefresh);
+    }); }, interval);})
 </script>
 ';
 } elseif ($hotspot == "active" && $serveractive == "") {
   echo '<script>
   $(document).ready(function(){
     var interval = "' . ($areload * 1000) . '";
-    setInterval(function() {
+    var activeRefresh = setInterval(function() {
     if ($("#reloadHotspotActive .hotspot-active-toolbar :focus").length) return;
-    $("#reloadHotspotActive").load("./hotspot/hotspotactive.php?session=' . rawurlencode($session) . '"); }, interval);})
+    $("#reloadHotspotActive").load("./hotspot/hotspotactive.php?session=' . rawurlencode($session) . '", function () {
+      if ($(this).is(".router-offline") || $(this).find(".router-offline").length) clearInterval(activeRefresh);
+    }); }, interval);})
 </script>
 ';
 } elseif ($userprofile == "add" || substr($userprofile, 0, 1) == "*" || $userprofile != "") {

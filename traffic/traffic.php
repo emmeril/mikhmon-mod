@@ -34,7 +34,8 @@ include_once('../lib/routeros_api.class.php');
 include_once('../lib/formatbytesbites.php');
 $API = new RouterosAPI();
 $API->debug = false;
-  
+header('Content-Type: application/json; charset=UTF-8');
+
   if($API->connect( $iphost, $userhost, decrypt($passwdhost))){
 
 //$getinterface = $API->comm("/interface/print");
@@ -55,15 +56,13 @@ $API->debug = false;
       $rows2['data'][] = $frx;
       
   }else{
-		echo "<font color='#ff0000'>Connection Failed!!</font>";
+    print json_encode(array('offline' => true, 'retry_after' => 30));
+    exit;
   }
   
   $API->disconnect();
   
-  $result = array();
-
-	array_push($result,$rows);
-	array_push($result,$rows2);
+  $result = array($rows, $rows2);
   print json_encode($result);
 }
 ?>
