@@ -543,8 +543,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 
-// Keep the paid invoice as the primary status until its next due date. The
-// following invoice is already stored, but becomes actionable only when due.
+// Keep the paid invoice as the primary status until the reminder window opens.
+// The following invoice becomes actionable together with its WhatsApp reminder.
 $latestInvoices = array();
 $invoiceCandidates = array();
 foreach ($invoices as $invoice) if (isset($invoice['customer_id'])) {
@@ -561,8 +561,8 @@ foreach ($invoiceCandidates as $key => $candidates) {
   $paid = $candidates['paid']; $unpaid = $candidates['unpaid'];
   if (!$unpaid) { if ($paid) $latestInvoices[$key] = $paid; continue; }
   $unpaidDue = billingDueTimestamp($unpaid['due_date'] ?? '');
-  $unpaidIsDue = $unpaidDue <= 0 || $unpaidDue <= time();
-  $latestInvoices[$key] = $paid && !$unpaidIsDue ? $paid : $unpaid;
+  $unpaidWindowOpen = $unpaidDue <= 0 || mikhmonBillingAutomationPaymentWindowOpen($unpaidDue, $fonnteConfig['reminder_days'] ?? 7);
+  $latestInvoices[$key] = $paid && !$unpaidWindowOpen ? $paid : $unpaid;
 }
 ?>
 <div class="row"><div class="col-12"><div class="card">
