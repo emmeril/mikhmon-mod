@@ -49,8 +49,9 @@ ksort($comments);
   .print-center-toolbar .btn { width: auto; white-space: nowrap; }
   .print-center-toolbar .print-center-btn-small { color: #2f353a; }
   @media (max-width: 600px) {
-    .print-center-toolbar { justify-content: center; }
+    .print-center-toolbar { align-items:stretch; flex-direction:column; justify-content:center; }
     .print-center-toolbar > span { flex-basis: 100%; text-align: center; }
+    .print-center-toolbar .btn { width:100%; min-height:44px; }
   }
 </style>
 <div class="row">
@@ -60,20 +61,16 @@ ksort($comments);
         <h3><i class="fa fa-print"></i> Print Center</h3>
       </div>
       <div class="card-body">
-        <div class="row">
-          <div class="col-4 pd-t-5 pd-b-5">
-            <input id="printCenterSearch" type="text" class="form-control" placeholder="Cari username, profile, atau komentar">
-          </div>
-          <div class="col-4 pd-t-5 pd-b-5">
-            <select id="printCenterProfile" class="form-control">
+        <div class="data-toolbar" role="search" aria-label="Filter voucher untuk dicetak">
+          <div class="data-toolbar__filters">
+            <input id="printCenterSearch" type="search" class="form-control data-toolbar__search" placeholder="Cari username, profile, atau komentar" autocomplete="off">
+            <select id="printCenterProfile" class="form-control data-toolbar__select">
               <option value="">Semua profile</option>
               <?php foreach (array_keys($profiles) as $profile): ?>
                 <option value="<?= htmlspecialchars($profile, ENT_QUOTES); ?>"><?= htmlspecialchars($profile, ENT_QUOTES); ?></option>
               <?php endforeach; ?>
             </select>
-          </div>
-          <div class="col-4 pd-t-5 pd-b-5">
-            <select id="printCenterComment" class="form-control">
+            <select id="printCenterComment" class="form-control data-toolbar__select">
               <option value="">Semua comment</option>
               <?php foreach ($comments as $comment => $commentCount): ?>
                 <option value="<?= htmlspecialchars($comment, ENT_QUOTES); ?>"><?= htmlspecialchars($comment, ENT_QUOTES); ?> [<?= $commentCount; ?>]</option>

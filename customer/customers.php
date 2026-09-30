@@ -242,13 +242,6 @@ if (!empty($routerConnected)) {
     <?php if ($customerMessage !== ''): ?><div class="box bg-success"><?= htmlspecialchars($customerMessage, ENT_QUOTES); ?></div><?php endif; ?>
     <?php if ($customerError !== ''): ?><div class="box bg-danger"><?= htmlspecialchars($customerError, ENT_QUOTES); ?><?php if ($customerManualFallbackUrl !== ''): ?> <a class="btn bg-green" target="_blank" rel="noopener" href="<?= htmlspecialchars($customerManualFallbackUrl, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Buka WhatsApp Manual</a><?php endif; ?></div><?php endif; ?>
     <style>
-      .customer-toolbar { display:flex; align-items:stretch; justify-content:space-between; gap:10px; margin:5px 0 10px; }
-      .customer-filter-controls { display:flex; align-items:stretch; flex:1; gap:8px; min-width:0; }
-      .customer-toolbar-actions { display:flex; align-items:stretch; justify-content:flex-end; gap:8px; }
-      .customer-toolbar-control { height:34px; min-height:34px; margin:0; box-sizing:border-box; }
-      #customerSearch { flex:1; min-width:220px; }
-      #customerServiceFilter, #customerStatusFilter { width:155px; }
-      .customer-toolbar .btn { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:34px; margin:0; box-sizing:border-box; }
       #dataTable .customer-service-select { min-width:115px; }
       #dataTable .customer-service-total { text-align:center; font-weight:bold; }
       #dataTable .customer-username-cell { min-width:145px; font-weight:bold; }
@@ -273,14 +266,7 @@ if (!empty($routerConnected)) {
       .customer-delete-options .customer-delete-all { grid-column:1/-1; justify-content:center; font-weight:bold; }
       .customer-delete-cancel { display:flex; justify-content:flex-end; margin-top:12px; padding-top:12px; border-top:1px solid rgba(127,127,127,.25); }
       .customer-delete-cancel .btn { min-width:110px; margin:0; }
-      @media(max-width:900px) {
-        .customer-toolbar { flex-direction:column; }
-        .customer-toolbar-actions { justify-content:stretch; }
-        .customer-toolbar-actions .btn { flex:1; }
-      }
       @media(max-width:600px) {
-        .customer-filter-controls, .customer-toolbar-actions { flex-direction:column; }
-        #customerSearch, #customerServiceFilter, #customerStatusFilter { width:100%; min-width:0; }
         #customerDeleteModal { padding:20px 10px !important; }
         .customer-delete-modal-card { margin:0 auto; }
         .customer-delete-options { grid-template-columns:1fr; }
@@ -288,14 +274,14 @@ if (!empty($routerConnected)) {
         .customer-delete-cancel .btn { width:100%; }
       }
     </style>
-    <div class="customer-toolbar">
-      <div class="customer-filter-controls">
-        <input id="customerSearch" type="text" class="form-control customer-toolbar-control" placeholder="<?= $_search ?>">
-        <select id="customerServiceFilter" class="form-control customer-toolbar-control"><option value="all">Layanan: Semua</option><option value="hotspot">Hotspot</option><option value="pppoe">PPPoE</option></select>
-        <select id="customerStatusFilter" class="form-control customer-toolbar-control"><option value="all">Status: Semua</option><option value="active">Aktif</option><option value="isolir">Isolir</option></select>
-        <select id="customerMitraFilter" class="form-control customer-toolbar-control"><option value="all">Mitra: Semua</option><?php foreach ($customerMitraFilterOptions as $mitraId => $mitraName): ?><option value="<?= htmlspecialchars($mitraId, ENT_QUOTES); ?>"><?= htmlspecialchars($mitraName, ENT_QUOTES); ?></option><?php endforeach; ?></select>
+    <div class="customer-toolbar data-toolbar" role="search" aria-label="Filter pelanggan">
+      <div class="customer-filter-controls data-toolbar__filters">
+        <input id="customerSearch" type="search" class="form-control customer-toolbar-control data-toolbar__search" placeholder="<?= $_search ?>" autocomplete="off">
+        <select id="customerServiceFilter" class="form-control customer-toolbar-control data-toolbar__select"><option value="all">Layanan: Semua</option><option value="hotspot">Hotspot</option><option value="pppoe">PPPoE</option></select>
+        <select id="customerStatusFilter" class="form-control customer-toolbar-control data-toolbar__select"><option value="all">Status: Semua</option><option value="active">Aktif</option><option value="isolir">Isolir</option></select>
+        <select id="customerMitraFilter" class="form-control customer-toolbar-control data-toolbar__select"><option value="all">Mitra: Semua</option><?php foreach ($customerMitraFilterOptions as $mitraId => $mitraName): ?><option value="<?= htmlspecialchars($mitraId, ENT_QUOTES); ?>"><?= htmlspecialchars($mitraName, ENT_QUOTES); ?></option><?php endforeach; ?></select>
       </div>
-      <div class="customer-toolbar-actions"><button id="customerReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button><?php if (mikhmonIsAdmin() || mikhmonIsMitra()): ?><a class="btn bg-primary" href="./?customer=service-add&session=<?= rawurlencode($session); ?>"><i class="fa fa-link"></i> Tambah Layanan</a><?php endif; ?></div>
+      <div class="customer-toolbar-actions data-toolbar__actions"><button id="customerReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button><?php if (mikhmonIsAdmin() || mikhmonIsMitra()): ?><a class="btn bg-primary" href="./?customer=service-add&session=<?= rawurlencode($session); ?>"><i class="fa fa-link"></i> Tambah Layanan</a><?php endif; ?></div>
     </div>
     <div class="overflow box-bordered" style="max-height:65vh"><table id="dataTable" class="table table-bordered table-hover text-nowrap">
       <thead><tr><th>No</th><th>Nama Pelanggan</th><th>Nomor HP</th><th>Alamat</th><th>Jumlah Layanan</th><th>Layanan</th><th>Username</th><th>Password</th><th>Profile</th><th>Tanggal Isolir</th><th>Status</th><th>Mitra</th><th>Aksi</th></tr></thead><tbody>

@@ -103,10 +103,10 @@ if (!isset($_SESSION["mikhmon"])) {
 </div>
 <div class="card-body">
 	<div>
-		<div style="padding-bottom: 5px; padding-top: 5px; display: table-row;">	   
-		  <input id="filterTable" type="text" class="form-control" style="float:left; margin-top: 6px; max-width: 150px;" placeholder="Search..">&nbsp;
-		  <button class="btn bg-primary " onclick="exportTableToCSV('user-log-mikhmon-<?= $filedownload; ?>.csv')" title="Download user log"><i class="fa fa-download"></i> CSV</button>
-		  <button class="btn bg-primary " onclick="location.href='./?report=userlog&session=<?= $session; ?>';" title="Reload all data"><i class="fa fa-search"></i> ALL</button>
+		<div class="data-toolbar" role="search">
+		  <div class="data-toolbar__filters"><input id="filterTable" type="search" class="form-control data-toolbar__search" placeholder="Search.." autocomplete="off"></div>
+		  <div class="data-toolbar__actions"><button type="button" class="btn bg-primary" onclick="exportTableToCSV('user-log-mikhmon-<?= $filedownload; ?>.csv')" title="Download user log"><i class="fa fa-download"></i> CSV</button>
+		  <button type="button" class="btn bg-primary" onclick="location.href='./?report=userlog&session=<?= $session; ?>';" title="Reload all data"><i class="fa fa-search"></i> ALL</button></div>
 		</div>
 		<div class="input-group mr-b-10">  
 			<div class="input-group-1 col-box-2">

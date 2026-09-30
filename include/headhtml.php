@@ -37,6 +37,7 @@ include_once('./include/brand.php');
 		<link rel="stylesheet" type="text/css" href="css/font-awesome/css/font-awesome.min.css" />
 		<!-- Mikhmon UI -->
 		<link rel="stylesheet" href="css/mikhmon-ui.<?= $theme; ?>.min.css">
+		<link rel="stylesheet" href="css/mikhmon-toolbar.css">
 		<style>
 			.dropdown-btn.active .fa-caret-down::before {
 				content: "\f0d8";

@@ -43,17 +43,17 @@ $count = count($secrets);
     </div>
   </div>
   <div class="card-body">
-    <div class="row">
-      <div class="col-6 pd-t-5 pd-b-5"><div class="input-group">
-        <div class="input-group-4 col-box-4"><input id="pppSearch" type="text" style="padding:5.8px" class="group-item group-item-l" placeholder="<?= $_search ?>"></div>
-        <div class="input-group-4 col-box-4"><select id="pppProfile" class="group-item group-item-m" onchange="location=this.value;loader()" title="Filter by Profile">
+    <div class="data-toolbar" role="search" aria-label="Filter PPPoE">
+      <div class="data-toolbar__filters">
+        <input id="pppSearch" type="search" class="form-control data-toolbar__search" placeholder="<?= $_search ?>" aria-label="<?= $_search ?> PPPoE" autocomplete="off">
+        <select id="pppProfile" class="form-control data-toolbar__select" onchange="location=this.value;loader()" title="Filter by Profile" aria-label="Filter by Profile">
           <option value="./?ppp=secrets&session=<?= $session ?>"><?= $_profile ?>: <?= $filter !== '' ? htmlspecialchars($filter, ENT_QUOTES) : $_show_all; ?></option>
           <option value="./?ppp=secrets&session=<?= $session ?>"><?= $_show_all ?></option>
           <?php foreach ($profiles as $profile): ?><?php if (!isset($profile['name'])) continue; ?><option value="./?ppp=secrets&profile=<?= rawurlencode($profile['name']); ?>&session=<?= $session; ?>"<?= $filter === $profile['name'] ? ' selected' : ''; ?>><?= htmlspecialchars($profile['name']); ?></option><?php endforeach; ?>
-        </select></div>
-        <div class="input-group-4 col-box-4"><select id="pppStatus" class="group-item group-item-r" title="Filter Status"><option value="all">Status: Semua</option><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></div>
-      </div></div>
-      <div class="col-6 text-right"><button id="pppReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button></div>
+        </select>
+        <select id="pppStatus" class="form-control data-toolbar__select" title="Filter Status" aria-label="Filter Status"><option value="all">Status: Semua</option><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select>
+      </div>
+      <div class="data-toolbar__actions"><button id="pppReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button></div>
     </div>
     <div class="overflow mr-t-10 box-bordered" style="max-height:75vh"><table id="dataTable" class="table table-bordered table-hover text-nowrap">
       <thead><tr><th id="pppVisibleCount" class="text-center"><?= $count ?></th><th><?= $_name ?></th><th><?= $_password ?></th><th><?= $_profile ?></th><th>Service</th><th>Caller ID</th><th>Status</th><th><?= $_action ?></th></tr></thead><tbody>

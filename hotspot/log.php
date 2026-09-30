@@ -37,8 +37,8 @@ if (!isset($_SESSION["mikhmon"])) {
 </div>
 <div class="card-body">
 
-<div style="max-width: 350px;">
-    <input id="filterTable" type="text" class="form-control" placeholder="Search.."> 
+<div class="data-toolbar" role="search">
+    <input id="filterTable" type="search" class="form-control data-toolbar__search" placeholder="Search.." autocomplete="off">
 </div>
 <div style="padding: 5px; max-height: 75vh;" class="mr-t-10 overflow">
 <table class="table table-sm table-bordered table-hover" id="dataTable" >

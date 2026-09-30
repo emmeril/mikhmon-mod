@@ -98,32 +98,23 @@ if (!isset($_SESSION["mikhmon"])) {
 				?>			</h3>
         </div>
          <div class="card-body">
-<style>
-  .hotspot-active-toolbar { display:flex; align-items:stretch; gap:8px; margin-bottom:10px; }
-  .hotspot-active-toolbar .form-control { height:34px; min-height:34px; margin:0; box-sizing:border-box; }
-  #hotspotActiveSearch { flex:1; min-width:220px; }
-  #hotspotActiveServerFilter, #hotspotActiveLoginFilter { width:180px; }
-  .hotspot-active-toolbar .btn { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:34px; margin:0; white-space:nowrap; }
-  @media(max-width:700px) {
-    .hotspot-active-toolbar { flex-direction:column; }
-    #hotspotActiveSearch, #hotspotActiveServerFilter, #hotspotActiveLoginFilter { width:100%; min-width:0; }
-  }
-</style>
-<div class="hotspot-active-toolbar" role="search" aria-label="Pencarian dan filter hotspot aktif">
-  <input id="hotspotActiveSearch" type="search" class="form-control" placeholder="<?= htmlspecialchars($_search, ENT_QUOTES); ?> user, IP, MAC, <?= strtolower(htmlspecialchars($_comment, ENT_QUOTES)); ?>..." aria-label="<?= htmlspecialchars($_search, ENT_QUOTES); ?> hotspot aktif" autocomplete="off">
-  <select id="hotspotActiveServerFilter" class="form-control" aria-label="Filter server">
+<div class="hotspot-active-toolbar data-toolbar" role="search" aria-label="Pencarian dan filter hotspot aktif">
+  <div class="data-toolbar__filters">
+  <input id="hotspotActiveSearch" type="search" class="form-control data-toolbar__search" placeholder="<?= htmlspecialchars($_search, ENT_QUOTES); ?> user, IP, MAC, <?= strtolower(htmlspecialchars($_comment, ENT_QUOTES)); ?>..." aria-label="<?= htmlspecialchars($_search, ENT_QUOTES); ?> hotspot aktif" autocomplete="off">
+  <select id="hotspotActiveServerFilter" class="form-control data-toolbar__select" aria-label="Filter server">
     <option value="all"><?= htmlspecialchars($_all, ENT_QUOTES); ?> Server</option>
     <?php foreach ($activeServerOptions as $activeServerOption): ?>
       <option value="<?= htmlspecialchars($activeServerOption, ENT_QUOTES); ?>"><?= htmlspecialchars($activeServerOption, ENT_QUOTES); ?></option>
     <?php endforeach; ?>
   </select>
-  <select id="hotspotActiveLoginFilter" class="form-control" aria-label="Filter login by">
+  <select id="hotspotActiveLoginFilter" class="form-control data-toolbar__select" aria-label="Filter login by">
     <option value="all"><?= htmlspecialchars($_all, ENT_QUOTES); ?> Login By</option>
     <?php foreach ($activeLoginByOptions as $activeLoginOption): ?>
       <option value="<?= htmlspecialchars($activeLoginOption, ENT_QUOTES); ?>"><?= htmlspecialchars($activeLoginOption, ENT_QUOTES); ?></option>
     <?php endforeach; ?>
   </select>
-  <button id="hotspotActiveResetFilter" type="button" class="btn bg-secondary" title="Reset filter"><i class="fa fa-refresh"></i> <?= htmlspecialchars($_show_all, ENT_QUOTES); ?></button>
+  </div>
+  <div class="data-toolbar__actions"><button id="hotspotActiveResetFilter" type="button" class="btn bg-secondary" title="Reset filter"><i class="fa fa-refresh"></i> <?= htmlspecialchars($_show_all, ENT_QUOTES); ?></button></div>
 </div>
 <div class="overflow box-bordered" style="max-height:75vh">
 <table id="hotspotActiveTable" class="table table-bordered table-hover text-nowrap">

@@ -47,8 +47,8 @@ if ($countbinding < 2) {
     </h3>
 </div>
 <div class="card-body">	   
-<div class="w-6">
-    <input id="filterTable" type="text" class="form-control" placeholder="Search..">
+<div class="data-toolbar" role="search">
+    <input id="filterTable" type="search" class="form-control data-toolbar__search" placeholder="Search.." autocomplete="off">
   </div>
 <div class="overflow box-bordered mr-t-10" style="max-height: 75vh">  	   
 <table id="dataTable" class="table table-bordered table-hover text-nowrap"> 

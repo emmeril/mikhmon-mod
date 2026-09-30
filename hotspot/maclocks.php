@@ -139,31 +139,22 @@ if ($routerConnected) {
           <?= htmlspecialchars($_mac_lock_description, ENT_QUOTES); ?>
         </div>
 
-        <style>
-          .mac-lock-toolbar { display:flex; align-items:stretch; gap:8px; }
-          .mac-lock-toolbar .form-control { height:34px; min-height:34px; margin:0; box-sizing:border-box; }
-          #macLockSearch { flex:1; min-width:220px; }
-          #macLockProfileFilter, #macLockStatusFilter { width:190px; }
-          .mac-lock-toolbar .btn { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:34px; margin:0; white-space:nowrap; }
-          @media(max-width:700px) {
-            .mac-lock-toolbar { flex-direction:column; }
-            #macLockSearch, #macLockProfileFilter, #macLockStatusFilter { width:100%; min-width:0; }
-          }
-        </style>
-        <div class="mac-lock-toolbar" role="search" aria-label="<?= htmlspecialchars($_search . ' ' . $_reset_mac_lock, ENT_QUOTES); ?>">
-          <input id="macLockSearch" type="search" class="form-control" placeholder="<?= htmlspecialchars($_mac_lock_search_placeholder, ENT_QUOTES); ?>" aria-label="<?= htmlspecialchars($_search . ' ' . $_reset_mac_lock, ENT_QUOTES); ?>" autocomplete="off">
-          <select id="macLockProfileFilter" class="form-control" aria-label="<?= htmlspecialchars($_profile, ENT_QUOTES); ?>">
+        <div class="mac-lock-toolbar data-toolbar" role="search" aria-label="<?= htmlspecialchars($_search . ' ' . $_reset_mac_lock, ENT_QUOTES); ?>">
+          <div class="data-toolbar__filters">
+          <input id="macLockSearch" type="search" class="form-control data-toolbar__search" placeholder="<?= htmlspecialchars($_mac_lock_search_placeholder, ENT_QUOTES); ?>" aria-label="<?= htmlspecialchars($_search . ' ' . $_reset_mac_lock, ENT_QUOTES); ?>" autocomplete="off">
+          <select id="macLockProfileFilter" class="form-control data-toolbar__select" aria-label="<?= htmlspecialchars($_profile, ENT_QUOTES); ?>">
             <option value="all"><?= htmlspecialchars($_mac_lock_all_profiles, ENT_QUOTES); ?></option>
             <?php foreach ($lockedProfileOptions as $lockedProfileOption): ?>
               <option value="<?= htmlspecialchars($lockedProfileOption, ENT_QUOTES); ?>"><?= htmlspecialchars($lockedProfileOption, ENT_QUOTES); ?></option>
             <?php endforeach; ?>
           </select>
-          <select id="macLockStatusFilter" class="form-control" aria-label="<?= htmlspecialchars($_mac_lock_status, ENT_QUOTES); ?>">
+          <select id="macLockStatusFilter" class="form-control data-toolbar__select" aria-label="<?= htmlspecialchars($_mac_lock_status, ENT_QUOTES); ?>">
             <option value="all"><?= htmlspecialchars($_mac_lock_all_statuses, ENT_QUOTES); ?></option>
             <option value="active"><?= htmlspecialchars($_mac_lock_active, ENT_QUOTES); ?></option>
             <option value="inactive"><?= htmlspecialchars($_mac_lock_inactive, ENT_QUOTES); ?></option>
           </select>
-          <button id="macLockResetFilter" type="button" class="btn bg-secondary" title="<?= htmlspecialchars($_show_all, ENT_QUOTES); ?>"><i class="fa fa-refresh"></i> <?= htmlspecialchars($_show_all, ENT_QUOTES); ?></button>
+          </div>
+          <div class="data-toolbar__actions"><button id="macLockResetFilter" type="button" class="btn bg-secondary" title="<?= htmlspecialchars($_show_all, ENT_QUOTES); ?>"><i class="fa fa-refresh"></i> <?= htmlspecialchars($_show_all, ENT_QUOTES); ?></button></div>
         </div>
 
         <div class="overflow box-bordered mr-t-10" style="max-height:75vh">
