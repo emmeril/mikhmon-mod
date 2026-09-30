@@ -18,7 +18,7 @@ if (isset($_POST['save'])) {
   echo '<script>window.location.replace(' . json_encode($target) . ')</script>'; exit;
 }
 ?>
-<div class="row"><div class="col-8"><div class="card box-bordered"><div class="card-header"><h3><i class="fa fa-plus"></i> <?= $_ppp_profiles ?></h3></div><div class="card-body"><form method="post"><a class="btn bg-warning" href="./?ppp=profiles&session=<?= $session ?>"><?= $_close ?></a> <button class="btn bg-primary" name="save"><?= $_save ?></button><table class="table">
+<div class="row"><div class="col-8"><div class="card box-bordered"><div class="card-header"><h3><i class="fa fa-plus"></i> <?= $_ppp_profiles ?></h3></div><div class="card-body"><form method="post"><table class="table">
 <tr><td><?= $_name ?></td><td><input class="form-control" name="name" required autofocus></td></tr>
 <tr><td>Local Address</td><td><select class="form-control" name="local-address"><option value="">none</option><?php foreach ($pools as $pool) { if (!isset($pool['name'])) continue; $label=$pool['name'] . (isset($pool['ranges']) && $pool['ranges'] !== '' ? ' - '.$pool['ranges'] : ''); echo '<option value="'.htmlspecialchars($pool['name'],ENT_QUOTES).'">'.htmlspecialchars($label).'</option>'; } ?><?php if (count($pools) === 0) echo '<option disabled>Tidak ada IP pool</option>'; ?></select></td></tr>
 <tr><td>Remote Address</td><td><select class="form-control" name="remote-address"><option value="">none</option><?php foreach ($pools as $pool) { if (!isset($pool['name'])) continue; $label=$pool['name'] . (isset($pool['ranges']) && $pool['ranges'] !== '' ? ' - '.$pool['ranges'] : ''); echo '<option value="'.htmlspecialchars($pool['name'],ENT_QUOTES).'">'.htmlspecialchars($label).'</option>'; } ?><?php if (count($pools) === 0) echo '<option disabled>Tidak ada IP pool</option>'; ?></select></td></tr>
@@ -27,4 +27,4 @@ if (isset($_POST['save'])) {
 <tr><td><?= $_selling_price . ' ' . $currency ?></td><td><input class="form-control" type="number" min="0" step="any" name="selling-price"></td></tr>
 <tr><td>Expired Mode</td><td><select class="form-control" name="expmode"><option value="none">Tidak ada</option><option value="remove">Remove user</option><option value="disable">Disable user</option></select></td></tr>
 <tr><td>Validity</td><td><input class="form-control" name="validity" placeholder="Contoh: 30d, 12h"></td></tr>
-<tr><td><?= $_comment ?></td><td><input class="form-control" name="comment"></td></tr></table></form></div></div></div></div>
+<tr><td><?= $_comment ?></td><td><input class="form-control" name="comment"></td></tr></table><div class="crud-form-actions"><button class="btn bg-primary" name="save"><i class="fa fa-save"></i> <?= $_save ?></button><a class="btn bg-warning" href="./?ppp=profiles&session=<?= $session ?>"><i class="fa fa-close"></i> <?= $_close ?></a></div></form></div></div></div></div>

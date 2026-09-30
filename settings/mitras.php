@@ -94,7 +94,8 @@ $isEditingMitra = $editMitra && mikhmonFindPartner($formMitra['id']);
   .mitra-form .wide{grid-column:1/-1}
   .mitra-form label{display:block;margin-bottom:5px;font-weight:600}
   .mitra-form textarea{min-height:76px;resize:vertical}
-  .mitra-form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+  .mitra-form-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid rgba(127,127,127,.25)}
+  .mitra-form-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;margin:0;box-sizing:border-box}
   .mitra-toolbar{display:grid;grid-template-columns:minmax(180px,1fr) minmax(150px,210px) auto;gap:8px;margin-bottom:12px;align-items:center}
   .mitra-toolbar .form-control,.mitra-toolbar .btn{height:44px;margin:0;box-sizing:border-box}
   .mitra-table td,.mitra-table th{vertical-align:middle}
@@ -110,7 +111,7 @@ $isEditingMitra = $editMitra && mikhmonFindPartner($formMitra['id']);
   body.mitra-modal-open{overflow:hidden}
   .mitra-page :focus-visible{outline:2px solid #f5a623;outline-offset:2px}
   @media(max-width:750px){.mitra-toolbar{grid-template-columns:1fr 1fr}.mitra-toolbar .mitra-add-button{grid-column:1/-1}.mitra-modal{padding:16px 10px}.mitra-dialog{max-height:calc(100vh - 32px)}}
-  @media(max-width:620px){.mitra-form,.mitra-toolbar{grid-template-columns:1fr}.mitra-form .wide,.mitra-toolbar .mitra-add-button{grid-column:auto}.mitra-form-actions{flex-direction:column}.mitra-form-actions .btn,.mitra-toolbar .btn{width:100%;min-height:44px;margin:0}.mitra-table .btn{min-height:44px}}
+  @media(max-width:620px){.mitra-form,.mitra-toolbar{grid-template-columns:1fr}.mitra-form .wide,.mitra-toolbar .mitra-add-button{grid-column:auto}.mitra-form-actions{align-items:stretch;flex-direction:column}.mitra-form-actions .btn,.mitra-toolbar .btn{width:100%;min-height:44px;margin:0}.mitra-table .btn{min-height:44px}}
 </style>
 <div class="row mitra-page"><div class="col-12">
   <?php if ($mitraMessage !== ''): ?><div class="box bg-success" role="status"><i class="fa fa-check"></i> <?= htmlspecialchars($mitraMessage, ENT_QUOTES); ?></div><?php endif; ?>
@@ -146,7 +147,7 @@ $isEditingMitra = $editMitra && mikhmonFindPartner($formMitra['id']);
           <div><label for="mitra-user">Login Account</label><select id="mitra-user" class="form-control" name="user_id"><option value="">No login account</option><?php foreach ($loginUsers as $loginUser): $usedByOther = isset($linkedUserIds[$loginUser['id']]) && $linkedUserIds[$loginUser['id']] !== $formMitra['id']; ?><option value="<?= htmlspecialchars($loginUser['id'], ENT_QUOTES); ?>" data-role="<?= htmlspecialchars($loginUser['role'], ENT_QUOTES); ?>"<?= $formMitra['user_id'] === $loginUser['id'] ? ' selected' : ''; ?><?= $usedByOther ? ' disabled' : ''; ?>><?= htmlspecialchars($loginUser['name'] . ' (' . strtoupper($loginUser['role']) . ')', ENT_QUOTES); ?></option><?php endforeach; ?></select></div>
           <div class="wide"><label><input type="checkbox" name="active" value="1"<?= !empty($formMitra['active']) ? ' checked' : ''; ?>> Active status</label></div>
         </div>
-        <div class="mitra-form-actions"><button class="btn bg-warning mitra-dialog-cancel" type="button"><i class="fa fa-close"></i> Cancel</button><button class="btn bg-primary" type="submit"><i class="fa fa-save"></i> Save Partner</button></div>
+        <div class="mitra-form-actions"><button class="btn bg-primary" type="submit"><i class="fa fa-save"></i> Save Partner</button><button class="btn bg-warning mitra-dialog-cancel" type="button"><i class="fa fa-close"></i> Cancel</button></div>
       </form>
     </div>
   </div>

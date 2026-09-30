@@ -24,6 +24,8 @@ crudModalAssert(strpos($html, 'min-height:44px') !== false, 'mobile controls kee
 crudModalAssert(strpos($html, '.crud-modal-content .card-header{min-height:52px') !== false, 'header contains the close button');
 crudModalAssert(strpos($html, 'top:4px;right:5px;width:44px;height:44px') !== false, 'close button stays inside the dialog edge');
 crudModalAssert(strpos($html, 'max-height:calc(100dvh - 24px)') !== false, 'mobile modal stays inside the viewport');
+crudModalAssert(strpos($html, '.crud-form-actions{display:flex;flex-wrap:wrap') !== false, 'modal actions wrap cleanly on wider screens');
+crudModalAssert(strpos($html, '.crud-form-actions .btn{width:100%;min-height:44px}') !== false, 'modal actions stack as full-width mobile buttons');
 
 $routerSource = file_get_contents(dirname(__DIR__) . '/index.php');
 $voucherSource = file_get_contents(dirname(__DIR__) . '/hotspot/users.php');
@@ -81,6 +83,7 @@ crudModalAssert(strpos($sessionSource, 'id=settings&amp;router=new-') !== false,
 foreach ($modalSaveSources as $formName => $definition) {
   crudModalAssert(strpos($definition[0], $definition[1]) !== false, $formName . ' returns to its list after save');
   crudModalAssert(strpos($definition[0], 'window.location.replace(') !== false, $formName . ' replaces the modal URL after save');
+  if ($formName !== 'quick print') crudModalAssert(strpos($definition[0], 'crud-form-actions') !== false, $formName . ' uses the shared modal action layout');
 }
 $routerSettingsSource = file_get_contents(dirname(__DIR__) . '/settings/settings.php');
 $userManagementSource = file_get_contents(dirname(__DIR__) . '/settings/users.php');
@@ -88,5 +91,7 @@ $partnerManagementSource = file_get_contents(dirname(__DIR__) . '/settings/mitra
 crudModalAssert(strpos($routerSettingsSource, '$admin === \'session-settings\'') !== false, 'router edit returns to the router list after save');
 crudModalAssert(strpos($userManagementSource, "'&saved=' . \$savedAction") !== false, 'user management redirects after a successful modal save');
 crudModalAssert(strpos($partnerManagementSource, 'window.location.replace(') !== false, 'partner management redirects after a successful modal save');
+crudModalAssert(strpos($userManagementSource, 'class="user-form-actions"') !== false, 'user management uses a responsive modal action footer');
+crudModalAssert(strpos($partnerManagementSource, 'class="mitra-form-actions"') !== false, 'partner management uses a responsive modal action footer');
 
 echo 'crud-modal-tests: OK' . PHP_EOL;

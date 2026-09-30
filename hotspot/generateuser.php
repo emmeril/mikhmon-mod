@@ -415,7 +415,7 @@ date_default_timezone_set($_SESSION['timezone']);
     </td>
 	  </tr>
 	</table>
-	<div class="text-right">
+	<div class="text-right crud-form-actions">
 	  <button type="submit" name="save" onclick="loader()" class="btn bg-primary" title="Generate User"> <i class="fa fa-save"></i> <?= $_generate ?></button>
 	  <a class="btn bg-pink" title="Open Voucher List by Profile <?php if ($_SESSION['ubp'] == "") { echo "all"; } else { echo $uprofile; } ?>" href="./?hotspot=users&profile=<?php if ($_SESSION['ubp'] == "") { echo "all"; } else { echo $uprofile; } ?>&session=<?= $session; ?>"> <i class="fa fa-ticket"></i> Voucher List</a>
 	  <a class="btn bg-secondary" title="Print Default" href="./voucher/print.php?id=<?= $urlprint; ?>&qr=no&session=<?= $session; ?>" target="_blank"> <i class="fa fa-print"></i> <?= $_print ?></a>

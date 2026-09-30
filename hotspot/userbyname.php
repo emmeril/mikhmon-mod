@@ -404,7 +404,7 @@ Login : *http://" . $dnsname . "* %0A
     </td>
   </tr>
 </table>
-<div class="user-edit-actions" style="margin-top:15px;">
+<div class="user-edit-actions crud-form-actions">
   <button type="submit" name="save" class="btn bg-primary"><i class="fa fa-save"></i> <?= $_save ?></button>
   <?php if ($_SESSION['ubp'] != "") {
     echo "<a class='btn bg-warning' href='./?hotspot=users&profile=" . rawurlencode($_SESSION['ubp']) . "&session=" . rawurlencode($session) . "'><i class='fa fa-close'></i> ".$_close."</a>";

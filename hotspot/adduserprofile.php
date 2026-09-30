@@ -202,7 +202,7 @@ if (!isset($_SESSION["mikhmon"])) {
   </td>
   </tr>
 </table>
-  <div class="text-right">
+  <div class="text-right crud-form-actions">
     <button type="submit" name="save" class="btn bg-primary btn-mrg"><i class="fa fa-save btn-mrg"></i> <?= $_save ?></button>
     <a class="btn bg-warning" href="./?hotspot=user-profiles&session=<?= $session; ?>"> <i class="fa fa-close btn-mrg"></i> <?= $_close ?></a>
   </div>

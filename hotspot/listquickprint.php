@@ -165,10 +165,12 @@ $getquickprint = $API->comm("/system/script/print", array("?.id" => "$qpid"));
 	.quick-print-dialog .card-header h3{width:100%;padding-right:48px;box-sizing:border-box}
 	.quick-print-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
 	.quick-print-header h3{margin:0}
+	.quick-print-form-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid rgba(127,127,127,.25)}
+	.quick-print-form-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;margin:0;box-sizing:border-box}
 	body.quick-print-modal-open{overflow:hidden}
 	.quick-print-page :focus-visible{outline:2px solid #f5a623;outline-offset:2px}
 	@media(max-width:750px){.quick-print-modal{padding:12px 8px}.quick-print-dialog{max-height:calc(100dvh - 24px)}}
-	@media(max-width:620px){.quick-print-dialog form>.table,.quick-print-dialog form>.table>tbody,.quick-print-dialog form>.table>tbody>tr,.quick-print-dialog form>.table>tbody>tr>td{display:block;width:100%;box-sizing:border-box}.quick-print-dialog form>.table>tbody>tr{padding:5px 0}.quick-print-dialog form>.table>tbody>tr>td{padding:5px;border:0}.quick-print-header{align-items:flex-start;flex-direction:column}.quick-print-header .btn{width:100%;min-height:44px;box-sizing:border-box}}
+	@media(max-width:620px){.quick-print-dialog form>.table,.quick-print-dialog form>.table>tbody,.quick-print-dialog form>.table>tbody>tr,.quick-print-dialog form>.table>tbody>tr>td{display:block;width:100%;box-sizing:border-box}.quick-print-dialog form>.table>tbody>tr{padding:5px 0}.quick-print-dialog form>.table>tbody>tr>td{padding:5px;border:0}.quick-print-header{align-items:flex-start;flex-direction:column}.quick-print-header .btn{width:100%;min-height:44px;box-sizing:border-box}.quick-print-form-actions{align-items:stretch;flex-direction:column}.quick-print-form-actions .btn{width:100%;min-height:44px}}
 </style>
 <div class="quick-print-page"><div class="row">
 	
@@ -177,13 +179,8 @@ $getquickprint = $API->comm("/system/script/print", array("?.id" => "$qpid"));
 	<div class="card-header">
 	<h3 id="quickPrintModalTitle"><i class="fa fa-ticket"></i> <?php if($quickPrintEditing){echo $_edit;}else{echo $_add;} echo ' '. $_quick_print ?> <small id="loader" style="display: none;" ><i><i class='fa fa-circle-o-notch fa-spin'></i> <?= $_processing ?> </i></small></h3>
 	</div>
-	<div class="card-body">
+<div class="card-body">
 <form autocomplete="off" method="post" action="">
-	<div>
-    <button type="button" class="btn bg-warning quick-print-cancel"><i class="fa fa-close"></i> <?= $quickPrintEditing ? $_cancel : $_close; ?></button>
-
-    <button type="submit" name="save" onclick="loader()" class="btn bg-primary" title="Generate User"> <i class="fa fa-save"></i> <?= $_save ?></button>
-</div>
 <table class="table">
   <tr>
     <td class="align-middle"><?= $_name ?></td><td><div><input class="form-control " type="text" name="name" value="<?= $package ?>" required="1"></div></td>
@@ -289,6 +286,10 @@ $getquickprint = $API->comm("/system/script/print", array("?.id" => "$qpid"));
     </td>
   </tr>
 </table>
+<div class="quick-print-form-actions">
+  <button type="submit" name="save" onclick="loader()" class="btn bg-primary" title="Generate User"><i class="fa fa-save"></i> <?= $_save ?></button>
+  <button type="button" class="btn bg-warning quick-print-cancel"><i class="fa fa-close"></i> <?= $quickPrintEditing ? $_cancel : $_close; ?></button>
+</div>
 </form>
 </div>
 </div>

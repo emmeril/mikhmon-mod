@@ -202,21 +202,14 @@ if (!isset($_SESSION["mikhmon"])) {
 					</tr>
 					<tr>
 						<td colspan="2">
-								<div class="input-group-4">
-									<input class="group-item group-item-md" type="submit" style="cursor: pointer;" name="save" value="Save"/>
-								</div>
-								<div class="input-group-4">	
-                  <span class="connect pointer group-item group-item-md pd-2p5 text-center align-middle" id="<?= $session; ?>&c=settings">Connect</span>
-								</div>
-								<div class="input-group-3">	
-                  <span class="pointer group-item group-item-md pd-2p5 text-center align-middle" id="ping_test">Ping</span>
-              	</div>
-              	<div class="input-group-1">	
-									<div style="cursor: pointer;" class="group-item group-item-r pd-2p5 text-center" onclick="location.reload();" title="Reload Data"><i class="fa fa-refresh"></i></div>
-								</div>
-            		</div>	
-    					</td>
-    				</tr>
+							<div class="crud-form-actions router-form-actions">
+								<button class="btn bg-primary" type="submit" name="save"><i class="fa fa-save"></i> Save</button>
+								<button class="btn bg-green connect" type="button" id="<?= $session; ?>&c=settings"><i class="fa fa-plug"></i> Connect</button>
+								<button class="btn bg-secondary" type="button" id="ping_test"><i class="fa fa-signal"></i> Ping</button>
+								<button class="btn bg-secondary" type="button" onclick="location.reload();" title="Reload Data"><i class="fa fa-refresh"></i> Reload</button>
+							</div>
+						</td>
+					</tr>
 				</table>
 			</div>
     </div>  	

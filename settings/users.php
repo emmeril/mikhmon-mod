@@ -114,11 +114,12 @@ $userModalOpen = $editUser || $userError !== '';
   .user-form-close{position:absolute;z-index:2;top:4px;right:5px;width:44px;height:44px;margin:0;padding:0;border:0;font-size:25px;line-height:44px}
   .user-form-dialog .card-header{min-height:52px;box-sizing:border-box;display:flex;align-items:center}
   .user-form-dialog .card-header h3{width:100%;padding-right:48px;box-sizing:border-box}
-  .user-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+  .user-form-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid rgba(127,127,127,.25)}
+  .user-form-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;margin:0;box-sizing:border-box}
   .user-management-page :focus-visible{outline:2px solid #f5a623;outline-offset:2px}
   body.user-form-open{overflow:hidden}
   @media(max-width:750px){.user-form-modal{padding:12px 8px}.user-form-dialog{max-height:calc(100dvh - 24px)}}
-  @media(max-width:620px){.user-form-dialog form>.table,.user-form-dialog form>.table>tbody,.user-form-dialog form>.table>tbody>tr,.user-form-dialog form>.table>tbody>tr>td{display:block;width:100%;box-sizing:border-box}.user-form-dialog form>.table>tbody>tr{padding:5px 0}.user-form-dialog form>.table>tbody>tr>td{padding:5px;border:0}.user-form-actions{flex-direction:column-reverse}.user-form-actions .btn{width:100%;min-height:44px;margin:0}.user-management-header{align-items:flex-start;flex-direction:column}.user-management-header .btn{width:100%;min-height:44px;box-sizing:border-box}}
+  @media(max-width:620px){.user-form-dialog form>.table,.user-form-dialog form>.table>tbody,.user-form-dialog form>.table>tbody>tr,.user-form-dialog form>.table>tbody>tr>td{display:block;width:100%;box-sizing:border-box}.user-form-dialog form>.table>tbody>tr{padding:5px 0}.user-form-dialog form>.table>tbody>tr>td{padding:5px;border:0}.user-form-actions{align-items:stretch;flex-direction:column}.user-form-actions .btn{width:100%;min-height:44px;margin:0}.user-management-header{align-items:flex-start;flex-direction:column}.user-management-header .btn{width:100%;min-height:44px;box-sizing:border-box}}
 </style>
 <div class="user-management-page">
 <div class="row">
@@ -140,7 +141,7 @@ $userModalOpen = $editUser || $userError !== '';
             <tr><td><?= $editUser ? 'Password Baru' : 'Password'; ?></td><td><input class="form-control" type="password" name="password"<?= $editUser ? ' placeholder="Kosongkan jika tidak diubah"' : ' required'; ?>></td></tr>
             <tr><td>Status</td><td><label><input type="checkbox" name="active" value="1"<?= !$editUser || !empty($editUser['active']) ? ' checked' : ''; ?>> Aktif</label></td></tr>
           </table>
-          <div class="user-form-actions"><button class="btn bg-warning user-form-cancel" type="button"><i class="fa fa-close"></i> Batal</button><button class="btn bg-primary" type="submit"><i class="fa fa-save"></i> Simpan</button></div>
+          <div class="user-form-actions"><button class="btn bg-primary" type="submit"><i class="fa fa-save"></i> Simpan</button><button class="btn bg-warning user-form-cancel" type="button"><i class="fa fa-close"></i> Batal</button></div>
         </form>
       </div>
     </div>
