@@ -199,6 +199,12 @@ $pppoeCustomers = count($pppoeCustomerNames);
         <div class="col-4 col-box-6"><div class="box bg-yellow bmh-75"><a href="./?customer=service-add&service=pppoe&session=<?= $session; ?>"><h1><i class="fa fa-user-plus"></i> <span style="font-size:15px"><?= $_add ?></span></h1><div><i class="fa fa-user-plus"></i> <?= $_ppp_secrets ?></div></a></div></div>
       </div></div></div></div>
 
+      <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-address-card"></i> Pelanggan</h3></div><div class="card-body"><div class="row">
+        <div class="col-4"><div class="box bg-blue bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= count($mitraCustomers); ?></h1><div><i class="fa fa-users"></i> Pelanggan</div></a></div></div>
+        <div class="col-4"><div class="box bg-green bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= $hotspotCustomers; ?></h1><div><i class="fa fa-wifi"></i> Hotspot</div></a></div></div>
+        <div class="col-4"><div class="box bg-yellow bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= $pppoeCustomers; ?></h1><div><i class="fa fa-exchange"></i> PPPoE</div></a></div></div>
+      </div></div></div></div>
+
       <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-area-chart"></i> <?= $_traffic ?></h3></div><div class="card-body">
         <div id="mitraTrafficMonitor"></div>
       </div></div></div>
@@ -283,12 +289,6 @@ $pppoeCustomers = count($pppoeCustomerNames);
         });
       })();
       </script>
-
-      <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-address-card"></i> Pelanggan</h3></div><div class="card-body"><div class="row">
-        <div class="col-4"><div class="box bg-blue bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= count($mitraCustomers); ?></h1><div><i class="fa fa-users"></i> Pelanggan</div></a></div></div>
-        <div class="col-4"><div class="box bg-green bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= $hotspotCustomers; ?></h1><div><i class="fa fa-wifi"></i> Hotspot</div></a></div></div>
-        <div class="col-4"><div class="box bg-yellow bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= $pppoeCustomers; ?></h1><div><i class="fa fa-exchange"></i> PPPoE</div></a></div></div>
-      </div></div></div></div>
     </div>
 
     <div class="col-4 mitra-dashboard-column mitra-dashboard-right">
