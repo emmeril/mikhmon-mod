@@ -145,7 +145,9 @@ $getquickprint = $API->comm("/system/script/print", array("?.id" => "$qpid"));
 				));
 			}
 
-		echo "<script>window.location='./?hotspot=list-quick-print&session=" . $session . "'</script>";
+		$target = './?hotspot=list-quick-print&session=' . rawurlencode($session);
+		echo '<script>window.location.replace(' . json_encode($target) . ')</script>';
+		exit;
 		
 	}
 

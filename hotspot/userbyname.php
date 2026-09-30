@@ -239,7 +239,9 @@ Login : *http://" . $dnsname . "* %0A
         "limit-bytes-total" => "$datalimit",
         "comment" => "$comment",
       ));
-      echo "<script>window.location='./?hotspot-user=" . $uid . "&session=" . $session . "'</script>";
+      $target = './?hotspot=users&profile=all&session=' . rawurlencode($session);
+      echo '<script>window.location.replace(' . json_encode($target) . ')</script>';
+      exit;
     }
   }
 }

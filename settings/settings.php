@@ -96,10 +96,10 @@ if (!isset($_SESSION["mikhmon"])) {
       $configLine = mikhmonBuildRouterConfigLine($sesname, $newRouterData);
       file_put_contents('./include/config.php', $configLine, FILE_APPEND);
       $_SESSION["connect"] = "";
-      $settingsTarget = isset($_GET['return']) && $_GET['return'] === 'routers'
+      $settingsTarget = (isset($_GET['return']) && $_GET['return'] === 'routers') || (isset($admin) && $admin === 'router-add')
         ? './?admin=routers&session=' . rawurlencode($sesname)
         : './admin.php?id=settings&session=' . rawurlencode($sesname);
-      echo "<script>window.location=" . json_encode($settingsTarget) . "</script>";
+      echo '<script>window.location.replace(' . json_encode($settingsTarget) . ')</script>';
       exit;
     }
 
@@ -114,10 +114,11 @@ if (!isset($_SESSION["mikhmon"])) {
         file_put_contents("./include/config.php", $newcontent);
       }
       $_SESSION["connect"] = "";
-      $settingsTarget = isset($_GET['return']) && $_GET['return'] === 'routers'
+      $settingsTarget = (isset($_GET['return']) && $_GET['return'] === 'routers') || (isset($admin) && $admin === 'session-settings')
         ? './?admin=routers&session=' . rawurlencode($sesname)
         : './admin.php?id=settings&session=' . rawurlencode($sesname);
-      echo "<script>window.location=" . json_encode($settingsTarget) . "</script>";
+      echo '<script>window.location.replace(' . json_encode($settingsTarget) . ')</script>';
+      exit;
     }
   }
   if ($currency == "" && !$isNewRouter) {

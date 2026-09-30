@@ -243,11 +243,9 @@ date_default_timezone_set($_SESSION['timezone']);
 		}
 
 
-		if ($qty < 2 && !(function_exists('mikhmonIsMitra') && mikhmonIsMitra())) {
-			echo "<script>window.location='./?hotspot-user=" . $u[1] . "&session=" . $session . "'</script>";
-		} else {
-			echo "<script>window.location='./?hotspot-user=generate&session=" . $session . "'</script>";
-		}
+		$target = './?hotspot=users&profile=all&session=' . rawurlencode($session);
+		echo '<script>window.location.replace(' . json_encode($target) . ')</script>';
+		exit;
 		}
 	}
 

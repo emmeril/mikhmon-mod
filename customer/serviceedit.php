@@ -113,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['service_action'] ?? '') ==
         $schedulerRows = $API->comm('/system/scheduler/print', array('?name' => $schedulerName));
         if (serviceEditApiError($schedulerRows) === '') foreach ((array) $schedulerRows as $schedulerRow) if (isset($schedulerRow['.id'])) $API->comm('/system/scheduler/remove', array('.id' => $schedulerRow['.id']));
         $query = './?customer=list&session=' . rawurlencode($session) . '&service-updated=1';
-        echo '<script>window.location=' . json_encode($query) . '</script>'; exit;
+        echo '<script>window.location.replace(' . json_encode($query) . ')</script>'; exit;
       }
     }
   }

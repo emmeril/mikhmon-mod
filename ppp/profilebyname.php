@@ -11,7 +11,8 @@ if (!is_array($pools)) {
 if (isset($_POST['save'])) {
   $profileComment=pppProfileMetaEncode($_POST['price'],$_POST['selling-price'],$_POST['comment'],$_POST['expmode'],$_POST['validity']);
   $API->comm("/ppp/profile/set",array(".id"=>$profile['.id'],"name"=>trim($_POST['name']),"local-address"=>$_POST['local-address'],"remote-address"=>$_POST['remote-address'],"rate-limit"=>$_POST['rate-limit'],"dns-server"=>$_POST['dns-server'],"comment"=>$profileComment,"on-up"=>pppProfileOnUpScript($_POST['expmode'],$_POST['validity'],trim($_POST['name']),$_POST['price'],$_POST['selling-price'])));
-  echo "<script>window.location='./?ppp=profiles&session=" . $session . "'</script>"; exit;
+  $target = './?ppp=profiles&session=' . rawurlencode($session);
+  echo '<script>window.location.replace(' . json_encode($target) . ')</script>'; exit;
 }
 function pv($key,$row){return htmlspecialchars(isset($row[$key])?$row[$key]:'',ENT_QUOTES);}
 function poolOptions($pools,$selected){$found=false; foreach($pools as $pool){if(!isset($pool['name']))continue; $poolName=$pool['name']; $isSelected=$poolName===$selected; $found=$found||$isSelected; $label=$poolName.(isset($pool['ranges'])&&$pool['ranges']!==''?' - '.$pool['ranges']:''); echo '<option value="'.htmlspecialchars($poolName,ENT_QUOTES).'"'.($isSelected?' selected':'').'>'.htmlspecialchars($label).'</option>';} if($selected!==''&&!$found)echo '<option value="'.htmlspecialchars($selected,ENT_QUOTES).'" selected>'.htmlspecialchars($selected).' (nilai saat ini)</option>';}

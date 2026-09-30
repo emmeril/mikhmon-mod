@@ -34,6 +34,21 @@ $pppProfileSource = file_get_contents(dirname(__DIR__) . '/ppp/pppprofile.php');
 $identitySource = file_get_contents(dirname(__DIR__) . '/customer/identities.php');
 $customerSource = file_get_contents(dirname(__DIR__) . '/customer/customers.php');
 $sessionSource = file_get_contents(dirname(__DIR__) . '/settings/sessions.php');
+$modalSaveSources = array(
+  'hotspot user add' => array(file_get_contents(dirname(__DIR__) . '/hotspot/adduser.php'), './?hotspot=users&profile=all&session='),
+  'hotspot user edit' => array(file_get_contents(dirname(__DIR__) . '/hotspot/userbyname.php'), './?hotspot=users&profile=all&session='),
+  'hotspot voucher generator' => array(file_get_contents(dirname(__DIR__) . '/hotspot/generateuser.php'), './?hotspot=users&profile=all&session='),
+  'hotspot profile add' => array(file_get_contents(dirname(__DIR__) . '/hotspot/adduserprofile.php'), './?hotspot=user-profiles&session='),
+  'hotspot profile edit' => array(file_get_contents(dirname(__DIR__) . '/hotspot/userprofilebyname.php'), './?hotspot=user-profiles&session='),
+  'PPPoE user add' => array(file_get_contents(dirname(__DIR__) . '/ppp/addsecret.php'), './?ppp=secrets&session='),
+  'PPPoE user edit' => array(file_get_contents(dirname(__DIR__) . '/ppp/secretbyname.php'), './?ppp=secrets&session='),
+  'PPPoE profile add' => array(file_get_contents(dirname(__DIR__) . '/ppp/addpppprofile.php'), './?ppp=profiles&session='),
+  'PPPoE profile edit' => array(file_get_contents(dirname(__DIR__) . '/ppp/profilebyname.php'), './?ppp=profiles&session='),
+  'customer identity' => array(file_get_contents(dirname(__DIR__) . '/customer/identityadd.php'), './?customer=identity-list&session='),
+  'customer service add' => array(file_get_contents(dirname(__DIR__) . '/customer/serviceadd.php'), './?customer=list&session='),
+  'customer service edit' => array(file_get_contents(dirname(__DIR__) . '/customer/serviceedit.php'), './?customer=list&session='),
+  'quick print' => array(file_get_contents(dirname(__DIR__) . '/hotspot/listquickprint.php'), './?hotspot=list-quick-print&session='),
+);
 crudModalAssert(strpos($routerSource, "'Generate hotspot vouchers'") !== false, 'voucher generator route uses the modal shell');
 crudModalAssert(strpos($voucherSource, 'class="btn bg-green" href="./?hotspot-user=generate') !== false, 'voucher list shows the generator button');
 crudModalAssert(strpos($voucherSource, 'class="btn bg-primary" href="./?hotspot-user=add') !== false, 'voucher list shows the add-user button');
@@ -63,5 +78,15 @@ crudModalAssert(strpos($pppProfileSource, 'href="./?ppp=add-profile') !== false,
 crudModalAssert(strpos($identitySource, 'href="./?customer=identity-add') !== false, 'identity list keeps its add button');
 crudModalAssert(strpos($customerSource, 'href="./?customer=service-add') !== false, 'customer list keeps its add-service button');
 crudModalAssert(strpos($sessionSource, 'id=settings&amp;router=new-') !== false, 'router list keeps its add button');
+foreach ($modalSaveSources as $formName => $definition) {
+  crudModalAssert(strpos($definition[0], $definition[1]) !== false, $formName . ' returns to its list after save');
+  crudModalAssert(strpos($definition[0], 'window.location.replace(') !== false, $formName . ' replaces the modal URL after save');
+}
+$routerSettingsSource = file_get_contents(dirname(__DIR__) . '/settings/settings.php');
+$userManagementSource = file_get_contents(dirname(__DIR__) . '/settings/users.php');
+$partnerManagementSource = file_get_contents(dirname(__DIR__) . '/settings/mitras.php');
+crudModalAssert(strpos($routerSettingsSource, '$admin === \'session-settings\'') !== false, 'router edit returns to the router list after save');
+crudModalAssert(strpos($userManagementSource, "'&saved=' . \$savedAction") !== false, 'user management redirects after a successful modal save');
+crudModalAssert(strpos($partnerManagementSource, 'window.location.replace(') !== false, 'partner management redirects after a successful modal save');
 
 echo 'crud-modal-tests: OK' . PHP_EOL;

@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mitra_action'])) {
         $mitraError = $mitraT('Partner could not be saved. Check the name, email, and login account.');
       } else {
         mikhmonSystemLog('success', 'Mitra', ($existingMitra ? 'Memperbarui' : 'Membuat') . ' Mitra ' . trim((string) $partner['name']) . '.', mikhmonSystemLogCurrentUser(array('session' => $session)));
-        header('Location: ' . $mitraBaseUrl . '&saved=1');
+        echo '<script>window.location.replace(' . json_encode($mitraBaseUrl . '&saved=1') . ')</script>';
         exit;
       }
     }
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mitra_action'])) {
       $mitraError = $mitraT('Partner could not be deleted.');
     } else {
       mikhmonSystemLog('warning', 'Mitra', 'Menghapus Mitra ' . $partner['name'] . '.', mikhmonSystemLogCurrentUser(array('session' => $session)));
-      header('Location: ' . $mitraBaseUrl . '&deleted=1');
+      echo '<script>window.location.replace(' . json_encode($mitraBaseUrl . '&deleted=1') . ')</script>';
       exit;
     }
   }

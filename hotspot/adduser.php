@@ -78,8 +78,9 @@ if (!isset($_SESSION["mikhmon"])) {
       $getuser = $API->comm("/ip/hotspot/user/print", array(
       "?name" => "$name",
       ));
-      $uid = $getuser[0]['.id'];
-      echo "<script>window.location='./?hotspot-user=" . $uid . "&session=" . $session . "'</script>";
+      $target = './?hotspot=users&profile=all&session=' . rawurlencode($session);
+      echo '<script>window.location.replace(' . json_encode($target) . ')</script>';
+      exit;
     }
   }
 }

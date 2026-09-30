@@ -8,7 +8,8 @@ if (isset($_POST['save'])) {
   if ($name === '' || $password === '') $error = 'Username dan password wajib diisi.';
   else {
     $API->comm('/ppp/secret/add', array('name'=>$name,'password'=>$password,'service'=>$_POST['service'],'profile'=>$_POST['profile'],'local-address'=>$_POST['local-address'],'remote-address'=>$_POST['remote-address'],'caller-id'=>$_POST['caller-id'],'comment'=>$_POST['comment'],'disabled'=>'no'));
-    echo "<script>window.location='./?ppp=secrets&session=".$session."'</script>"; exit;
+    $target = './?ppp=secrets&session=' . rawurlencode($session);
+    echo '<script>window.location.replace(' . json_encode($target) . ')</script>'; exit;
   }
 }
 ?>

@@ -38,8 +38,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (mikhmonSaveUser($userId, $name, $username, $role, $routerSession, $password, $active) === false) {
       $userError = 'Pengguna gagal disimpan. Pastikan semua data lengkap, username unik, dan password diisi untuk akun baru.';
     } else {
-      $userMessage = $userId === '' ? 'Akun pengguna berhasil dibuat.' : 'Akun pengguna berhasil diperbarui.';
+      $savedAction = $userId === '' ? 'created' : 'updated';
       mikhmonSystemLog('success', 'Manajemen User', ($userId === '' ? 'Membuat' : 'Memperbarui') . ' akun ' . $username . ' dengan role ' . strtoupper($role) . '.', mikhmonSystemLogCurrentUser(array('session' => $role === 'admin' ? '' : $routerSession)));
+      echo '<script>window.location.replace(' . json_encode($userManagementBaseUrl . '&saved=' . $savedAction) . ')</script>';
+      exit;
     }
   } elseif ($action === 'delete') {
     $userId = isset($_POST['user_id']) ? (string) $_POST['user_id'] : '';
@@ -56,6 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 
+if (isset($_GET['saved']) && $_GET['saved'] === 'created') $userMessage = 'Akun pengguna berhasil dibuat.';
+if (isset($_GET['saved']) && $_GET['saved'] === 'updated') $userMessage = 'Akun pengguna berhasil diperbarui.';
 if (!empty($_GET['user-id'])) $editUser = mikhmonFindUser($_GET['user-id']);
 $users = mikhmonGetUsers();
 $commissionCurrency = isset($currency) && trim((string) $currency) !== '' ? (string) $currency : 'Rp';

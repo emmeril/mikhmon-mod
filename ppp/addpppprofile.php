@@ -14,7 +14,8 @@ if (isset($_POST['save'])) {
     "dns-server" => $_POST['dns-server'], "comment" => $profileComment,
     "on-up" => pppProfileOnUpScript($_POST['expmode'], $_POST['validity'], trim($_POST['name']), $_POST['price'], $_POST['selling-price'])
   ));
-  echo "<script>window.location='./?ppp=profiles&session=" . $session . "'</script>"; exit;
+  $target = './?ppp=profiles&session=' . rawurlencode($session);
+  echo '<script>window.location.replace(' . json_encode($target) . ')</script>'; exit;
 }
 ?>
 <div class="row"><div class="col-8"><div class="card box-bordered"><div class="card-header"><h3><i class="fa fa-plus"></i> <?= $_ppp_profiles ?></h3></div><div class="card-body"><form method="post"><a class="btn bg-warning" href="./?ppp=profiles&session=<?= $session ?>"><?= $_close ?></a> <button class="btn bg-primary" name="save"><?= $_save ?></button><table class="table">

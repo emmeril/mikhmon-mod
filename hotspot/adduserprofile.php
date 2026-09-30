@@ -117,11 +117,9 @@ if (!isset($_SESSION["mikhmon"])) {
           ".id" => "$monid"));
       }
 
-    $getprofile = $API->comm("/ip/hotspot/user/profile/print", array(
-      "?name" => "$name",
-    ));
-    $pid = $getprofile[0]['.id'];
-    echo "<script>window.location='./?user-profile=" . $pid . "&session=" . $session . "'</script>";
+    $target = './?hotspot=user-profiles&session=' . rawurlencode($session);
+    echo '<script>window.location.replace(' . json_encode($target) . ')</script>';
+    exit;
   }
 }
 ?>

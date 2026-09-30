@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['service_action'] ?? '') ==
     } elseif ($localOwnerCustomerId === (string) $customerId) {
       // Make retries idempotent when the router and local save both completed.
       $query = './?customer=list&session=' . rawurlencode($session) . '&service-added=1';
-      echo "<script>window.location=" . json_encode($query) . "</script>"; exit;
+      echo '<script>window.location.replace(' . json_encode($query) . ')</script>'; exit;
     }
     if ($serviceError !== '') {
       // Keep the router state untouched when the local username is already owned.
@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['service_action'] ?? '') ==
         $schedulerRows = $API->comm('/system/scheduler/print', array('?name' => $schedulerName));
         if (serviceAddApiError($schedulerRows) === '' && is_array($schedulerRows)) foreach ($schedulerRows as $schedulerRow) if (isset($schedulerRow['.id'])) $API->comm('/system/scheduler/remove', array('.id' => $schedulerRow['.id']));
         $query = './?customer=list&session=' . rawurlencode($session) . '&service-added=1';
-        echo "<script>window.location=" . json_encode($query) . "</script>"; exit;
+        echo '<script>window.location.replace(' . json_encode($query) . ')</script>'; exit;
       }
     }
     }

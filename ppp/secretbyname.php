@@ -7,7 +7,9 @@ $profiles = $API->comm('/ppp/profile/print');
 if (isset($_POST['save'])) {
   $args = array('.id'=>$user['.id'],'name'=>trim($_POST['name']),'service'=>$_POST['service'],'profile'=>$_POST['profile'],'local-address'=>$_POST['local-address'],'remote-address'=>$_POST['remote-address'],'caller-id'=>$_POST['caller-id'],'comment'=>$_POST['comment']);
   if ($_POST['password'] !== '') $args['password'] = $_POST['password'];
-  $API->comm('/ppp/secret/set',$args); echo "<script>window.location='./?ppp=secrets&session=".$session."'</script>"; exit;
+  $API->comm('/ppp/secret/set',$args);
+  $target = './?ppp=secrets&session=' . rawurlencode($session);
+  echo '<script>window.location.replace(' . json_encode($target) . ')</script>'; exit;
 }
 function val($k,$u){return htmlspecialchars(isset($u[$k])?$u[$k]:'',ENT_QUOTES);}
 ?>

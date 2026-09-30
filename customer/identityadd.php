@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['identity_action'])) {
     if ($savedId === false) $identityError = 'Identitas pelanggan gagal disimpan.';
     else {
       $query = './?customer=identity-list&session=' . rawurlencode($session) . '&saved=1';
-      echo "<script>window.location=" . json_encode($query) . "</script>"; exit;
+      echo '<script>window.location.replace(' . json_encode($query) . ')</script>'; exit;
     }
   }
 }
