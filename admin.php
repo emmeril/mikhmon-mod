@@ -99,7 +99,7 @@ if ($id == "login" || substr($url, -1) == "p") {
           $loginSession = mikhmonDefaultRouterSession($data);
         } else {
           $staffSession = rawurlencode($staff['session']);
-          $target = $staff['role'] === 'biller' ? './?billing=1&session=' . $staffSession : './?session=' . $staffSession;
+          $target = $staff['role'] === 'biller' ? './?billing=unpaid&session=' . $staffSession : './?session=' . $staffSession;
           $loginSession = $staff['session'];
         }
         mikhmonSystemLog('success', 'Autentikasi', 'Pengguna berhasil login.', mikhmonSystemLogCurrentUser(array('session' => $loginSession)));
@@ -127,7 +127,7 @@ if ($id == "login" || substr($url, -1) == "p") {
   echo "<script>window.location='./admin.php?id=login'</script>";
 } elseif (!mikhmonIsAdmin() && $id !== 'logout') {
   $staffSession = rawurlencode(mikhmonAssignedSession());
-  $target = mikhmonIsBiller() ? './?billing=1&session=' . $staffSession : './?session=' . $staffSession;
+  $target = mikhmonIsBiller() ? './?billing=unpaid&session=' . $staffSession : './?session=' . $staffSession;
   echo "<script>window.location=" . json_encode($target) . "</script>";
 } elseif (substr($url, -1) == "/" || substr($url, -4) == ".php") {
   echo "<script>window.location=" . json_encode(mikhmonAdminLandingUrl($data)) . "</script>";

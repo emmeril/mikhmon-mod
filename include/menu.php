@@ -104,11 +104,16 @@ if (!isset($_SESSION["mikhmon"])) {
   } elseif ($commission == "1") {
     $scommission = "active";
     $mpage = "Komisi Saya";
-  } elseif ($billing == "1") {
-    $mcustomers = "active";
-    $customermenu = "menu-open";
-    $sbilling = "active";
-    $mpage = "Billing";
+  } elseif (in_array($billing, array("1", "unpaid", "paid"), true)) {
+    $mbilling = "active";
+    $billingmenu = "menu-open";
+    if ($billing === "paid") {
+      $spaidinvoice = "active";
+      $mpage = "Invoice Paid";
+    } else {
+      $sunpaidinvoice = "active";
+      $mpage = "Invoice Unpaid";
+    }
   } elseif (in_array($customer, array("list", "identity-list", "identity-add", "identity-edit", "service-add", "add", "edit"), true)) {
     $mcustomers = "active";
     $customermenu = "menu-open";
@@ -263,6 +268,17 @@ if($idleto != "disable"){
     box-sizing: border-box;
     padding-bottom: 24px;
   }
+  #sidenav .dropdown-btn {
+    min-height: 44px;
+  }
+  #sidenav .dropdown-btn:focus-visible,
+  #sidenav a:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -2px;
+  }
+  .billing-submenu-label {
+    text-transform: uppercase;
+  }
 </style>
 
 
@@ -405,7 +421,11 @@ include('./info.php');
 <div id="sidenav" class="sidenav">
   <div class="menu text-center align-middle card-header" style="border-radius:0;"><h3><?= $identity; ?></h3><?php if (!mikhmonIsAdmin()): ?><small><?= htmlspecialchars(mikhmonUserName(), ENT_QUOTES); ?> &middot; <?= strtoupper(htmlspecialchars(mikhmonRole(), ENT_QUOTES)); ?></small><?php endif; ?></div>
 <?php if (mikhmonIsBiller()): ?>
-  <a href="./?billing=1&session=<?= $session; ?>" class="menu <?= $sbilling; ?>"><i class="fa fa-money"></i> Billing</a>
+  <div class="dropdown-btn <?= $mbilling; ?>" role="button" tabindex="0" aria-label="Buka submenu Billing" aria-expanded="<?= $billingmenu === 'menu-open' ? 'true' : 'false'; ?>"><i class="fa fa-money"></i> Billing <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-container <?= $billingmenu; ?>">
+    <a href="./?billing=unpaid&session=<?= $session; ?>" class="<?= $sunpaidinvoice; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-file-text-o"></i> <span class="billing-submenu-label">Invoice Unpaid</span></a>
+    <a href="./?billing=paid&session=<?= $session; ?>" class="<?= $spaidinvoice; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-check-square-o"></i> <span class="billing-submenu-label">Invoice Paid</span></a>
+  </div>
   <a href="./?commission=1&session=<?= $session; ?>" class="menu <?= $scommission; ?>"><i class="fa fa-line-chart"></i> Komisi Saya</a>
 <?php elseif (mikhmonIsMitra()): ?>
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
@@ -433,7 +453,11 @@ include('./info.php');
     <a href="./?customer=identity-list&session=<?= $session; ?>" class="<?= $sidentitylist; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-id-card"></i> Daftar Identitas</a>
     <a href="./?customer=service-add&session=<?= $session; ?>" class="<?= $sserviceadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-link"></i> Tambah Layanan</a>
     <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> Daftar Pelanggan</a>
-    <a href="./?billing=1&session=<?= $session; ?>" class="<?= $sbilling; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-money"></i> Billing</a>
+  </div>
+  <div class="dropdown-btn <?= $mbilling; ?>" role="button" tabindex="0" aria-label="Buka submenu Billing" aria-expanded="<?= $billingmenu === 'menu-open' ? 'true' : 'false'; ?>"><i class="fa fa-money"></i> Billing <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-container <?= $billingmenu; ?>">
+    <a href="./?billing=unpaid&session=<?= $session; ?>" class="<?= $sunpaidinvoice; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-file-text-o"></i> <span class="billing-submenu-label">Invoice Unpaid</span></a>
+    <a href="./?billing=paid&session=<?= $session; ?>" class="<?= $spaidinvoice; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-check-square-o"></i> <span class="billing-submenu-label">Invoice Paid</span></a>
   </div>
   <div class="dropdown-btn <?= $sselling; ?>"><i class="fa fa-money"></i> <?= $_report ?> <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $reportmenu; ?>">
@@ -492,7 +516,11 @@ include('./info.php');
     <a href="./?customer=identity-list&session=<?= $session; ?>" class="<?= $sidentitylist; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-id-card"></i> Daftar Identitas</a>
     <a href="./?customer=service-add&session=<?= $session; ?>" class="<?= $sserviceadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-link"></i> Tambah Layanan</a>
     <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> Daftar Pelanggan</a>
-    <a href="./?billing=1&session=<?= $session; ?>" class="<?= $sbilling; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-money"></i> Billing</a>
+  </div>
+  <div class="dropdown-btn <?= $mbilling; ?>" role="button" tabindex="0" aria-label="Buka submenu Billing" aria-expanded="<?= $billingmenu === 'menu-open' ? 'true' : 'false'; ?>"><i class="fa fa-money"></i> Billing <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-container <?= $billingmenu; ?>">
+    <a href="./?billing=unpaid&session=<?= $session; ?>" class="<?= $sunpaidinvoice; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-file-text-o"></i> <span class="billing-submenu-label">Invoice Unpaid</span></a>
+    <a href="./?billing=paid&session=<?= $session; ?>" class="<?= $spaidinvoice; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-check-square-o"></i> <span class="billing-submenu-label">Invoice Paid</span></a>
   </div>
    <!--log-->
   <div class="dropdown-btn <?= $log; ?>"><i class=" fa fa-align-justify"></i> <?= $_log ?>
@@ -544,6 +572,21 @@ include('./info.php');
 </div>
 <script>
 $(document).ready(function(){
+  $('.dropdown-btn[role="button"]').each(function(){
+    var submenuOpen = window.getComputedStyle(this.nextElementSibling).display === 'block';
+    this.nextElementSibling.style.display = submenuOpen ? 'block' : 'none';
+    this.setAttribute('aria-expanded', submenuOpen ? 'true' : 'false');
+  }).on('keydown', function(event){
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.click();
+    }
+  }).on('click', function(){
+    var control = this;
+    window.setTimeout(function(){
+      control.setAttribute('aria-expanded', window.getComputedStyle(control.nextElementSibling).display === 'block' ? 'true' : 'false');
+    }, 0);
+  });
   $(".connect").change(function(){
     notify("<?= $_connecting ?>");
     connect(this.value)

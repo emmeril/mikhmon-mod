@@ -2,7 +2,7 @@
 error_reporting(0);
 
 if (!isset($_SESSION['mikhmon']) || !mikhmonIsBiller()) {
-  header('Location:./?billing=1&session=' . rawurlencode($session));
+  header('Location:./?billing=unpaid&session=' . rawurlencode($session));
   exit;
 }
 

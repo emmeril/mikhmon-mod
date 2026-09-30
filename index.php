@@ -47,7 +47,7 @@ if (!isset($_SESSION["mikhmon"])) {
     $landingTarget = mikhmonAdminLandingUrl($data);
   } else {
     $assignedSession = rawurlencode(mikhmonAssignedSession());
-    $landingTarget = mikhmonIsBiller() ? './?billing=1&session=' . $assignedSession : './?session=' . $assignedSession;
+    $landingTarget = mikhmonIsBiller() ? './?billing=unpaid&session=' . $assignedSession : './?session=' . $assignedSession;
   }
   echo "<script>window.location=" . json_encode($landingTarget) . "</script>";
 } else {
@@ -88,7 +88,7 @@ if (!isset($_SESSION["mikhmon"])) {
   }
   if (!mikhmonIsAdmin() && mikhmonAssignedSession() !== '' && (string) $session !== mikhmonAssignedSession()) {
     $assignedSession = rawurlencode(mikhmonAssignedSession());
-    $assignedTarget = mikhmonIsBiller() ? './?billing=1&session=' . $assignedSession : './?session=' . $assignedSession;
+    $assignedTarget = mikhmonIsBiller() ? './?billing=unpaid&session=' . $assignedSession : './?session=' . $assignedSession;
     header('Location: ' . $assignedTarget);
     exit;
   }
@@ -162,7 +162,7 @@ if (!isset($_SESSION["mikhmon"])) {
 
   $requestedRoute = 'other';
   if ($hotspot == 'logout') $requestedRoute = 'logout';
-  elseif ($billing == '1') $requestedRoute = 'billing';
+  elseif (in_array($billing, array('1', 'unpaid', 'paid'), true)) $requestedRoute = 'billing';
   elseif ($commission == '1') $requestedRoute = 'commission';
   elseif ($customer == 'list' && $customerid != '') $requestedRoute = 'customer-identity-edit';
   elseif ($customer == 'list') $requestedRoute = 'customer-list';
@@ -196,7 +196,7 @@ if (!isset($_SESSION["mikhmon"])) {
 
   if (!mikhmonCanOpenMainRoute($requestedRoute)) {
     $roleTarget = mikhmonIsBiller()
-      ? './?billing=1&session=' . rawurlencode($session)
+      ? './?billing=unpaid&session=' . rawurlencode($session)
       : './?session=' . rawurlencode($session);
     header('Location: ' . $roleTarget);
     exit;
@@ -315,7 +315,7 @@ if (!isset($_SESSION["mikhmon"])) {
   elseif ($commission == "1") {
     include_once('./customer/commission.php');
   }
-  elseif ($billing == "1") {
+  elseif (in_array($billing, array("1", "unpaid", "paid"), true)) {
     include_once('./customer/billing.php');
   }
   elseif ($customer == "list" && $customerid != "") {

@@ -543,6 +543,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 
+$billingView = $billing === 'paid' ? 'paid' : 'unpaid';
+$currentMonth = date('Y-m');
+$monthNames = array(1 => 'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER');
+$currentMonthLabel = $monthNames[(int) date('n')] . ' ' . date('Y');
+$unpaidInvoiceCount = 0;
+$isolatedInvoiceCount = 0;
+$unpaidInvoiceAmount = 0;
+$currentInvoiceCount = 0;
+$paidMonthAmount = 0;
+$paidMonthCommission = 0;
+
 // Keep the paid invoice as the primary status until the reminder window opens.
 // The following invoice becomes actionable together with its WhatsApp reminder.
 $latestInvoices = array();
@@ -559,31 +570,133 @@ foreach ($invoices as $invoice) if (isset($invoice['customer_id'])) {
 }
 foreach ($invoiceCandidates as $key => $candidates) {
   $paid = $candidates['paid']; $unpaid = $candidates['unpaid'];
+  if ($billingView === 'paid') { if ($paid) $latestInvoices[$key] = $paid; continue; }
   if (!$unpaid) { if ($paid) $latestInvoices[$key] = $paid; continue; }
   $unpaidDue = billingDueTimestamp($unpaid['due_date'] ?? '');
   $unpaidWindowOpen = $unpaidDue <= 0 || mikhmonBillingAutomationPaymentWindowOpen($unpaidDue, $fonnteConfig['reminder_days'] ?? 7);
   $latestInvoices[$key] = $paid && !$unpaidWindowOpen ? $paid : $unpaid;
 }
+$billingRows = array();
+if ($billingView === 'paid') {
+  foreach ($invoices as $paidInvoice) {
+    if (($paidInvoice['status'] ?? '') !== 'paid') continue;
+    $paidCustomer = billingFindCustomer($customers, $paidInvoice['customer_id'] ?? '');
+    if (!$paidCustomer) continue;
+    $billingRows[] = array('customer' => $paidCustomer, 'invoice' => $paidInvoice);
+  }
+  usort($billingRows, function ($left, $right) {
+    return (int) ($right['invoice']['paid_at'] ?? 0) <=> (int) ($left['invoice']['paid_at'] ?? 0);
+  });
+  foreach ($billingRows as $billingRow) {
+    $currentPaidInvoice = $billingRow['invoice'];
+    $paidAt = (int) ($currentPaidInvoice['paid_at'] ?? 0);
+    if ($paidAt <= 0 || date('Y-m', $paidAt) !== $currentMonth) continue;
+    $paidMonthAmount += (float) ($currentPaidInvoice['amount'] ?? 0);
+    $paidMonthCommission += (float) ($currentPaidInvoice['biller_commission'] ?? 0);
+  }
+} else {
+  foreach ($customers as $unpaidCustomer) $billingRows[] = array(
+    'customer' => $unpaidCustomer,
+    'invoice' => $latestInvoices[(string) ($unpaidCustomer['id'] ?? '')] ?? array(),
+  );
+  $unpaidInvoiceCount = 0;
+  $isolatedInvoiceCount = 0;
+  $unpaidInvoiceAmount = 0;
+  foreach ($billingRows as $billingRow) {
+    $currentInvoice = $billingRow['invoice'];
+    $currentStatus = (string) ($currentInvoice['status'] ?? '');
+    if ($currentStatus !== 'paid' && $currentStatus !== 'unpaid') continue;
+    $currentInvoiceCount++;
+    if ($currentStatus !== 'unpaid') continue;
+    $unpaidInvoiceCount++;
+    $unpaidInvoiceAmount += (float) ($currentInvoice['amount'] ?? 0);
+    if (!empty($currentInvoice['automation']['isolated_at'])) $isolatedInvoiceCount++;
+  }
+}
+$paidMonthAdminFee = max(0, $paidMonthAmount - $paidMonthCommission);
 ?>
+<style>
+  .billing-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 16px}
+  .billing-summary.paid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .billing-summary-card{border:1px solid rgba(127,127,127,.45);border-radius:4px;padding:14px 16px;min-width:0}
+  .billing-summary-label{display:block;font-weight:600;line-height:1.35;margin-bottom:8px}
+  .billing-summary-value{display:block;font-size:clamp(20px,2.2vw,28px);font-weight:700;line-height:1.2;overflow-wrap:anywhere}
+  .billing-page-label{text-transform:uppercase}
+  #billingSearch,#billingStatus,#billingDataFilter,#billingDateFrom,#billingDateTo{height:44px}
+  .billing-toolbar{display:grid;grid-template-columns:minmax(220px,1fr) minmax(190px,260px) auto;gap:10px;align-items:center;margin:0 0 12px}
+  .billing-toolbar.paid{grid-template-columns:minmax(190px,1fr) minmax(170px,220px) minmax(145px,180px) minmax(145px,180px) auto;align-items:end}
+  .billing-toolbar .group-item,.billing-toolbar .btn{width:100%;height:44px;margin:0;box-sizing:border-box}
+  .billing-date-field{display:block;min-width:0;font-weight:600}
+  .billing-date-field span{display:block;margin:0 0 5px;font-size:12px;line-height:1.2}
+  .billing-date-field input{width:100%;box-sizing:border-box}
+  .billing-filter-error{display:none;margin:-4px 0 12px;color:#b3261e;font-weight:600}
+  .billing-export:disabled{cursor:not-allowed;opacity:.55}
+  .billing-service-select{min-width:110px}
+  .billing-username{font-weight:bold;min-width:130px}
+  .billing-profile{color:#777;font-size:12px;min-width:170px;white-space:normal}
+  .billing-service-count{text-align:center;font-weight:bold}
+  @media(max-width:1050px){.billing-summary,.billing-summary.paid{grid-template-columns:repeat(2,minmax(0,1fr))}.billing-toolbar.paid{grid-template-columns:repeat(2,minmax(0,1fr))}.billing-toolbar.paid .billing-export{grid-column:1/-1}}
+  @media(max-width:750px){.billing-toolbar,.billing-toolbar.paid{grid-template-columns:1fr}.billing-toolbar.paid .billing-export{grid-column:auto}}
+  @media(max-width:620px){.billing-summary,.billing-summary.paid{grid-template-columns:1fr}.billing-summary-card{padding:12px}.billing-search-wrap{width:100%!important}.billing-search-wrap .input-group,.billing-search-wrap .input-group-6{width:100%!important}}
+</style>
 <div class="row"><div class="col-12"><div class="card">
-  <div class="card-header"><h3><i class="fa fa-money"></i> Billing <span style="font-size:14px"> &nbsp;|&nbsp; <span id="billingVisibleCount"><?= count($customers); ?></span> pelanggan</span></h3></div>
+  <div class="card-header"><h3><i class="fa <?= $billingView === 'paid' ? 'fa-check-square-o' : 'fa-file-text-o'; ?>"></i> <span class="billing-page-label"><?= $billingView === 'paid' ? 'Invoice Paid' : 'Invoice Unpaid'; ?></span> <span style="font-size:14px"> &nbsp;|&nbsp; <span id="billingVisibleCount">0</span> <?= $billingView === 'paid' ? 'invoice' : 'pelanggan'; ?></span></h3></div>
   <div class="card-body">
     <?php if ($customerMessage !== ''): ?><div class="box bg-success"><?= htmlspecialchars($customerMessage, ENT_QUOTES); ?></div><?php endif; ?>
     <?php if ($customerError !== ''): ?><div class="box bg-danger"><?= htmlspecialchars($customerError, ENT_QUOTES); ?></div><?php endif; ?>
     <?php if (empty($routerConnected)): ?><div class="box bg-warning">Router MikroTik tidak terhubung. Invoice baru dan aktivasi pembayaran dinonaktifkan.</div><?php endif; ?>
-    <div class="row"><div class="col-6 pd-t-5 pd-b-5"><div class="input-group"><div class="input-group-6 col-box-6"><input id="billingSearch" type="text" class="group-item group-item-l" placeholder="<?= $_search; ?>"></div><div class="input-group-6 col-box-6"><select id="billingStatus" class="group-item group-item-r"><option value="all">Status: Semua</option><option value="unpaid">Belum Bayar / Belum Dibuat</option><option value="paid">Lunas Bulan Ini</option></select></div></div></div></div>
-    <style>#billingSearch,#billingStatus{height:30px}.billing-service-select{min-width:110px}.billing-username{font-weight:bold;min-width:130px}.billing-profile{color:#777;font-size:12px;min-width:170px;white-space:normal}.billing-service-count{text-align:center;font-weight:bold}</style>
+    <?php if ($billingView === 'paid'): ?>
+      <div class="billing-summary paid" aria-label="Ringkasan invoice paid bulan ini">
+        <div class="billing-summary-card"><span class="billing-summary-label">Total Komisi Mitra</span><span class="billing-summary-value"><?= htmlspecialchars($currency . ' ' . number_format($paidMonthCommission, 0, ',', '.'), ENT_QUOTES); ?></span></div>
+        <div class="billing-summary-card"><span class="billing-summary-label">Biaya Admin</span><span class="billing-summary-value"><?= htmlspecialchars($currency . ' ' . number_format($paidMonthAdminFee, 0, ',', '.'), ENT_QUOTES); ?></span></div>
+        <div class="billing-summary-card"><span class="billing-summary-label">TOTAL <?= htmlspecialchars($currentMonthLabel, ENT_QUOTES); ?></span><span class="billing-summary-value"><?= htmlspecialchars($currency . ' ' . number_format($paidMonthAmount, 0, ',', '.'), ENT_QUOTES); ?></span></div>
+      </div>
+    <?php else: ?>
+      <div class="billing-summary" aria-label="Ringkasan invoice unpaid">
+        <div class="billing-summary-card"><span class="billing-summary-label">Jumlah Invoice</span><span class="billing-summary-value"><?= $currentInvoiceCount; ?></span></div>
+        <div class="billing-summary-card"><span class="billing-summary-label">Unpaid</span><span class="billing-summary-value"><?= $unpaidInvoiceCount; ?></span></div>
+        <div class="billing-summary-card"><span class="billing-summary-label">Isolir</span><span class="billing-summary-value"><?= $isolatedInvoiceCount; ?></span></div>
+        <div class="billing-summary-card"><span class="billing-summary-label">Total Blm Dibayar</span><span class="billing-summary-value"><?= htmlspecialchars($currency . ' ' . number_format($unpaidInvoiceAmount, 0, ',', '.'), ENT_QUOTES); ?></span></div>
+      </div>
+    <?php endif; ?>
+    <?php if ($billingView === 'unpaid'): ?>
+      <div class="billing-toolbar" aria-label="Filter Data">
+        <input id="billingSearch" type="search" class="group-item radius-3" placeholder="<?= $_search; ?>" aria-label="Cari invoice">
+        <select id="billingDataFilter" class="group-item radius-3" aria-label="Filter Data">
+          <option value="all">All Data</option>
+          <option value="unpaid">Invoice Unpaid</option>
+          <option value="isolated">Isolated</option>
+          <option value="none">No Invoice</option>
+        </select>
+        <button id="billingExportExcel" class="btn bg-success billing-export" type="button"><i class="fa fa-file-excel-o"></i> Export Excel</button>
+      </div>
+    <?php else: ?>
+      <div class="billing-toolbar paid" aria-label="Filter Data">
+        <input id="billingSearch" type="search" class="group-item radius-3" placeholder="<?= $_search; ?>" aria-label="Cari invoice">
+        <select id="billingDataFilter" class="group-item radius-3" aria-label="Filter Data">
+          <option value="all">All Data</option>
+          <option value="manual">Manual Payment</option>
+          <option value="gateway">Gateway Payment</option>
+        </select>
+        <label class="billing-date-field"><span>Start Date</span><input id="billingDateFrom" type="date" class="group-item radius-3" value="<?= date('Y-m-01'); ?>" max="<?= date('Y-m-d'); ?>"></label>
+        <label class="billing-date-field"><span>End Date</span><input id="billingDateTo" type="date" class="group-item radius-3" value="<?= date('Y-m-d'); ?>" max="<?= date('Y-m-d'); ?>"></label>
+        <button id="billingExportExcel" class="btn bg-success billing-export" type="button"><i class="fa fa-file-excel-o"></i> Export Excel</button>
+      </div>
+      <div id="billingDateError" class="billing-filter-error" role="alert">Start date cannot be later than end date.</div>
+    <?php endif; ?>
+    <input id="billingStatus" type="hidden" value="<?= $billingView; ?>">
     <div class="overflow box-bordered" style="max-height:75vh"><table id="billingTable" class="table table-bordered table-hover text-nowrap"><thead><tr><th>No</th><th>Nama</th><th>HP</th><th>Jumlah Layanan</th><th>Layanan</th><th>Username</th><th>Profile</th><th>Status User</th><th>Jatuh Tempo</th><th>Invoice</th><th>Status Invoice</th><th>Invoice Berikutnya</th><th>Status Berikutnya</th><th>Total Tagihan</th><th>Diproses Oleh</th><th>Aksi</th></tr></thead><tbody>
-    <?php foreach ($customers as $index => $customer):
+    <?php foreach ($billingRows as $index => $billingRow):
+      $customer = $billingRow['customer'];
       $serviceDetails = billingServiceDetails($customer, $customerUsers, $customerSchedulers, $hotspotProfiles, $pppoeProfiles);
       $firstService = $serviceDetails[0] ?? array('username'=>'','profile'=>'','status_text'=>'-','status'=>'missing');
-      $invoice = $latestInvoices[(string) $customer['id']] ?? array();
+      $invoice = $billingRow['invoice'];
       $nextUnpaidInvoice = billingLatestUnpaidInvoice($invoices, $customer['id']);
       $invoiceStatus = $invoice['status'] ?? 'none';
       $customerDueDate = $invoiceStatus === 'paid' && !empty($invoice['next_due_date'])
         ? (string) $invoice['next_due_date']
         : (!empty($invoice['due_date']) ? (string) $invoice['due_date'] : billingCustomerDueDate($customer, $serviceDetails));
-      $invoiceStatusText = $invoiceStatus === 'paid' ? 'Lunas Bulan Ini' : ($invoiceStatus === 'unpaid' ? 'Belum Bayar' : 'Belum Dibuat');
+      $invoiceStatusText = $invoiceStatus === 'paid' ? 'Paid' : ($invoiceStatus === 'unpaid' ? 'Unpaid' : 'No Invoice');
       $invoiceStatusClass = $invoiceStatus === 'paid' ? 'text-success' : ($invoiceStatus === 'unpaid' ? 'text-danger' : 'text-secondary');
       $estimatedAmount = 0; foreach ($serviceDetails as $detail) $estimatedAmount += (float) $detail['amount'];
       $amount = isset($invoice['amount']) ? (float) $invoice['amount'] : $estimatedAmount;
@@ -618,9 +731,9 @@ foreach ($invoiceCandidates as $key => $candidates) {
       $invoicePdfUrl = $invoiceStatus !== 'none' && !empty($invoice['id']) ? './customer/invoice-pdf.php?session=' . rawurlencode($session) . '&invoice_id=' . rawurlencode($invoice['id']) : '';
       $nextInvoicePdfUrl = $nextUnpaidInvoice && !empty($nextUnpaidInvoice['id']) ? './customer/invoice-pdf.php?session=' . rawurlencode($session) . '&invoice_id=' . rawurlencode($nextUnpaidInvoice['id']) : '';
     ?>
-      <tr class="billing-row" data-search="<?= htmlspecialchars(strtolower($serviceSearch), ENT_QUOTES); ?>" data-status="<?= $invoiceStatus === 'paid' ? 'paid' : 'unpaid'; ?>"><td><?= $index + 1; ?></td><td><?= htmlspecialchars($customerName, ENT_QUOTES); ?></td><td><?= htmlspecialchars($customer['phone'] ?? '', ENT_QUOTES); ?></td><td class="billing-service-count"><?= count($serviceDetails); ?></td><td><select class="form-control billing-service-select"><?php foreach ($serviceDetails as $serviceIndex => $detail): ?><option value="<?= $serviceIndex; ?>" data-username="<?= htmlspecialchars($detail['username'], ENT_QUOTES); ?>" data-profile="<?= htmlspecialchars($detail['profile'], ENT_QUOTES); ?>" data-user-status="<?= htmlspecialchars($detail['status_text'], ENT_QUOTES); ?>" data-status-class="<?= $detail['status'] === 'active' ? 'text-success' : 'text-danger'; ?>"><?= strtoupper(htmlspecialchars($detail['service'], ENT_QUOTES)); ?></option><?php endforeach; ?></select></td><td class="billing-username"><?= htmlspecialchars($firstService['username'], ENT_QUOTES); ?></td><td class="billing-profile"><?= htmlspecialchars($firstService['profile'], ENT_QUOTES); ?></td><td class="billing-user-status <?= $firstService['status'] === 'active' ? 'text-success' : 'text-danger'; ?>"><strong><?= htmlspecialchars($firstService['status_text'], ENT_QUOTES); ?></strong></td><td class="billing-due-date"><?= htmlspecialchars($customerDueDate !== '' ? $customerDueDate : '-', ENT_QUOTES); ?></td><td><?= htmlspecialchars($invoice['number'] ?? '-', ENT_QUOTES); ?><?php if ($invoiceStatus === 'paid' && $nextUnpaidInvoice): ?><br><small class="text-warning">Berikutnya: <?= htmlspecialchars($nextUnpaidInvoice['number'] ?? '-', ENT_QUOTES); ?></small><?php endif; ?></td><td class="<?= $invoiceStatusClass; ?>"><strong><?= htmlspecialchars($invoiceStatusText, ENT_QUOTES); ?></strong></td><td><?= $amount > 0 ? htmlspecialchars($currency . ' ' . number_format($amount, 0, ',', '.'), ENT_QUOTES) : '-'; ?></td><td><?= $invoiceStatus === 'paid' ? htmlspecialchars($invoice['paid_by_name'] ?? 'Data lama', ENT_QUOTES) : '-'; ?></td><td><?php if ($invoicePdfUrl !== ''): ?><a class="btn bg-primary" href="<?= htmlspecialchars($invoicePdfUrl, ENT_QUOTES); ?>" title="Download invoice PDF"><i class="fa fa-file-pdf-o"></i> PDF</a><?php endif; ?><?php if ($invoiceStatus === 'paid'): ?><?php if ($nextUnpaidInvoice): ?> <span class="text-warning"><i class="fa fa-file-text-o"></i> Tagihan berikutnya <?= htmlspecialchars($nextUnpaidInvoice['number'] ?? '-', ENT_QUOTES); ?></span><?php if ($nextInvoicePdfUrl !== ''): ?> <a class="btn bg-primary" href="<?= htmlspecialchars($nextInvoicePdfUrl, ENT_QUOTES); ?>" title="Download invoice berikutnya PDF"><i class="fa fa-file-pdf-o"></i> PDF Berikutnya</a><?php endif; ?><?php if ($nextWaUrl !== ''): ?> <a class="btn bg-green" target="_blank" href="<?= htmlspecialchars($nextWaUrl, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Kirim Tagihan</a><?php endif; ?><?php if ($canSendNextFonnte): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="send_fonnte"><input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($nextUnpaidInvoice['id'], ENT_QUOTES); ?>"><button class="btn bg-green" type="submit"><i class="fa fa-send"></i> Fonnte</button></form><?php endif; ?><?php else: ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Invoice Baru</button></form><?php endif; ?><?php else: ?><?php if ($invoiceStatus === 'none'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Buat Invoice</button></form><?php endif; ?><?php if ($paymentUrl !== '' && !$gatewayPaymentReceived): ?><?php elseif ($canCreatePayment): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_payment"><input type="hidden" name="payment_gateway_csrf" value="<?= htmlspecialchars(mikhmonPaymentGatewayCsrfToken(), ENT_QUOTES); ?>"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit" title="Buat link pembayaran Midtrans"><i class="fa fa-credit-card"></i> Buat Link Midtrans</button></form><?php endif; ?><?php if ($waUrl !== ''): ?><a class="btn bg-green" target="_blank" href="<?= htmlspecialchars($waUrl, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Kirim</a><?php endif; ?><?php if ($canSendFonnte): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="send_fonnte"><input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-green" type="submit" title="Kirim melalui Fonnte"><i class="fa fa-send"></i> Fonnte</button></form><?php endif; ?><?php if ($invoiceStatus === 'unpaid'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="mark_paid"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-success" type="submit" onclick="return confirm('Tandai invoice lunas dan aktifkan semua layanan pelanggan?');"><i class="fa fa-check"></i> <?= $gatewayPaymentReceived ? ($activationFailed ? 'Coba Lagi Aktivasi' : 'Aktifkan Layanan') : 'Tandai Lunas'; ?></button></form><?php endif; ?><?php endif; ?></td></tr>
+      <tr class="billing-row" data-search="<?= htmlspecialchars(strtolower($serviceSearch), ENT_QUOTES); ?>" data-status="<?= $invoiceStatus === 'paid' ? 'paid' : 'unpaid'; ?>" data-invoice-state="<?= htmlspecialchars($invoiceStatus, ENT_QUOTES); ?>" data-isolated="<?= !empty($invoice['automation']['isolated_at']) ? '1' : '0'; ?>" data-paid-date="<?= $invoiceStatus === 'paid' && !empty($invoice['paid_at']) ? date('Y-m-d', (int) $invoice['paid_at']) : ''; ?>" data-payment-source="<?= $invoiceStatus === 'paid' && (!empty($invoice['payment_gateway']) || !empty($invoice['gateway_payment_received'])) ? 'gateway' : 'manual'; ?>"><td><?= $index + 1; ?></td><td><?= htmlspecialchars($customerName, ENT_QUOTES); ?></td><td><?= htmlspecialchars($customer['phone'] ?? '', ENT_QUOTES); ?></td><td class="billing-service-count"><?= count($serviceDetails); ?></td><td><select class="form-control billing-service-select"><?php foreach ($serviceDetails as $serviceIndex => $detail): ?><option value="<?= $serviceIndex; ?>" data-username="<?= htmlspecialchars($detail['username'], ENT_QUOTES); ?>" data-profile="<?= htmlspecialchars($detail['profile'], ENT_QUOTES); ?>" data-user-status="<?= htmlspecialchars($detail['status_text'], ENT_QUOTES); ?>" data-status-class="<?= $detail['status'] === 'active' ? 'text-success' : 'text-danger'; ?>"><?= strtoupper(htmlspecialchars($detail['service'], ENT_QUOTES)); ?></option><?php endforeach; ?></select></td><td class="billing-username"><?= htmlspecialchars($firstService['username'], ENT_QUOTES); ?></td><td class="billing-profile"><?= htmlspecialchars($firstService['profile'], ENT_QUOTES); ?></td><td class="billing-user-status <?= $firstService['status'] === 'active' ? 'text-success' : 'text-danger'; ?>"><strong><?= htmlspecialchars($firstService['status_text'], ENT_QUOTES); ?></strong></td><td class="billing-due-date"><?= htmlspecialchars($customerDueDate !== '' ? $customerDueDate : '-', ENT_QUOTES); ?></td><td><?= htmlspecialchars($invoice['number'] ?? '-', ENT_QUOTES); ?><?php if ($invoiceStatus === 'paid' && $nextUnpaidInvoice): ?><br><small class="text-warning">Berikutnya: <?= htmlspecialchars($nextUnpaidInvoice['number'] ?? '-', ENT_QUOTES); ?></small><?php endif; ?></td><td class="<?= $invoiceStatusClass; ?>"><strong><?= htmlspecialchars($invoiceStatusText, ENT_QUOTES); ?></strong></td><td><?= $amount > 0 ? htmlspecialchars($currency . ' ' . number_format($amount, 0, ',', '.'), ENT_QUOTES) : '-'; ?></td><td><?= $invoiceStatus === 'paid' ? htmlspecialchars($invoice['paid_by_name'] ?? 'Data lama', ENT_QUOTES) : '-'; ?></td><td><?php if ($invoicePdfUrl !== ''): ?><a class="btn bg-primary" href="<?= htmlspecialchars($invoicePdfUrl, ENT_QUOTES); ?>" title="Download invoice PDF"><i class="fa fa-file-pdf-o"></i> PDF</a><?php endif; ?><?php if ($invoiceStatus === 'paid'): ?><?php if ($nextUnpaidInvoice): ?> <span class="text-warning"><i class="fa fa-file-text-o"></i> Tagihan berikutnya <?= htmlspecialchars($nextUnpaidInvoice['number'] ?? '-', ENT_QUOTES); ?></span><?php if ($nextInvoicePdfUrl !== ''): ?> <a class="btn bg-primary" href="<?= htmlspecialchars($nextInvoicePdfUrl, ENT_QUOTES); ?>" title="Download invoice berikutnya PDF"><i class="fa fa-file-pdf-o"></i> PDF Berikutnya</a><?php endif; ?><?php if ($nextWaUrl !== ''): ?> <a class="btn bg-green" target="_blank" href="<?= htmlspecialchars($nextWaUrl, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Kirim Tagihan</a><?php endif; ?><?php if ($canSendNextFonnte): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="send_fonnte"><input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($nextUnpaidInvoice['id'], ENT_QUOTES); ?>"><button class="btn bg-green" type="submit"><i class="fa fa-send"></i> Fonnte</button></form><?php endif; ?><?php else: ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Invoice Baru</button></form><?php endif; ?><?php else: ?><?php if ($invoiceStatus === 'none'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Buat Invoice</button></form><?php endif; ?><?php if ($paymentUrl !== '' && !$gatewayPaymentReceived): ?><?php elseif ($canCreatePayment): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_payment"><input type="hidden" name="payment_gateway_csrf" value="<?= htmlspecialchars(mikhmonPaymentGatewayCsrfToken(), ENT_QUOTES); ?>"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit" title="Buat link pembayaran Midtrans"><i class="fa fa-credit-card"></i> Buat Link Midtrans</button></form><?php endif; ?><?php if ($waUrl !== ''): ?><a class="btn bg-green" target="_blank" href="<?= htmlspecialchars($waUrl, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Kirim</a><?php endif; ?><?php if ($canSendFonnte): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="send_fonnte"><input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-green" type="submit" title="Kirim melalui Fonnte"><i class="fa fa-send"></i> Fonnte</button></form><?php endif; ?><?php if ($invoiceStatus === 'unpaid'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="mark_paid"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-success" type="submit" onclick="return confirm('Tandai invoice lunas dan aktifkan semua layanan pelanggan?');"><i class="fa fa-check"></i> <?= $gatewayPaymentReceived ? ($activationFailed ? 'Coba Lagi Aktivasi' : 'Aktifkan Layanan') : 'Tandai Lunas'; ?></button></form><?php endif; ?><?php endif; ?></td></tr>
     <?php endforeach; ?>
-    <?php if (!$customers): ?><tr><td colspan="16" class="text-center">Belum ada data pelanggan.</td></tr><?php endif; ?><tr id="billingNoResults" style="display:none"><td colspan="16" class="text-center">Data billing tidak ditemukan.</td></tr></tbody></table></div>
+    <?php if (!$billingRows): ?><tr><td colspan="16" class="text-center">Belum ada data pelanggan.</td></tr><?php endif; ?><tr id="billingNoResults" style="display:none"><td colspan="16" class="text-center">Data billing tidak ditemukan.</td></tr></tbody></table></div>
   </div>
 </div></div></div>
 <script>
@@ -628,7 +741,21 @@ $(function(){
   function showBillingService(select){var option=$(select).find('option:selected'),row=$(select).closest('tr'),status=row.find('.billing-user-status');row.find('.billing-username').text(option.data('username')||'-');row.find('.billing-profile').text(option.data('profile')||'-');status.removeClass('text-success text-danger').addClass(option.data('status-class')).find('strong').text(option.data('user-status')||'-');}
   $('.billing-service-select').on('change',function(){showBillingService(this);});
   $('#billingTable tbody .billing-row').each(function(){var row=$(this),invoice=row.children('td').eq(9),next=invoice.find('small').text().replace(/^Berikutnya:\s*/,'').trim();invoice.find('small').remove();row.find('td').eq(13).find('.text-warning').remove();var nextCell=next?'<strong>'+next+'</strong>':'-',statusCell=next?'<strong class="text-danger">Belum Bayar</strong>':'-';row.children('td').eq(10).after('<td>'+nextCell+'</td><td>'+statusCell+'</td>');});
-  function filterBilling(){var search=$('#billingSearch').val().toLowerCase(),status=$('#billingStatus').val(),visible=0;$('.billing-row').each(function(){var row=$(this),text=row.text().toLowerCase()+' '+String(row.data('search')||''),show=text.indexOf(search)>-1&&(status==='all'||row.data('status')===status);row.toggle(show);if(show)visible++;});$('#billingVisibleCount').text(visible);$('#billingNoResults').toggle(visible===0&&$('.billing-row').length>0);}
-  $('#billingSearch').on('input',filterBilling);$('#billingStatus').on('change',filterBilling);filterBilling();
+  function filterBilling(){var search=$('#billingSearch').val().toLowerCase(),status=$('#billingStatus').val(),dataFilter=$('#billingDataFilter').val()||'all',dateFrom=$('#billingDateFrom').val()||'',dateTo=$('#billingDateTo').val()||'',invalidRange=status==='paid'&&dateFrom!==''&&dateTo!==''&&dateFrom>dateTo,visible=0;$('#billingDateError').toggle(invalidRange);$('#billingDateFrom').attr('aria-invalid',invalidRange?'true':'false');$('#billingDateTo').attr('aria-invalid',invalidRange?'true':'false');$('.billing-row').each(function(){var row=$(this),text=row.text().toLowerCase()+' '+String(row.data('search')||''),paidDate=String(row.data('paid-date')||''),matchesDate=status!=='paid'||(paidDate!==''&&(dateFrom===''||paidDate>=dateFrom)&&(dateTo===''||paidDate<=dateTo)),matchesData=dataFilter==='all'||(status==='paid'?String(row.data('payment-source'))===dataFilter:(dataFilter==='isolated'&&String(row.data('isolated'))==='1')||String(row.data('invoice-state'))===dataFilter),show=!invalidRange&&text.indexOf(search)>-1&&row.data('status')===status&&matchesDate&&matchesData;row.toggle(show);if(show)visible++;});$('#billingVisibleCount').text(visible);$('#billingNoResults').toggle(visible===0&&$('.billing-row').length>0&&!invalidRange);$('#billingExportExcel').prop('disabled',visible===0||invalidRange).attr('aria-disabled',visible===0||invalidRange?'true':'false');}
+  $('#billingSearch').on('input',filterBilling);$('#billingDataFilter,#billingDateFrom,#billingDateTo').on('change input',filterBilling);
+  $('#billingExportExcel').on('click',function(){
+    var rows=[],headers=[],dataColumnCount=$('#billingTable thead th').length-1;
+    $('#billingTable thead th').each(function(index){if(index<$('#billingTable thead th').length-1)headers.push($(this).text().trim());});
+    var paidView=$('#billingStatus').val()==='paid';if(paidView)headers.splice(1,0,<?= json_encode(mikhmonTranslateText('Payment Date', $langid)); ?>);rows.push(headers);
+    $('.billing-row:visible').each(function(){var cells=[];$(this).children('td').each(function(index){if(index>=dataColumnCount)return;var select=$(this).find('select option:selected'),value=select.length?select.text().trim():$(this).clone().find('form,.btn').remove().end().text().replace(/\s+/g,' ').trim();cells.push(value);});rows.push(cells);});
+    if(paidView)$('.billing-row:visible').each(function(index){rows[index+1].splice(1,0,String($(this).data('paid-date')||''));});
+    if(rows.length<2)return;
+    var escapeCell=function(value){return '<td>'+ $('<div>').text(value).html() +'</td>';},html='<html><head><meta charset="UTF-8"></head><body><table border="1">';
+    rows.forEach(function(row,rowIndex){html+='<tr>'+row.map(function(value){return rowIndex===0?'<th>'+ $('<div>').text(value).html() +'</th>':escapeCell(value);}).join('')+'</tr>';});
+    html+='</table></body></html>';
+    var url=URL.createObjectURL(new Blob(['\ufeff',html],{type:'application/vnd.ms-excel;charset=utf-8'})),link=document.createElement('a');
+    var fileRange=paidView?'-'+($('#billingDateFrom').val()||'awal')+'-'+($('#billingDateTo').val()||'akhir'): '-<?= date('Y-m-d'); ?>';link.href=url;link.download=(paidView?'invoice-paid':'invoice-unpaid')+fileRange+'.xls';document.body.appendChild(link);link.click();link.remove();window.setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  });
+  filterBilling();
 });
 </script>
