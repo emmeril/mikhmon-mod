@@ -253,7 +253,7 @@ function mikhmonCustomerPortalCreateMonthlyInvoice($session, $customer, $api) {
   if ($amount < 1) return array('success' => false, 'message' => 'Nominal invoice langganan tidak valid.');
   if (!$invoice) {
     $number = 'INV-' . date('YmdHis') . '-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
-    $invoice = array('id' => 'invoice-' . bin2hex(random_bytes(8)), 'number' => $number, 'customer_id' => $customer['id'], 'customer_name' => $customer['name'] ?? '', 'kind' => 'monthly', 'services' => $services, 'service_count' => count($services), 'amount' => $amount, 'due_date' => date('Y-m-d H:i:s'), 'status' => 'unpaid', 'created_at' => time());
+    $invoice = array('id' => 'invoice-' . bin2hex(random_bytes(8)), 'number' => $number, 'customer_id' => $customer['id'], 'customer_name' => $customer['name'] ?? '', 'kind' => 'monthly', 'services' => $services, 'service_count' => count($services), 'subtotal' => $amount, 'admin_fee' => 0, 'amount' => $amount, 'due_date' => date('Y-m-d H:i:s'), 'status' => 'unpaid', 'created_at' => time());
   }
   $number = (string) ($invoice['number'] ?? $invoice['id']);
   $orderId = $number . '-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));

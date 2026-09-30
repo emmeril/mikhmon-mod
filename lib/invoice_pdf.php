@@ -99,6 +99,8 @@ function mikhmonInvoicePdf($invoice, $customer, $currency, $brand) {
   $dueDate = (string) ($invoice['due_date'] ?? '-');
   $status = $paymentReceived ? 'LUNAS' : 'BELUM DIBAYAR';
   $total = mikhmonInvoicePdfMoney($invoice['amount'] ?? 0, $currency);
+  $subtotal = (float) ($invoice['subtotal'] ?? ((float) ($invoice['amount'] ?? 0) - (float) ($invoice['admin_fee'] ?? 0)));
+  $adminFee = max(0, (float) ($invoice['admin_fee'] ?? 0));
   $paidAt = (int) ($invoice['paid_at'] ?? $invoice['gateway_paid_at'] ?? 0);
   $commands = array();
 
@@ -159,9 +161,17 @@ function mikhmonInvoicePdf($invoice, $customer, $currency, $brand) {
     $commands[] = $tableLeft . ' ' . $lineY . ' m 555 ' . $lineY . ' l S';
   }
   $summaryY = $tableBottom - 34;
-  mikhmonInvoicePdfDrawRect($commands, 350, $summaryY - 60, 205, 60, '0.95 0.97 0.99');
-  mikhmonInvoicePdfDrawText($commands, 365, $summaryY - 22, 10, 'TOTAL TAGIHAN: ' . $total, '0.08 0.22 0.38');
-  mikhmonInvoicePdfDrawText($commands, 365, $summaryY - 42, 10, 'Status: ' . $status, $paymentReceived ? '0.05 0.45 0.25' : '0.75 0.35 0.05');
+  $summaryHeight = $adminFee > 0 ? 82 : 60;
+  mikhmonInvoicePdfDrawRect($commands, 350, $summaryY - $summaryHeight, 205, $summaryHeight, '0.95 0.97 0.99');
+  if ($adminFee > 0) {
+    mikhmonInvoicePdfDrawText($commands, 365, $summaryY - 18, 9, 'Subtotal: ' . mikhmonInvoicePdfMoney($subtotal, $currency), '0.08 0.22 0.38');
+    mikhmonInvoicePdfDrawText($commands, 365, $summaryY - 36, 9, 'Biaya Admin: ' . mikhmonInvoicePdfMoney($adminFee, $currency), '0.08 0.22 0.38');
+    mikhmonInvoicePdfDrawText($commands, 365, $summaryY - 54, 10, 'TOTAL TAGIHAN: ' . $total, '0.08 0.22 0.38');
+    mikhmonInvoicePdfDrawText($commands, 365, $summaryY - 72, 10, 'Status: ' . $status, $paymentReceived ? '0.05 0.45 0.25' : '0.75 0.35 0.05');
+  } else {
+    mikhmonInvoicePdfDrawText($commands, 365, $summaryY - 22, 10, 'TOTAL TAGIHAN: ' . $total, '0.08 0.22 0.38');
+    mikhmonInvoicePdfDrawText($commands, 365, $summaryY - 42, 10, 'Status: ' . $status, $paymentReceived ? '0.05 0.45 0.25' : '0.75 0.35 0.05');
+  }
   if ($paidAt > 0) mikhmonInvoicePdfDrawText($commands, 52, $summaryY - 20, 9, 'Tanggal Bayar: ' . date('Y-m-d H:i:s', $paidAt));
   if (!empty($invoice['next_due_date'])) mikhmonInvoicePdfDrawText($commands, 52, $summaryY - 38, 9, 'Jatuh Tempo Berikutnya: ' . $invoice['next_due_date']);
   mikhmonInvoicePdfDrawText($commands, 40, 55, 8, 'Terima kasih telah menggunakan layanan kami.', '0.4 0.4 0.4');

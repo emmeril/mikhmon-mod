@@ -23,6 +23,12 @@ $mitraId = mikhmonSaveUser('', 'Mitra Satu', 'mitra1', 'mitra', 'router-a', 'sec
 $billerId = mikhmonSaveUser('', 'Biller Satu', 'biller1', 'biller', 'router-a', 'secret', true);
 $adminId = mikhmonSaveUser('', 'Admin Baru', 'adminbaru', 'admin', '', 'secret', true);
 roleTestAssert($mitraId !== false && $billerId !== false && $adminId !== false, 'roles can be saved');
+$billerPartner = mikhmonFindPartner($billerId, 'user_id');
+roleTestAssert($billerPartner && $billerPartner['category'] === 'biller' && $billerPartner['commission'] === 2500.0, 'biller account receives a linked partner profile');
+$billerPartner['commission'] = 3500;
+roleTestAssert(mikhmonSavePartner($billerPartner) !== false && mikhmonBillerCommissionAmount($billerId) === 3500.0, 'partner commission is configurable per biller');
+$salesPartnerId = mikhmonSavePartner(array('name' => 'Sales Satu', 'session' => 'router-a', 'category' => 'sales', 'commission' => 1000, 'active' => true));
+roleTestAssert($salesPartnerId !== false && mikhmonFindPartner($salesPartnerId)['category'] === 'sales', 'sales partner can be stored without a login account');
 roleTestAssert(mikhmonFindUser($adminId)['session'] === 'mikhmon', 'admin accounts receive access to all routers');
 roleTestAssert(mikhmonLoginStaff('ADMINBARU', 'secret')['role'] === 'admin', 'additional admins can log in');
 roleTestAssert(mikhmonLoginStaff('MITRA1', 'secret')['role'] === 'mitra', 'staff password login is case-insensitive');
@@ -105,12 +111,12 @@ $invoice = array(
   'status' => 'paid',
   'paid_at' => time(),
   'paid_by_user_id' => $billerId,
-  'biller_commission' => 2500,
+  'biller_commission' => 3500,
 );
 roleTestAssert(mikhmonSaveInvoice('router-a', $invoice) !== false, 'paid invoice can be saved');
 $savedInvoice = mikhmonGetInvoices('router-a')[0];
 roleTestAssert(count($savedInvoice['services']) === 2, 'one invoice can contain all customer services');
 $stats = mikhmonBillerCommissionStats('router-a', $billerId);
-roleTestAssert($stats['count'] === 1 && $stats['amount'] === 2500, 'biller earns Rp2.500 once per paid invoice');
+roleTestAssert($stats['count'] === 1 && $stats['amount'] === 3500, 'biller earns the commission snapshot stored on the paid invoice');
 
 echo 'role-access-tests: OK' . PHP_EOL;

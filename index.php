@@ -157,6 +157,7 @@ if (!isset($_SESSION["mikhmon"])) {
   $customerid = $_GET['customer-id'];
   $billing = $_GET['billing'];
   $commission = $_GET['commission'];
+  $mitra = $_GET['mitra'];
   $admin = $_GET['admin'];
   $router = $_GET['router'];
 
@@ -164,6 +165,7 @@ if (!isset($_SESSION["mikhmon"])) {
   if ($hotspot == 'logout') $requestedRoute = 'logout';
   elseif (in_array($billing, array('1', 'unpaid', 'paid'), true)) $requestedRoute = 'billing';
   elseif ($commission == '1') $requestedRoute = 'commission';
+  elseif ($mitra == 'list') $requestedRoute = 'admin-mitra';
   elseif ($customer == 'list' && $customerid != '') $requestedRoute = 'customer-identity-edit';
   elseif ($customer == 'list') $requestedRoute = 'customer-list';
   elseif ($customer == 'identity-list') $requestedRoute = 'customer-identity-list';
@@ -202,7 +204,7 @@ if (!isset($_SESSION["mikhmon"])) {
     exit;
   }
 
-  $localRoutes = array('logout', 'system-log', 'admin-settings', 'admin-routers', 'admin-users', 'admin-fonnte', 'admin-payment-gateway', 'admin-router-add', 'admin-session-settings');
+  $localRoutes = array('logout', 'system-log', 'admin-mitra', 'admin-settings', 'admin-routers', 'admin-users', 'admin-fonnte', 'admin-payment-gateway', 'admin-router-add', 'admin-session-settings');
   $routerConnected = false;
   $API = null;
   $identity = isset($hotspotname) ? $hotspotname : $session;
@@ -312,6 +314,9 @@ if (!isset($_SESSION["mikhmon"])) {
   }
 
 // customer database
+  elseif ($mitra == "list" && mikhmonIsAdmin()) {
+    include_once('./settings/mitras.php');
+  }
   elseif ($commission == "1") {
     include_once('./customer/commission.php');
   }

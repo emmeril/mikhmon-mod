@@ -35,7 +35,7 @@ $selectedMonth = isset($_GET['month']) && preg_match('/^\d{4}-\d{2}$/', (string)
 $totalAmount = 0;
 foreach ($commissionRows as $invoice) {
   if (empty($invoice['paid_at']) || date('Y-m', (int) $invoice['paid_at']) !== $selectedMonth) continue;
-  $commission = isset($invoice['biller_commission']) ? (float) $invoice['biller_commission'] : mikhmonBillerCommissionAmount();
+  $commission = (float) ($invoice['biller_commission'] ?? 0);
   $totalAmount += $commission;
 }
 ?>
@@ -58,7 +58,7 @@ foreach ($commissionRows as $invoice) {
         if (empty($invoice['paid_at']) || date('Y-m', (int) $invoice['paid_at']) !== $selectedMonth) continue;
         $visibleIndex++;
         $customer = isset($invoice['customer_id'], $customersById[(string) $invoice['customer_id']]) ? $customersById[(string) $invoice['customer_id']] : array();
-        $commission = isset($invoice['biller_commission']) ? (float) $invoice['biller_commission'] : mikhmonBillerCommissionAmount();
+        $commission = (float) ($invoice['biller_commission'] ?? 0);
         $invoiceServices = isset($invoice['services']) && is_array($invoice['services']) ? $invoice['services'] : array();
         $invoiceServiceLabel = $invoiceServices ? count($invoiceServices) . ' layanan' : ($invoice['service'] ?? ($customer['service'] ?? '-'));
         $invoiceUsernameLabel = $invoiceServices ? implode(', ', array_map(function ($service) { return $service['username'] ?? ''; }, $invoiceServices)) : ($invoice['username'] ?? ($customer['username'] ?? '-'));

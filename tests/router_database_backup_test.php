@@ -53,6 +53,11 @@ class RouterDatabaseBackupFakeApi {
 }
 
 $mitraId = mikhmonSaveUser('', 'Mitra Backup', 'mitra-backup', 'mitra', 'router-lama', 'rahasia-mitra', true);
+$sourcePartner = mikhmonFindPartner($mitraId, 'user_id');
+$sourcePartner['phone'] = '081299999999';
+$sourcePartner['category'] = 'sales';
+$sourcePartner['commission'] = 12500;
+routerDatabaseBackupTestAssert(mikhmonSavePartner($sourcePartner) !== false, 'source partner profile is configured');
 $longAddress = 'Alamat pelanggan ' . bin2hex(random_bytes(12000));
 $customerId = mikhmonSaveCustomer(
   'router-lama',
@@ -110,6 +115,8 @@ routerDatabaseBackupTestAssert($customers[0]['address'] === $longAddress, 'custo
 routerDatabaseBackupTestAssert(count(mikhmonGetInvoices('router-baru')) === 2, 'invoice history is preserved');
 $restoredMitra = mikhmonFindUser('mitra-backup', 'username');
 routerDatabaseBackupTestAssert($restoredMitra && $restoredMitra['session'] === 'router-baru', 'mitra is restored and remapped to the target session');
+$restoredPartner = mikhmonFindPartner($restoredMitra['id'], 'user_id');
+routerDatabaseBackupTestAssert($restoredPartner && $restoredPartner['category'] === 'sales' && $restoredPartner['commission'] === 12500.0 && $restoredPartner['phone'] === '081299999999', 'partner category and commission are restored with the remapped account');
 routerDatabaseBackupTestAssert($customers[0]['mitra_id'] === $restoredMitra['id'], 'customer assignment to mitra is preserved');
 routerDatabaseBackupTestAssert($customers[0]['id'] === $existingCustomerId && mikhmonGetInvoices('router-baru')[0]['customer_id'] === $existingCustomerId, 'invoice customer references follow an existing target identity');
 $restoredAgain = mikhmonRestoreRouterDatabaseBackup($api, 'router-baru', 'password-pemulihan');

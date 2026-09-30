@@ -61,6 +61,9 @@ function mikhmonRouterDatabaseBackupPayload($session) {
     'invoices' => array_values((array) ($database['invoices'][$session] ?? array())),
     'report_records' => array_values((array) ($database['report_records'][$session] ?? array())),
     'users' => array_values($users),
+    'partners' => array_values(array_filter((array) ($database['partners'] ?? array()), function ($partner) use ($session) {
+      return is_array($partner) && (string) ($partner['session'] ?? '') === (string) $session;
+    })),
   );
 }
 
@@ -275,7 +278,7 @@ function mikhmonRestoreRouterDatabaseBackup($API, $targetSession, $password) {
   if (empty($read['status'])) return $read;
   $payload = $read['payload'];
   $database = mikhmonReadDatabase();
-  foreach (array('customers', 'invoices', 'report_records', 'users') as $key) if (!isset($database[$key]) || !is_array($database[$key])) $database[$key] = array();
+  foreach (array('customers', 'invoices', 'report_records', 'users', 'partners') as $key) if (!isset($database[$key]) || !is_array($database[$key])) $database[$key] = array();
 
   $userIdMap = array();
   $usersAdded = 0;
@@ -294,6 +297,30 @@ function mikhmonRestoreRouterDatabaseBackup($API, $targetSession, $password) {
     $database['users'][] = $backupUser;
     $userIdMap[$oldId] = $oldId;
     $usersAdded++;
+  }
+
+  $partnerIdMap = array();
+  foreach ((array) ($payload['partners'] ?? array()) as $backupPartner) {
+    if (!is_array($backupPartner) || empty($backupPartner['id'])) continue;
+    $oldPartnerId = (string) $backupPartner['id'];
+    $oldUserId = (string) ($backupPartner['user_id'] ?? '');
+    if ($oldUserId !== '' && isset($userIdMap[$oldUserId])) $backupPartner['user_id'] = $userIdMap[$oldUserId];
+    $backupPartner['session'] = (string) $targetSession;
+    $matchIndex = null;
+    foreach ($database['partners'] as $index => $currentPartner) {
+      $sameId = (string) ($currentPartner['id'] ?? '') === $oldPartnerId;
+      $sameUser = !empty($backupPartner['user_id']) && (string) ($currentPartner['user_id'] ?? '') === (string) $backupPartner['user_id'];
+      if ($sameId || $sameUser) { $matchIndex = $index; break; }
+    }
+    if ($matchIndex === null) {
+      $database['partners'][] = mikhmonNormalizePartner($backupPartner);
+      $partnerIdMap[$oldPartnerId] = $oldPartnerId;
+      continue;
+    }
+    $currentPartnerId = (string) ($database['partners'][$matchIndex]['id'] ?? $oldPartnerId);
+    $backupPartner['id'] = $currentPartnerId;
+    $database['partners'][$matchIndex] = mikhmonNormalizePartner(array_merge($database['partners'][$matchIndex], $backupPartner));
+    $partnerIdMap[$oldPartnerId] = $currentPartnerId;
   }
 
   if (!isset($database['customers'][$targetSession]) || !is_array($database['customers'][$targetSession])) $database['customers'][$targetSession] = array();
@@ -341,8 +368,10 @@ function mikhmonRestoreRouterDatabaseBackup($API, $targetSession, $password) {
     if (!is_array($invoice)) continue;
     $oldCustomerId = (string) ($invoice['customer_id'] ?? '');
     $oldPaidBy = (string) ($invoice['paid_by_user_id'] ?? '');
+    $oldBillerPartnerId = (string) ($invoice['biller_partner_id'] ?? '');
     if ($oldCustomerId !== '' && isset($customerIdMap[$oldCustomerId])) $backupInvoices[$invoiceIndex]['customer_id'] = $customerIdMap[$oldCustomerId];
     if ($oldPaidBy !== '' && isset($userIdMap[$oldPaidBy])) $backupInvoices[$invoiceIndex]['paid_by_user_id'] = $userIdMap[$oldPaidBy];
+    if ($oldBillerPartnerId !== '' && isset($partnerIdMap[$oldBillerPartnerId])) $backupInvoices[$invoiceIndex]['biller_partner_id'] = $partnerIdMap[$oldBillerPartnerId];
   }
   $invoiceMerge = mikhmonMergeRowsByField($database['invoices'][$targetSession], $backupInvoices, 'id');
   $database['invoices'][$targetSession] = $invoiceMerge['rows'];

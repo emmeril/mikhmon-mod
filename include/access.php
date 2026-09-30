@@ -216,24 +216,36 @@ function mikhmonCanOpenMainRoute($route) {
   return false;
 }
 
-function mikhmonBillerCommissionAmount() {
-  return 2500;
+function mikhmonBillerCommissionAmount($userId = '') {
+  $userId = $userId !== '' ? (string) $userId : (mikhmonIsBiller() ? mikhmonUserId() : '');
+  if ($userId !== '') {
+    $partner = mikhmonFindPartner($userId, 'user_id');
+    if ($partner && $partner['category'] === 'biller' && !empty($partner['active'])) return (float) $partner['commission'];
+  }
+  return 0;
 }
 
 function mikhmonBillerCommissionStats($session, $userId = '') {
   $count = 0;
   $monthCount = 0;
+  $amount = 0;
+  $monthAmount = 0;
   $month = date('Ym');
   foreach (mikhmonGetInvoices($session) as $invoice) {
     if (!isset($invoice['status']) || $invoice['status'] !== 'paid' || empty($invoice['paid_by_user_id'])) continue;
     if ($userId !== '' && (string) $invoice['paid_by_user_id'] !== (string) $userId) continue;
     $count++;
-    if (!empty($invoice['paid_at']) && date('Ym', (int) $invoice['paid_at']) === $month) $monthCount++;
+    $invoiceCommission = (int) round((float) ($invoice['biller_commission'] ?? 0));
+    $amount += $invoiceCommission;
+    if (!empty($invoice['paid_at']) && date('Ym', (int) $invoice['paid_at']) === $month) {
+      $monthCount++;
+      $monthAmount += $invoiceCommission;
+    }
   }
   return array(
     'count' => $count,
-    'amount' => $count * mikhmonBillerCommissionAmount(),
+    'amount' => $amount,
     'month_count' => $monthCount,
-    'month_amount' => $monthCount * mikhmonBillerCommissionAmount(),
+    'month_amount' => $monthAmount,
   );
 }

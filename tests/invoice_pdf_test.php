@@ -35,4 +35,11 @@ invoicePdfTestAssert(mikhmonInvoicePdfTextWidth($addressLines[0], 8) <= 226 && m
 invoicePdfTestAssert(substr($addressLines[1], -3) === '...', 'overflowing address is truncated visibly');
 invoicePdfTestAssert(preg_match('/xref\n0 6\n(?:\d{10} \d{5} [fn] \n){6}/', $pdf) === 1, 'cross-reference table is valid');
 
+$feeInvoice = $invoice;
+$feeInvoice['subtotal'] = 3000;
+$feeInvoice['admin_fee'] = 500;
+$feeInvoice['amount'] = 3500;
+$feePdf = mikhmonInvoicePdf($feeInvoice, array('name' => 'Apri', 'phone' => '08123456789', 'address' => $longAddress), 'Rp', 'Emmeril Hotspot');
+invoicePdfTestAssert(strpos($feePdf, 'Subtotal: Rp 3.000') !== false && strpos($feePdf, 'Biaya Admin: Rp 500') !== false && strpos($feePdf, 'TOTAL TAGIHAN: Rp 3.500') !== false, 'invoice PDF separates service subtotal, admin fee, and customer total');
+
 echo 'invoice-pdf-tests: OK' . PHP_EOL;

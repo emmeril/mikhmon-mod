@@ -25,6 +25,12 @@ foreach (mikhmonVisibleInvoices($session) as $candidate) {
   if ((string) ($candidate['id'] ?? '') === $invoiceId) { $invoice = $candidate; break; }
 }
 if (!$invoice) { http_response_code(404); exit('Invoice tidak ditemukan.'); }
+$invoiceStatus = (string) ($invoice['status'] ?? '');
+if ($invoiceStatus === 'unpaid' && mikhmonIsBiller()) {
+  $invoice['subtotal'] = (float) ($invoice['subtotal'] ?? $invoice['amount'] ?? 0);
+  $invoice['admin_fee'] = mikhmonBillerCommissionAmount(mikhmonUserId());
+  $invoice['amount'] = $invoice['subtotal'] + $invoice['admin_fee'];
+}
 $customer = mikhmonFindCustomer($session, $invoice['customer_id'] ?? '');
 if (!$customer) $customer = array('name' => $invoice['customer_name'] ?? '-', 'phone' => '-');
 $brand = isset($brandname) && trim((string) $brandname) !== '' ? trim((string) $brandname) : 'MIKHMON';

@@ -87,7 +87,9 @@ function billingInvoiceMessage($customer, $invoice, $dueDate, $currency, $brand)
     $services[] = '- ' . strtoupper($row['service'] ?? '') . ' / ' . ($row['username'] ?? '') . ' / ' . ($row['profile'] ?? '') . ' / ' . billingMessageAmount($row['amount'] ?? 0, $currency);
   }
   $amount = isset($invoice['amount']) ? (float) $invoice['amount'] : 0;
-  $message = "Yth. Bapak/Ibu " . $customerName . ",\n\nDETAIL TAGIHAN " . $brand . "\nNo. Invoice: " . ($invoice['number'] ?? 'baru') . "\nNama Pelanggan: " . $customerName . "\nLayanan:\n" . implode("\n", $services) . "\n\nTotal Tagihan: " . billingMessageAmount($amount, $currency) . "\nJatuh Tempo: " . ($invoice['due_date'] ?? $dueDate ?: '-') . "\n\nMohon melakukan pembayaran sebelum jatuh tempo. Terima kasih.";
+  $adminFee = max(0, (float) ($invoice['admin_fee'] ?? 0));
+  $feeDetail = $adminFee > 0 ? "\nBiaya Admin: " . billingMessageAmount($adminFee, $currency) : '';
+  $message = "Yth. Bapak/Ibu " . $customerName . ",\n\nDETAIL TAGIHAN " . $brand . "\nNo. Invoice: " . ($invoice['number'] ?? 'baru') . "\nNama Pelanggan: " . $customerName . "\nLayanan:\n" . implode("\n", $services) . $feeDetail . "\n\nTotal Tagihan: " . billingMessageAmount($amount, $currency) . "\nJatuh Tempo: " . ($invoice['due_date'] ?? $dueDate ?: '-') . "\n\nMohon melakukan pembayaran sebelum jatuh tempo. Terima kasih.";
   $paymentUrl = trim((string) ($invoice['payment_url'] ?? ''));
   if ($paymentUrl !== '') $message .= "\n\nLink Pembayaran: " . $paymentUrl;
   return $message;
@@ -297,11 +299,13 @@ function billingSyncUnpaidInvoice($session, &$invoices, $customer, $customerUser
   $newSignature = json_encode(array_map(function ($service) {
     return array('id' => $service['id'] ?? '', 'service' => $service['service'] ?? '', 'username' => $service['username'] ?? '', 'profile' => $service['profile'] ?? '', 'amount' => (float) ($service['amount'] ?? 0));
   }, $serviceDetails));
-  $changed = $oldSignature !== $newSignature || (float) ($invoice['amount'] ?? 0) !== (float) $amount || (int) ($invoice['service_count'] ?? 0) !== count($serviceDetails) || (string) ($invoice['due_date'] ?? '') !== $dueDate || (string) ($invoice['customer_name'] ?? '') !== (string) ($customer['name'] ?? '');
+  $changed = $oldSignature !== $newSignature || (float) ($invoice['subtotal'] ?? $invoice['amount'] ?? 0) !== (float) $amount || (int) ($invoice['service_count'] ?? 0) !== count($serviceDetails) || (string) ($invoice['due_date'] ?? '') !== $dueDate || (string) ($invoice['customer_name'] ?? '') !== (string) ($customer['name'] ?? '');
   if ($changed) {
     $invoice['customer_name'] = $customer['name'] ?? '';
     $invoice['services'] = $serviceDetails;
     $invoice['service_count'] = count($serviceDetails);
+    $invoice['subtotal'] = $amount;
+    $invoice['admin_fee'] = 0;
     $invoice['amount'] = $amount;
     $invoice['due_date'] = $dueDate;
     if (mikhmonSaveInvoice($session, $invoice) === false) return false;
@@ -452,6 +456,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           'id' => 'invoice-' . uniqid(), 'number' => 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5)),
           'customer_id' => $customer['id'], 'customer_name' => $customer['name'] ?? '',
           'services' => $invoiceServices, 'service_count' => count($invoiceServices),
+          'subtotal' => $amount, 'admin_fee' => 0,
           'amount' => $amount, 'due_date' => $customerDueDate,
           'status' => 'unpaid', 'created_at' => time(),
         );
@@ -475,6 +480,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif (empty($routerConnected)) $customerError = 'Router MikroTik tidak terhubung.';
     else {
       $gatewayConfirmed = !empty($invoices[$invoiceIndex]['gateway_payment_received']);
+      $receivingPartner = !$gatewayConfirmed && mikhmonIsBiller() ? mikhmonFindPartner(mikhmonUserId(), 'user_id') : false;
+      $billerCommission = $receivingPartner ? mikhmonBillerCommissionAmount(mikhmonUserId()) : 0;
       $actorName = $gatewayConfirmed
         ? 'Retry ' . strtoupper((string) ($invoices[$invoiceIndex]['payment_gateway'] ?? 'Gateway'))
         : (mikhmonIsAdmin() ? 'Administrator' : mikhmonUserName());
@@ -482,7 +489,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'allow_manual' => !$gatewayConfirmed,
         'actor_name' => $actorName,
         'paid_by_user_id' => $gatewayConfirmed || mikhmonIsAdmin() ? '' : mikhmonUserId(),
-        'biller_commission' => !$gatewayConfirmed && mikhmonIsBiller() ? mikhmonBillerCommissionAmount() : 0,
+        'biller_partner_id' => $receivingPartner ? $receivingPartner['id'] : '',
+        'biller_commission' => $billerCommission,
       ));
       if (empty($activationResult['success'])) $customerError = $activationResult['message'] ?? 'Aktivasi layanan gagal.';
       else {
@@ -507,6 +515,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif (!$customer || !$invoiceToSend || (string) ($invoiceToSend['customer_id'] ?? '') !== (string) ($customer['id'] ?? '')) $customerError = 'Invoice atau pelanggan tidak ditemukan.';
     elseif (!mikhmonBillingAutomationIsWorkHour()) $customerError = 'Pengiriman invoice melalui Fonnte hanya dapat dilakukan pada jam kerja (07.00-17.00).';
     else {
+      if (($invoiceToSend['status'] ?? '') === 'unpaid' && mikhmonIsBiller()) {
+        $invoiceToSend['subtotal'] = (float) ($invoiceToSend['subtotal'] ?? $invoiceToSend['amount'] ?? 0);
+        $invoiceToSend['admin_fee'] = mikhmonBillerCommissionAmount(mikhmonUserId());
+        $invoiceToSend['amount'] = $invoiceToSend['subtotal'] + $invoiceToSend['admin_fee'];
+      }
       $brand = isset($brandname) && trim((string) $brandname) !== '' ? trim((string) $brandname) : 'MIKHMON';
       $message = billingInvoiceMessage($customer, $invoiceToSend, $invoiceToSend['due_date'] ?? '', $currency, $brand);
       $result = mikhmonFonnteSend($customer['phone'] ?? '', $message, $fonnteConfig);
@@ -553,6 +566,7 @@ $unpaidInvoiceAmount = 0;
 $currentInvoiceCount = 0;
 $paidMonthAmount = 0;
 $paidMonthCommission = 0;
+$paidMonthAdminFee = 0;
 
 // Keep the paid invoice as the primary status until the reminder window opens.
 // The following invoice becomes actionable together with its WhatsApp reminder.
@@ -593,6 +607,7 @@ if ($billingView === 'paid') {
     if ($paidAt <= 0 || date('Y-m', $paidAt) !== $currentMonth) continue;
     $paidMonthAmount += (float) ($currentPaidInvoice['amount'] ?? 0);
     $paidMonthCommission += (float) ($currentPaidInvoice['biller_commission'] ?? 0);
+    $paidMonthAdminFee += (float) ($currentPaidInvoice['admin_fee'] ?? 0);
   }
 } else {
   foreach ($customers as $unpaidCustomer) $billingRows[] = array(
@@ -609,11 +624,10 @@ if ($billingView === 'paid') {
     $currentInvoiceCount++;
     if ($currentStatus !== 'unpaid') continue;
     $unpaidInvoiceCount++;
-    $unpaidInvoiceAmount += (float) ($currentInvoice['amount'] ?? 0);
+    $unpaidInvoiceAmount += (float) ($currentInvoice['amount'] ?? 0) + (mikhmonIsBiller() ? mikhmonBillerCommissionAmount(mikhmonUserId()) : 0);
     if (!empty($currentInvoice['automation']['isolated_at'])) $isolatedInvoiceCount++;
   }
 }
-$paidMonthAdminFee = max(0, $paidMonthAmount - $paidMonthCommission);
 ?>
 <style>
   .billing-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 16px}
@@ -698,11 +712,17 @@ $paidMonthAdminFee = max(0, $paidMonthAmount - $paidMonthCommission);
       $invoiceStatusText = $invoiceStatus === 'paid' ? 'Paid' : ($invoiceStatus === 'unpaid' ? 'Unpaid' : 'No Invoice');
       $invoiceStatusClass = $invoiceStatus === 'paid' ? 'text-success' : ($invoiceStatus === 'unpaid' ? 'text-danger' : 'text-secondary');
       $estimatedAmount = 0; foreach ($serviceDetails as $detail) $estimatedAmount += (float) $detail['amount'];
-      $amount = isset($invoice['amount']) ? (float) $invoice['amount'] : $estimatedAmount;
+      $displayInvoice = $invoice;
+      if ($invoiceStatus === 'unpaid' && mikhmonIsBiller()) {
+        $displayInvoice['subtotal'] = (float) ($invoice['subtotal'] ?? $invoice['amount'] ?? $estimatedAmount);
+        $displayInvoice['admin_fee'] = mikhmonBillerCommissionAmount(mikhmonUserId());
+        $displayInvoice['amount'] = $displayInvoice['subtotal'] + $displayInvoice['admin_fee'];
+      }
+      $amount = isset($displayInvoice['amount']) ? (float) $displayInvoice['amount'] : $estimatedAmount;
       $serviceSearch = implode(' ', array_map(function($row){return $row['service'].' '.$row['username'].' '.$row['profile'];}, $serviceDetails));
       $phone = billingPhone($customer['phone'] ?? ''); $customerName = trim((string) ($customer['name'] ?? ''));
       $messageBrand = isset($brandname) && trim((string) $brandname) !== '' ? trim((string) $brandname) : 'MIKHMON';
-      $invoiceText = billingInvoiceMessage($customer, $invoice, $customerDueDate, $currency, $messageBrand);
+      $invoiceText = billingInvoiceMessage($customer, $displayInvoice, $customerDueDate, $currency, $messageBrand);
       $waUrl = $phone !== '' && $invoiceStatus !== 'none' ? 'https://wa.me/' . $phone . '?text=' . rawurlencode($invoiceText) : '';
       $canSendFonnte = !empty($fonnteConfig['enabled']) && $fonnteConfig['token'] !== '' && $phone !== '' && $invoiceStatus !== 'none';
       $gatewayPaymentReceived = !empty($invoice['gateway_payment_received']) && $invoiceStatus === 'unpaid';

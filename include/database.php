@@ -118,14 +118,14 @@ function mikhmonReadDatabase() {
     return $GLOBALS['_mikhmon_database_cache'];
   }
   if (!is_file($path)) {
-    $empty = array('version' => 5, 'customers' => array(), 'invoices' => array(), 'report_records' => array(), 'users' => array(), 'customer_auth' => array());
+    $empty = array('version' => 6, 'customers' => array(), 'invoices' => array(), 'report_records' => array(), 'users' => array(), 'partners' => array(), 'customer_auth' => array());
     $GLOBALS['_mikhmon_database_cache'] = $empty;
     $GLOBALS['_mikhmon_database_cache_path'] = $path;
     return $empty;
   }
   $data = json_decode((string) @file_get_contents($path), true);
   if (!is_array($data)) {
-    $empty = array('version' => 5, 'customers' => array(), 'invoices' => array(), 'report_records' => array(), 'users' => array(), 'customer_auth' => array());
+    $empty = array('version' => 6, 'customers' => array(), 'invoices' => array(), 'report_records' => array(), 'users' => array(), 'partners' => array(), 'customer_auth' => array());
     $GLOBALS['_mikhmon_database_cache'] = $empty;
     $GLOBALS['_mikhmon_database_cache_path'] = $path;
     return $empty;
@@ -156,10 +156,37 @@ function mikhmonReadDatabase() {
   if (!isset($data['users']) || !is_array($data['users'])) {
     $data['users'] = array();
   }
+  if (!isset($data['partners']) || !is_array($data['partners'])) {
+    $data['partners'] = array();
+  }
   if (!isset($data['customer_auth']) || !is_array($data['customer_auth'])) {
     $data['customer_auth'] = array();
   }
   $changed = false;
+  $partnerUserIds = array();
+  foreach ($data['partners'] as $partnerIndex => $partner) {
+    if (!is_array($partner)) continue;
+    $normalizedPartner = mikhmonNormalizePartner($partner);
+    if ($normalizedPartner !== $partner) {
+      $data['partners'][$partnerIndex] = $normalizedPartner;
+      $changed = true;
+    }
+    if ($normalizedPartner['user_id'] !== '') $partnerUserIds[$normalizedPartner['user_id']] = true;
+  }
+  foreach ($data['users'] as $user) {
+    if (!is_array($user) || !in_array($user['role'] ?? '', array('mitra', 'biller'), true) || empty($user['id']) || isset($partnerUserIds[(string) $user['id']])) continue;
+    $data['partners'][] = mikhmonNormalizePartner(array(
+      'id' => 'mitra-' . bin2hex(random_bytes(8)),
+      'user_id' => (string) $user['id'],
+      'session' => (string) ($user['session'] ?? ''),
+      'name' => (string) ($user['name'] ?? $user['username'] ?? ''),
+      'category' => ($user['role'] ?? '') === 'biller' ? 'biller' : 'reseller',
+      'commission' => ($user['role'] ?? '') === 'biller' ? 2500 : 0,
+      'active' => !empty($user['active']),
+    ));
+    $partnerUserIds[(string) $user['id']] = true;
+    $changed = true;
+  }
   foreach ($data['customers'] as $session => $customers) {
     if (!is_array($customers)) continue;
     foreach ($customers as $index => $customer) {
@@ -177,7 +204,7 @@ function mikhmonReadDatabase() {
     }
   }
   if ($changed) {
-    $data['version'] = 5;
+    $data['version'] = 6;
     mikhmonWriteDatabase($data);
   }
   $GLOBALS['_mikhmon_database_cache'] = $data;
@@ -333,6 +360,79 @@ function mikhmonCustomerServices($customer) {
   return isset($normalized['services']) ? $normalized['services'] : array();
 }
 
+function mikhmonNormalizePartner($partner) {
+  $partner = is_array($partner) ? $partner : array();
+  $category = strtolower(trim((string) ($partner['category'] ?? 'reseller')));
+  if (!in_array($category, array('reseller', 'biller', 'sales'), true)) $category = 'reseller';
+  return array(
+    'id' => !empty($partner['id']) ? (string) $partner['id'] : 'mitra-' . bin2hex(random_bytes(8)),
+    'user_id' => trim(strip_tags((string) ($partner['user_id'] ?? ''))),
+    'session' => trim(strip_tags((string) ($partner['session'] ?? ''))),
+    'name' => trim(strip_tags((string) ($partner['name'] ?? ''))),
+    'category' => $category,
+    'voucher_stock' => max(0, (int) ($partner['voucher_stock'] ?? 0)),
+    'phone' => trim(strip_tags((string) ($partner['phone'] ?? ''))),
+    'email' => trim(strip_tags((string) ($partner['email'] ?? ''))),
+    'address' => trim(strip_tags((string) ($partner['address'] ?? ''))),
+    'commission' => max(0, (float) ($partner['commission'] ?? 0)),
+    'active' => array_key_exists('active', $partner) ? (bool) $partner['active'] : true,
+    'updated_at' => (int) ($partner['updated_at'] ?? time()),
+  );
+}
+
+function mikhmonGetPartners($session = '', $category = '') {
+  $database = mikhmonReadDatabase();
+  return array_values(array_filter(array_map('mikhmonNormalizePartner', (array) ($database['partners'] ?? array())), function ($partner) use ($session, $category) {
+    if ($session !== '' && $partner['session'] !== $session) return false;
+    if ($category !== '' && $partner['category'] !== $category) return false;
+    return true;
+  }));
+}
+
+function mikhmonFindPartner($value, $field = 'id') {
+  foreach (mikhmonGetPartners() as $partner) {
+    if (isset($partner[$field]) && (string) $partner[$field] === (string) $value) return $partner;
+  }
+  return false;
+}
+
+function mikhmonSavePartner($partner) {
+  $database = mikhmonReadDatabase();
+  $partner = mikhmonNormalizePartner($partner);
+  if ($partner['name'] === '' || $partner['session'] === '') return false;
+  if ($partner['email'] !== '' && !filter_var($partner['email'], FILTER_VALIDATE_EMAIL)) return false;
+  if ($partner['user_id'] !== '') {
+    $user = mikhmonFindUser($partner['user_id']);
+    $expectedRole = $partner['category'] === 'biller' ? 'biller' : 'mitra';
+    if (!$user || ($user['role'] ?? '') !== $expectedRole || (string) ($user['session'] ?? '') !== $partner['session']) return false;
+  }
+  foreach ((array) ($database['partners'] ?? array()) as $existing) {
+    if (!empty($partner['user_id']) && (string) ($existing['user_id'] ?? '') === $partner['user_id'] && (string) ($existing['id'] ?? '') !== $partner['id']) return false;
+  }
+  $found = false;
+  foreach ((array) ($database['partners'] ?? array()) as $index => $existing) {
+    if ((string) ($existing['id'] ?? '') !== $partner['id']) continue;
+    $database['partners'][$index] = $partner;
+    $found = true;
+    break;
+  }
+  if (!$found) $database['partners'][] = $partner;
+  return mikhmonWriteDatabase($database) ? $partner['id'] : false;
+}
+
+function mikhmonDeletePartner($id) {
+  $database = mikhmonReadDatabase();
+  $kept = array();
+  $removed = false;
+  foreach ((array) ($database['partners'] ?? array()) as $partner) {
+    if ((string) ($partner['id'] ?? '') === (string) $id) { $removed = true; continue; }
+    $kept[] = $partner;
+  }
+  if (!$removed) return false;
+  $database['partners'] = $kept;
+  return mikhmonWriteDatabase($database);
+}
+
 function mikhmonGetUsers($role = '', $session = '') {
   $database = mikhmonReadDatabase();
   $users = array_values($database['users']);
@@ -389,6 +489,29 @@ function mikhmonSaveUser($id, $name, $username, $role, $session, $password = '',
     }
   }
   if (!$found) $database['users'][] = $user;
+  if ($role !== 'admin') {
+    $partnerFound = false;
+    foreach ((array) ($database['partners'] ?? array()) as $partnerIndex => $partner) {
+      if ((string) ($partner['user_id'] ?? '') !== $user['id']) continue;
+      $database['partners'][$partnerIndex]['name'] = $user['name'];
+      $database['partners'][$partnerIndex]['session'] = $user['session'];
+      $database['partners'][$partnerIndex]['active'] = $user['active'];
+      $database['partners'][$partnerIndex]['category'] = $role === 'biller' ? 'biller' : (($partner['category'] ?? '') === 'sales' ? 'sales' : 'reseller');
+      $database['partners'][$partnerIndex]['updated_at'] = time();
+      $partnerFound = true;
+      break;
+    }
+    if (!$partnerFound) $database['partners'][] = mikhmonNormalizePartner(array(
+      'user_id' => $user['id'], 'session' => $user['session'], 'name' => $user['name'],
+      'category' => $role === 'biller' ? 'biller' : 'reseller',
+      'commission' => $role === 'biller' ? 2500 : 0, 'active' => $user['active'],
+    ));
+  } else foreach ((array) ($database['partners'] ?? array()) as $partnerIndex => $partner) {
+    if ((string) ($partner['user_id'] ?? '') === $user['id']) {
+      $database['partners'][$partnerIndex]['user_id'] = '';
+      $database['partners'][$partnerIndex]['updated_at'] = time();
+    }
+  }
   return mikhmonWriteDatabase($database) ? $user['id'] : false;
 }
 
@@ -403,6 +526,12 @@ function mikhmonDeleteUser($id) {
   }
   if (!$removed) return false;
   $database['users'] = array_values($database['users']);
+  foreach ((array) ($database['partners'] ?? array()) as $index => $partner) {
+    if ((string) ($partner['user_id'] ?? '') === (string) $id) {
+      $database['partners'][$index]['user_id'] = '';
+      $database['partners'][$index]['updated_at'] = time();
+    }
+  }
   return mikhmonWriteDatabase($database);
 }
 
@@ -888,7 +1017,7 @@ function mikhmonDeleteCustomer($session, $id) {
 function mikhmonWriteDatabase($data) {
   $path = mikhmonBackupPath();
   $tmp = $path . '.tmp.' . getmypid();
-  $data['version'] = 5;
+  $data['version'] = 6;
   $json = json_encode($data, JSON_UNESCAPED_SLASHES);
   if ($json === false || @file_put_contents($tmp, $json, LOCK_EX) === false) {
     return false;

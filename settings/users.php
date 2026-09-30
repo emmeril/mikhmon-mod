@@ -74,7 +74,8 @@ foreach ($users as $staff) {
     foreach ((array) ($invoicesBySession[$staff['session']] ?? array()) as $invoice) {
       if (($invoice['status'] ?? '') === 'paid' && (string) ($invoice['paid_by_user_id'] ?? '') === (string) $staff['id'] && !empty($invoice['paid_at']) && date('Ym', (int) $invoice['paid_at']) === $currentMonth) $count++;
     }
-    $monthlySummaries[$staff['id']] = array('label' => 'Komisi', 'count' => $count, 'amount' => $count * mikhmonBillerCommissionAmount());
+    $stats = mikhmonBillerCommissionStats($staff['session'], $staff['id']);
+    $monthlySummaries[$staff['id']] = array('label' => 'Komisi', 'count' => $count, 'amount' => $stats['month_amount']);
     continue;
   }
   $customerIds = array();

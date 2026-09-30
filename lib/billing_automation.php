@@ -341,7 +341,8 @@ function mikhmonBillingAutomationEnsureInitialInvoice($api, $session, &$invoices
   $invoice = array(
     'id' => 'invoice-' . uniqid(), 'number' => 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5)),
     'customer_id' => $customerId, 'customer_name' => $customer['name'] ?? '',
-    'services' => $services, 'service_count' => count($services), 'amount' => $amount,
+    'services' => $services, 'service_count' => count($services),
+    'subtotal' => $amount, 'admin_fee' => 0, 'amount' => $amount,
     'due_date' => date('Y-m-d H:i:s', $dueAt), 'status' => 'unpaid', 'created_at' => time(),
     'generated_from' => 'bootstrap',
   );
@@ -364,7 +365,8 @@ function mikhmonBillingAutomationEnsureUnpaidInvoice($session, &$invoices, $cust
     'customer_id' => $customerId, 'customer_name' => $customer['name'] ?? '',
     'services' => mikhmonBillingAutomationInvoiceServices($paid, $customer),
     'service_count' => count(mikhmonBillingAutomationInvoiceServices($paid, $customer)),
-    'amount' => (float) ($paid['amount'] ?? 0), 'due_date' => $dueDate,
+    'subtotal' => (float) ($paid['subtotal'] ?? $paid['amount'] ?? 0), 'admin_fee' => 0,
+    'amount' => (float) ($paid['subtotal'] ?? $paid['amount'] ?? 0), 'due_date' => $dueDate,
     'status' => 'unpaid', 'created_at' => time(), 'generated_from' => $paid['id'] ?? '',
   );
   if (mikhmonSaveInvoice($session, $nextInvoice) === false) return array();

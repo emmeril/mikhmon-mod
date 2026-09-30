@@ -104,6 +104,9 @@ if (!isset($_SESSION["mikhmon"])) {
   } elseif ($commission == "1") {
     $scommission = "active";
     $mpage = "Komisi Saya";
+  } elseif ($mitra == "list") {
+    $smitralist = "active";
+    $mpage = "Mitra";
   } elseif (in_array($billing, array("1", "unpaid", "paid"), true)) {
     $mbilling = "active";
     $billingmenu = "menu-open";
@@ -488,6 +491,7 @@ include('./info.php');
   </div>
 <?php else: ?>
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
+  <a href="./?mitra=list&amp;session=<?= rawurlencode($session); ?>" class="menu <?= $smitralist; ?>"><i class="fa fa-handshake-o"></i> Mitra</a>
   <!--users-->
   <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-ticket"></i> Voucher
     <i class="fa fa-caret-down"></i>
