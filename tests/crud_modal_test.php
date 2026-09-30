@@ -93,5 +93,8 @@ crudModalAssert(strpos($userManagementSource, "'&saved=' . \$savedAction") !== f
 crudModalAssert(strpos($partnerManagementSource, 'window.location.replace(') !== false, 'partner management redirects after a successful modal save');
 crudModalAssert(strpos($userManagementSource, 'class="user-form-actions"') !== false, 'user management uses a responsive modal action footer');
 crudModalAssert(strpos($partnerManagementSource, 'class="mitra-form-actions"') !== false, 'partner management uses a responsive modal action footer');
+crudModalAssert(strpos($partnerManagementSource, 'class="mitra-action-cell"><div class="mitra-actions">') !== false, 'partner row actions use a dedicated layout group');
+crudModalAssert(strpos($partnerManagementSource, '.mitra-actions{display:grid;grid-template-columns:repeat(2,minmax(82px,1fr))') !== false, 'partner row actions stay aligned side by side');
+crudModalAssert(strpos($partnerManagementSource, '.mitra-actions .btn{min-height:44px}') !== false, 'partner row actions keep a mobile tap target');
 
 echo 'crud-modal-tests: OK' . PHP_EOL;
