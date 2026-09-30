@@ -11,10 +11,13 @@ $mitraMessage = '';
 $mitraError = '';
 $editMitra = false;
 $mitraBaseUrl = './?mitra=list&session=' . rawurlencode($session);
+$mitraT = function ($text) {
+  return function_exists('mikhmonTranslateText') ? mikhmonTranslateText($text) : $text;
+};
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mitra_action'])) {
   if (!mikhmonValidCsrf($_POST['_csrf'] ?? '')) {
-    $mitraError = 'Sesi formulir tidak valid. Muat ulang halaman lalu coba lagi.';
+    $mitraError = $mitraT('The form session is invalid. Reload the page and try again.');
   } elseif ($_POST['mitra_action'] === 'save') {
     $mitraId = trim((string) ($_POST['mitra_id'] ?? ''));
     $existingMitra = $mitraId !== '' ? mikhmonFindPartner($mitraId) : false;
@@ -37,13 +40,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mitra_action'])) {
       'updated_at' => time(),
     );
     if (!in_array($category, array('reseller', 'biller', 'sales'), true)) {
-      $mitraError = 'Kategori Mitra tidak valid.';
+      $mitraError = $mitraT('Partner category is invalid.');
     } elseif ($userId !== '' && (!$user || ($user['role'] ?? '') !== $expectedRole || (string) ($user['session'] ?? '') !== (string) $session)) {
-      $mitraError = 'Akun login tidak sesuai dengan kategori atau router Mitra.';
+      $mitraError = $mitraT('The login account does not match the Partner category or router.');
     } else {
       $savedId = mikhmonSavePartner($partner);
       if ($savedId === false) {
-        $mitraError = 'Data Mitra gagal disimpan. Pastikan nama, email, dan akun login valid serta tidak digunakan Mitra lain.';
+        $mitraError = $mitraT('Partner could not be saved. Check the name, email, and login account.');
       } else {
         mikhmonSystemLog('success', 'Mitra', ($existingMitra ? 'Memperbarui' : 'Membuat') . ' Mitra ' . trim((string) $partner['name']) . '.', mikhmonSystemLogCurrentUser(array('session' => $session)));
         header('Location: ' . $mitraBaseUrl . '&saved=1');
@@ -55,11 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mitra_action'])) {
     $mitraId = trim((string) ($_POST['mitra_id'] ?? ''));
     $partner = mikhmonFindPartner($mitraId);
     if (!$partner || $partner['session'] !== $session) {
-      $mitraError = 'Data Mitra tidak ditemukan.';
+      $mitraError = $mitraT('Partner not found.');
     } elseif ($partner['user_id'] !== '') {
-      $mitraError = 'Lepaskan akun login dari Mitra sebelum menghapus data.';
+      $mitraError = $mitraT('Unlink the login account before deleting this Partner.');
     } elseif (!mikhmonDeletePartner($mitraId)) {
-      $mitraError = 'Data Mitra gagal dihapus.';
+      $mitraError = $mitraT('Partner could not be deleted.');
     } else {
       mikhmonSystemLog('warning', 'Mitra', 'Menghapus Mitra ' . $partner['name'] . '.', mikhmonSystemLogCurrentUser(array('session' => $session)));
       header('Location: ' . $mitraBaseUrl . '&deleted=1');
@@ -71,10 +74,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mitra_action'])) {
 if (!$editMitra && !empty($_GET['mitra-id'])) {
   $candidate = mikhmonFindPartner((string) $_GET['mitra-id']);
   if ($candidate && $candidate['session'] === $session) $editMitra = $candidate;
-  else $mitraError = 'Data Mitra tidak ditemukan.';
+  else $mitraError = $mitraT('Partner not found.');
 }
-if (isset($_GET['saved'])) $mitraMessage = 'Data Mitra berhasil disimpan.';
-if (isset($_GET['deleted'])) $mitraMessage = 'Data Mitra berhasil dihapus.';
+if (isset($_GET['saved'])) $mitraMessage = $mitraT('Partner saved successfully.');
+if (isset($_GET['deleted'])) $mitraMessage = $mitraT('Partner deleted successfully.');
 
 $mitras = mikhmonGetPartners($session);
 usort($mitras, function ($left, $right) { return strcasecmp($left['name'], $right['name']); });
@@ -112,19 +115,19 @@ $isEditingMitra = $editMitra && mikhmonFindPartner($formMitra['id']);
   <?php if ($mitraMessage !== ''): ?><div class="box bg-success" role="status"><i class="fa fa-check"></i> <?= htmlspecialchars($mitraMessage, ENT_QUOTES); ?></div><?php endif; ?>
   <?php if ($mitraError !== ''): ?><div class="box bg-danger" role="alert"><i class="fa fa-warning"></i> <?= htmlspecialchars($mitraError, ENT_QUOTES); ?></div><?php endif; ?>
     <div class="card">
-      <div class="card-header"><h3><i class="fa fa-handshake-o"></i> Daftar Mitra <span style="font-size:14px">| <span id="mitraVisibleCount"><?= count($mitras); ?></span> data</span></h3></div>
+      <div class="card-header"><h3><i class="fa fa-handshake-o"></i> Partner List <span style="font-size:14px">| <span id="mitraVisibleCount"><?= count($mitras); ?></span> <?= htmlspecialchars($mitraT('records'), ENT_QUOTES); ?></span></h3></div>
       <div class="card-body">
-        <div class="mitra-toolbar"><input id="mitraSearch" class="form-control" type="search" placeholder="Cari nama, telepon, email, atau alamat" aria-label="Cari Mitra"><select id="mitraCategoryFilter" class="form-control" aria-label="Filter kategori"><option value="all">Semua Kategori</option><option value="reseller">Reseller</option><option value="biller">Biller</option><option value="sales">Sales</option></select><button id="openMitraModal" class="btn bg-primary mitra-add-button" type="button"><i class="fa fa-user-plus"></i> Tambah Mitra</button></div>
-        <div class="overflow box-bordered"><table class="table table-bordered table-hover text-nowrap mitra-table"><thead><tr><th>ID</th><th>Status</th><th>Nama</th><th>Kategori</th><th>Stok VC</th><th>Telepon</th><th>Email</th><th>Alamat</th><th>Komisi</th><th>Akun</th><th>Aksi</th></tr></thead><tbody>
-          <?php foreach ($mitras as $partner): $account = $partner['user_id'] !== '' ? mikhmonFindUser($partner['user_id']) : false; ?><tr class="mitra-row" data-category="<?= htmlspecialchars($partner['category'], ENT_QUOTES); ?>"><td><?= htmlspecialchars($partner['id'], ENT_QUOTES); ?></td><td class="mitra-status <?= $partner['active'] ? 'text-success' : 'text-danger'; ?>"><?= $partner['active'] ? 'Aktif' : 'Nonaktif'; ?></td><td><?= htmlspecialchars($partner['name'], ENT_QUOTES); ?></td><td><?= strtoupper(htmlspecialchars($partner['category'], ENT_QUOTES)); ?></td><td class="text-right"><?= (int) $partner['voucher_stock']; ?></td><td><?= htmlspecialchars($partner['phone'] ?: '-', ENT_QUOTES); ?></td><td><?= htmlspecialchars($partner['email'] ?: '-', ENT_QUOTES); ?></td><td><?= htmlspecialchars($partner['address'] ?: '-', ENT_QUOTES); ?></td><td class="text-right"><?= htmlspecialchars($currency . ' ' . number_format($partner['commission'], 0, ',', '.'), ENT_QUOTES); ?></td><td><?= htmlspecialchars($account ? $account['username'] : '-', ENT_QUOTES); ?></td><td><a class="btn bg-primary" href="<?= htmlspecialchars($mitraBaseUrl, ENT_QUOTES); ?>&amp;mitra-id=<?= rawurlencode($partner['id']); ?>"><i class="fa fa-edit"></i> Edit</a> <form method="post" style="display:inline" onsubmit="return confirm('Hapus data Mitra ini?');"><?= mikhmonCsrfField(); ?><input type="hidden" name="mitra_action" value="delete"><input type="hidden" name="mitra_id" value="<?= htmlspecialchars($partner['id'], ENT_QUOTES); ?>"><button class="btn bg-danger" type="submit"<?= $partner['user_id'] !== '' ? ' disabled title="Lepaskan akun login sebelum menghapus"' : ''; ?>><i class="fa fa-trash"></i> Hapus</button></form></td></tr><?php endforeach; ?>
-          <?php if (!$mitras): ?><tr><td colspan="11" class="mitra-empty">Belum ada Mitra. Klik Tambah Mitra untuk membuat data pertama.</td></tr><?php endif; ?><tr id="mitraNoResults" style="display:none"><td colspan="11" class="mitra-empty">Tidak ada Mitra yang cocok dengan filter.</td></tr>
+        <div class="mitra-toolbar"><input id="mitraSearch" class="form-control" type="search" placeholder="<?= htmlspecialchars($mitraT('Search by name, phone, email, or address'), ENT_QUOTES); ?>" aria-label="<?= htmlspecialchars($mitraT('Search by name, phone, email, or address'), ENT_QUOTES); ?>"><select id="mitraCategoryFilter" class="form-control" aria-label="<?= htmlspecialchars($mitraT('Filter by category'), ENT_QUOTES); ?>"><option value="all">All Categories</option><option value="reseller">Reseller</option><option value="biller">Biller</option><option value="sales">Sales</option></select><button id="openMitraModal" class="btn bg-primary mitra-add-button" type="button"><i class="fa fa-user-plus"></i> Add Partner</button></div>
+        <div class="overflow box-bordered"><table class="table table-bordered table-hover text-nowrap mitra-table"><thead><tr><th>ID</th><th>Status</th><th>Name</th><th>Category</th><th>Voucher Stock</th><th>Phone</th><th>Email</th><th>Address</th><th>Commission</th><th>Login Account</th><th>Action</th></tr></thead><tbody>
+          <?php foreach ($mitras as $partner): $account = $partner['user_id'] !== '' ? mikhmonFindUser($partner['user_id']) : false; ?><tr class="mitra-row" data-category="<?= htmlspecialchars($partner['category'], ENT_QUOTES); ?>"><td><?= htmlspecialchars($partner['id'], ENT_QUOTES); ?></td><td class="mitra-status <?= $partner['active'] ? 'text-success' : 'text-danger'; ?>"><?= $partner['active'] ? 'Active' : 'Inactive'; ?></td><td><?= htmlspecialchars($partner['name'], ENT_QUOTES); ?></td><td><?= strtoupper(htmlspecialchars($partner['category'], ENT_QUOTES)); ?></td><td class="text-right"><?= (int) $partner['voucher_stock']; ?></td><td><?= htmlspecialchars($partner['phone'] ?: '-', ENT_QUOTES); ?></td><td><?= htmlspecialchars($partner['email'] ?: '-', ENT_QUOTES); ?></td><td><?= htmlspecialchars($partner['address'] ?: '-', ENT_QUOTES); ?></td><td class="text-right"><?= htmlspecialchars($currency . ' ' . number_format($partner['commission'], 0, ',', '.'), ENT_QUOTES); ?></td><td><?= htmlspecialchars($account ? $account['username'] : '-', ENT_QUOTES); ?></td><td><a class="btn bg-primary" href="<?= htmlspecialchars($mitraBaseUrl, ENT_QUOTES); ?>&amp;mitra-id=<?= rawurlencode($partner['id']); ?>"><i class="fa fa-edit"></i> Edit</a> <form method="post" style="display:inline" onsubmit="return confirm(<?= htmlspecialchars(json_encode($mitraT('Delete this Partner?')), ENT_QUOTES); ?>);"><?= mikhmonCsrfField(); ?><input type="hidden" name="mitra_action" value="delete"><input type="hidden" name="mitra_id" value="<?= htmlspecialchars($partner['id'], ENT_QUOTES); ?>"><button class="btn bg-danger" type="submit"<?= $partner['user_id'] !== '' ? ' disabled title="' . htmlspecialchars($mitraT('Unlink the login account before deleting'), ENT_QUOTES) . '"' : ''; ?>><i class="fa fa-trash"></i> Delete</button></form></td></tr><?php endforeach; ?>
+          <?php if (!$mitras): ?><tr><td colspan="11" class="mitra-empty">No Partners yet. Select Add Partner to create the first record.</td></tr><?php endif; ?><tr id="mitraNoResults" style="display:none"><td colspan="11" class="mitra-empty">No Partners match the filter.</td></tr>
         </tbody></table></div>
       </div>
     </div>
 </div></div>
 <div id="mitraModal" class="mitra-modal<?= $editMitra ? ' is-open' : ''; ?>" role="dialog" aria-modal="true" aria-labelledby="mitraModalTitle" aria-hidden="<?= $editMitra ? 'false' : 'true'; ?>">
   <div class="card box-bordered mitra-dialog" role="document">
-    <div class="card-header mitra-dialog-header"><h3 id="mitraModalTitle"><i class="fa <?= $isEditingMitra ? 'fa-edit' : 'fa-user-plus'; ?>"></i> <?= $isEditingMitra ? 'Edit Mitra' : 'Tambah Mitra'; ?></h3><button class="btn bg-danger mitra-dialog-close" type="button" aria-label="Tutup modal">&times;</button></div>
+    <div class="card-header mitra-dialog-header"><h3 id="mitraModalTitle"><i class="fa <?= $isEditingMitra ? 'fa-edit' : 'fa-user-plus'; ?>"></i> <?= $isEditingMitra ? 'Edit Partner' : 'Add Partner'; ?></h3><button class="btn bg-danger mitra-dialog-close" type="button" aria-label="<?= htmlspecialchars($mitraT('Close modal'), ENT_QUOTES); ?>">&times;</button></div>
     <div class="card-body">
       <form method="post" autocomplete="off">
         <?= mikhmonCsrfField(); ?>
@@ -132,25 +135,25 @@ $isEditingMitra = $editMitra && mikhmonFindPartner($formMitra['id']);
         <input type="hidden" name="mitra_id" value="<?= htmlspecialchars($formMitra['id'], ENT_QUOTES); ?>">
         <div class="mitra-form">
           <?php if ($isEditingMitra): ?><div class="wide"><label>ID</label><input class="form-control" value="<?= htmlspecialchars($formMitra['id'], ENT_QUOTES); ?>" readonly></div><?php endif; ?>
-          <div class="wide"><label for="mitra-name">Nama *</label><input id="mitra-name" class="form-control" name="name" maxlength="100" required value="<?= htmlspecialchars($formMitra['name'], ENT_QUOTES); ?>"></div>
-          <div><label for="mitra-category">Kategori *</label><select id="mitra-category" class="form-control" name="category" required><option value="reseller"<?= $formMitra['category'] === 'reseller' ? ' selected' : ''; ?>>Reseller</option><option value="biller"<?= $formMitra['category'] === 'biller' ? ' selected' : ''; ?>>Biller</option><option value="sales"<?= $formMitra['category'] === 'sales' ? ' selected' : ''; ?>>Sales</option></select></div>
-          <div><label for="mitra-stock">Stok Voucher</label><input id="mitra-stock" class="form-control" type="number" min="0" step="1" name="voucher_stock" value="<?= (int) $formMitra['voucher_stock']; ?>"></div>
-          <div><label for="mitra-phone">Telepon</label><input id="mitra-phone" class="form-control" name="phone" maxlength="30" value="<?= htmlspecialchars($formMitra['phone'], ENT_QUOTES); ?>"></div>
+          <div class="wide"><label for="mitra-name">Name *</label><input id="mitra-name" class="form-control" name="name" maxlength="100" required value="<?= htmlspecialchars($formMitra['name'], ENT_QUOTES); ?>"></div>
+          <div><label for="mitra-category">Category *</label><select id="mitra-category" class="form-control" name="category" required><option value="reseller"<?= $formMitra['category'] === 'reseller' ? ' selected' : ''; ?>>Reseller</option><option value="biller"<?= $formMitra['category'] === 'biller' ? ' selected' : ''; ?>>Biller</option><option value="sales"<?= $formMitra['category'] === 'sales' ? ' selected' : ''; ?>>Sales</option></select></div>
+          <div><label for="mitra-stock">Voucher Stock</label><input id="mitra-stock" class="form-control" type="number" min="0" step="1" name="voucher_stock" value="<?= (int) $formMitra['voucher_stock']; ?>"></div>
+          <div><label for="mitra-phone">Phone</label><input id="mitra-phone" class="form-control" name="phone" maxlength="30" value="<?= htmlspecialchars($formMitra['phone'], ENT_QUOTES); ?>"></div>
           <div><label for="mitra-email">Email</label><input id="mitra-email" class="form-control" type="email" name="email" maxlength="120" value="<?= htmlspecialchars($formMitra['email'], ENT_QUOTES); ?>"></div>
-          <div class="wide"><label for="mitra-address">Alamat</label><textarea id="mitra-address" class="form-control" name="address" maxlength="255"><?= htmlspecialchars($formMitra['address'], ENT_QUOTES); ?></textarea></div>
-          <div><label for="mitra-commission">Komisi</label><input id="mitra-commission" class="form-control" type="number" min="0" step="1" name="commission" value="<?= (float) $formMitra['commission']; ?>"></div>
-          <div><label for="mitra-user">Akun Login</label><select id="mitra-user" class="form-control" name="user_id"><option value="">Tanpa akun login</option><?php foreach ($loginUsers as $loginUser): $usedByOther = isset($linkedUserIds[$loginUser['id']]) && $linkedUserIds[$loginUser['id']] !== $formMitra['id']; ?><option value="<?= htmlspecialchars($loginUser['id'], ENT_QUOTES); ?>" data-role="<?= htmlspecialchars($loginUser['role'], ENT_QUOTES); ?>"<?= $formMitra['user_id'] === $loginUser['id'] ? ' selected' : ''; ?><?= $usedByOther ? ' disabled' : ''; ?>><?= htmlspecialchars($loginUser['name'] . ' (' . strtoupper($loginUser['role']) . ')', ENT_QUOTES); ?></option><?php endforeach; ?></select></div>
-          <div class="wide"><label><input type="checkbox" name="active" value="1"<?= !empty($formMitra['active']) ? ' checked' : ''; ?>> Status aktif</label></div>
+          <div class="wide"><label for="mitra-address">Address</label><textarea id="mitra-address" class="form-control" name="address" maxlength="255"><?= htmlspecialchars($formMitra['address'], ENT_QUOTES); ?></textarea></div>
+          <div><label for="mitra-commission">Commission</label><input id="mitra-commission" class="form-control" type="number" min="0" step="1" name="commission" value="<?= (float) $formMitra['commission']; ?>"></div>
+          <div><label for="mitra-user">Login Account</label><select id="mitra-user" class="form-control" name="user_id"><option value="">No login account</option><?php foreach ($loginUsers as $loginUser): $usedByOther = isset($linkedUserIds[$loginUser['id']]) && $linkedUserIds[$loginUser['id']] !== $formMitra['id']; ?><option value="<?= htmlspecialchars($loginUser['id'], ENT_QUOTES); ?>" data-role="<?= htmlspecialchars($loginUser['role'], ENT_QUOTES); ?>"<?= $formMitra['user_id'] === $loginUser['id'] ? ' selected' : ''; ?><?= $usedByOther ? ' disabled' : ''; ?>><?= htmlspecialchars($loginUser['name'] . ' (' . strtoupper($loginUser['role']) . ')', ENT_QUOTES); ?></option><?php endforeach; ?></select></div>
+          <div class="wide"><label><input type="checkbox" name="active" value="1"<?= !empty($formMitra['active']) ? ' checked' : ''; ?>> Active status</label></div>
         </div>
-        <div class="mitra-form-actions"><button class="btn bg-warning mitra-dialog-cancel" type="button"><i class="fa fa-close"></i> Batal</button><button class="btn bg-primary" type="submit"><i class="fa fa-save"></i> Simpan Mitra</button></div>
+        <div class="mitra-form-actions"><button class="btn bg-warning mitra-dialog-cancel" type="button"><i class="fa fa-close"></i> Cancel</button><button class="btn bg-primary" type="submit"><i class="fa fa-save"></i> Save Partner</button></div>
       </form>
     </div>
   </div>
 </div>
 <script>
 $(function(){
-  var modal=$('#mitraModal'),openButton=$('#openMitraModal'),form=modal.find('form'),lastFocus=null;
-  function prepareAdd(){form[0].reset();form.find('[name="mitra_id"]').val('');form.find('[name="name"],[name="phone"],[name="email"],[name="address"]').val('');form.find('[name="voucher_stock"],[name="commission"]').val('0');form.find('[name="category"]').val('reseller');form.find('[name="user_id"]').val('');form.find('[name="active"]').prop('checked',true);$('#mitraModalTitle').html('<i class="fa fa-user-plus"></i> Tambah Mitra');updateAccountOptions();}
+  var modal=$('#mitraModal'),openButton=$('#openMitraModal'),form=modal.find('form'),lastFocus=null,addPartnerLabel=<?= json_encode($mitraT('Add Partner')); ?>;
+  function prepareAdd(){form[0].reset();form.find('[name="mitra_id"]').val('');form.find('[name="name"],[name="phone"],[name="email"],[name="address"]').val('');form.find('[name="voucher_stock"],[name="commission"]').val('0');form.find('[name="category"]').val('reseller');form.find('[name="user_id"]').val('');form.find('[name="active"]').prop('checked',true);$('#mitraModalTitle').html('<i class="fa fa-user-plus"></i> '+addPartnerLabel);updateAccountOptions();}
   function openModal(){lastFocus=document.activeElement;modal.addClass('is-open').attr('aria-hidden','false');$('body').addClass('mitra-modal-open');window.setTimeout(function(){$('#mitra-name').trigger('focus');},0);}
   function closeModal(){modal.removeClass('is-open').attr('aria-hidden','true');$('body').removeClass('mitra-modal-open');if(lastFocus)$(lastFocus).trigger('focus');else openButton.trigger('focus');}
   function updateAccountOptions(){var category=$('#mitra-category').val(),requiredRole=category==='biller'?'biller':'mitra',select=$('#mitra-user');select.find('option[data-role]').each(function(){var option=$(this),matches=option.data('role')===requiredRole;option.prop('hidden',!matches);if(!matches&&option.prop('selected'))select.val('');});}
