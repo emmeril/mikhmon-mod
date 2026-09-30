@@ -278,6 +278,27 @@ if($idleto != "disable"){
   }
   .billing-submenu-label {
     text-transform: uppercase;
+    font-size: 12px;
+    min-width: 0;
+  }
+  #sidenav .billing-submenu {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 34px;
+    white-space: nowrap;
+  }
+  #sidenav .billing-submenu > i {
+    flex: 0 0 32px;
+    width: 32px;
+    padding-left: 7px;
+    box-sizing: border-box;
+    text-align: center;
+  }
+  #sidenav .hotspot-submenu-icon {
+    width: 43px;
+    box-sizing: border-box;
+    text-align: center;
   }
 </style>
 
@@ -423,8 +444,8 @@ include('./info.php');
 <?php if (mikhmonIsBiller()): ?>
   <div class="dropdown-btn <?= $mbilling; ?>" role="button" tabindex="0" aria-label="Buka submenu Billing" aria-expanded="<?= $billingmenu === 'menu-open' ? 'true' : 'false'; ?>"><i class="fa fa-money"></i> Billing <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $billingmenu; ?>">
-    <a href="./?billing=unpaid&session=<?= $session; ?>" class="<?= $sunpaidinvoice; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-file-text-o"></i> <span class="billing-submenu-label">Invoice Unpaid</span></a>
-    <a href="./?billing=paid&session=<?= $session; ?>" class="<?= $spaidinvoice; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-check-square-o"></i> <span class="billing-submenu-label">Invoice Paid</span></a>
+    <a href="./?billing=unpaid&session=<?= $session; ?>" class="billing-submenu <?= $sunpaidinvoice; ?>"><i class="fa fa-file-text-o"></i><span class="billing-submenu-label">Invoice Unpaid</span></a>
+    <a href="./?billing=paid&session=<?= $session; ?>" class="billing-submenu <?= $spaidinvoice; ?>"><i class="fa fa-check-square-o"></i><span class="billing-submenu-label">Invoice Paid</span></a>
   </div>
   <a href="./?commission=1&session=<?= $session; ?>" class="menu <?= $scommission; ?>"><i class="fa fa-line-chart"></i> Komisi Saya</a>
 <?php elseif (mikhmonIsMitra()): ?>
@@ -438,8 +459,8 @@ include('./info.php');
   </div>
   <div class="dropdown-btn <?= $sactive . $susersbp . $smaclocks; ?>"><i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $hamenu . $hotspotmenu . $macmenu; ?>">
-    <a href="./?hotspot=active&session=<?= $session; ?>" class="<?= $sactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi"></i> <?= $_hotspot_active ?></a>
-    <a href="./?hotspot=mac-locks&session=<?= $session; ?>" class="<?= $smaclocks; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-unlock-alt"></i> <?= $_reset_mac_lock; ?></a>
+    <a href="./?hotspot=active&session=<?= $session; ?>" class="<?= $sactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi hotspot-submenu-icon"></i> <?= $_hotspot_active ?></a>
+    <a href="./?hotspot=mac-locks&session=<?= $session; ?>" class="<?= $smaclocks; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-unlock-alt hotspot-submenu-icon"></i> <?= $_reset_mac_lock; ?></a>
   </div>
   <div class="dropdown-btn <?= $mppp; ?>"><i class="fa fa-exchange"></i> PPPoE <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $pppmenu; ?>">
@@ -456,8 +477,8 @@ include('./info.php');
   </div>
   <div class="dropdown-btn <?= $mbilling; ?>" role="button" tabindex="0" aria-label="Buka submenu Billing" aria-expanded="<?= $billingmenu === 'menu-open' ? 'true' : 'false'; ?>"><i class="fa fa-money"></i> Billing <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $billingmenu; ?>">
-    <a href="./?billing=unpaid&session=<?= $session; ?>" class="<?= $sunpaidinvoice; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-file-text-o"></i> <span class="billing-submenu-label">Invoice Unpaid</span></a>
-    <a href="./?billing=paid&session=<?= $session; ?>" class="<?= $spaidinvoice; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-check-square-o"></i> <span class="billing-submenu-label">Invoice Paid</span></a>
+    <a href="./?billing=unpaid&session=<?= $session; ?>" class="billing-submenu <?= $sunpaidinvoice; ?>"><i class="fa fa-file-text-o"></i><span class="billing-submenu-label">Invoice Unpaid</span></a>
+    <a href="./?billing=paid&session=<?= $session; ?>" class="billing-submenu <?= $spaidinvoice; ?>"><i class="fa fa-check-square-o"></i><span class="billing-submenu-label">Invoice Paid</span></a>
   </div>
   <div class="dropdown-btn <?= $sselling; ?>"><i class="fa fa-money"></i> <?= $_report ?> <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $reportmenu; ?>">
@@ -492,15 +513,15 @@ include('./info.php');
 
   </div>
   <!--active-->
-  <a href="./?hotspot=active&session=<?= $session; ?>" class="menu <?= $sactive; ?>"><i class=" fa fa-wifi"></i> <?= $_hotspot_active ?></a>
+  <a href="./?hotspot=active&session=<?= $session; ?>" class="menu <?= $sactive; ?>"><i class="fa fa-wifi hotspot-submenu-icon"></i> <?= $_hotspot_active ?></a>
   <!--MAC locks-->
-  <a href="./?hotspot=mac-locks&session=<?= $session; ?>" class="menu <?= $smaclocks; ?>"><i class="fa fa-unlock-alt"></i> <?= $_reset_mac_lock; ?></a>
+  <a href="./?hotspot=mac-locks&session=<?= $session; ?>" class="menu <?= $smaclocks; ?>"><i class="fa fa-unlock-alt hotspot-submenu-icon"></i> <?= $_reset_mac_lock; ?></a>
   <!--hosts-->
-  <a href="./?hotspot=hosts&session=<?= $session; ?>" class="menu <?= $shosts; ?>"><i class=" fa fa-laptop"></i> <?= $_hosts ?></a>
+  <a href="./?hotspot=hosts&session=<?= $session; ?>" class="menu <?= $shosts; ?>"><i class="fa fa-laptop hotspot-submenu-icon"></i> <?= $_hosts ?></a>
   <!--ip bindings-->
-  <a href="./?hotspot=ipbinding&session=<?= $session; ?>" class="menu <?= $sipbind; ?>"><i class=" fa fa-address-book"></i> <?= $_ip_bindings ?></a>
+  <a href="./?hotspot=ipbinding&session=<?= $session; ?>" class="menu <?= $sipbind; ?>"><i class="fa fa-address-book hotspot-submenu-icon"></i> <?= $_ip_bindings ?></a>
   <!--cookies-->
-   <a href="./?hotspot=cookies&session=<?= $session; ?>" class="menu <?= $scookies; ?>"><i class=" fa fa-hourglass"></i> <?= $_hotspot_cookies ?></a>
+   <a href="./?hotspot=cookies&session=<?= $session; ?>" class="menu <?= $scookies; ?>"><i class="fa fa-hourglass hotspot-submenu-icon"></i> <?= $_hotspot_cookies ?></a>
   </div>
   <!-- PPPoE -->
   <div class="dropdown-btn <?= $mppp; ?>"><i class="fa fa-exchange"></i> PPPoE <i class="fa fa-caret-down"></i></div>
@@ -519,8 +540,8 @@ include('./info.php');
   </div>
   <div class="dropdown-btn <?= $mbilling; ?>" role="button" tabindex="0" aria-label="Buka submenu Billing" aria-expanded="<?= $billingmenu === 'menu-open' ? 'true' : 'false'; ?>"><i class="fa fa-money"></i> Billing <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $billingmenu; ?>">
-    <a href="./?billing=unpaid&session=<?= $session; ?>" class="<?= $sunpaidinvoice; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-file-text-o"></i> <span class="billing-submenu-label">Invoice Unpaid</span></a>
-    <a href="./?billing=paid&session=<?= $session; ?>" class="<?= $spaidinvoice; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-check-square-o"></i> <span class="billing-submenu-label">Invoice Paid</span></a>
+    <a href="./?billing=unpaid&session=<?= $session; ?>" class="billing-submenu <?= $sunpaidinvoice; ?>"><i class="fa fa-file-text-o"></i><span class="billing-submenu-label">Invoice Unpaid</span></a>
+    <a href="./?billing=paid&session=<?= $session; ?>" class="billing-submenu <?= $spaidinvoice; ?>"><i class="fa fa-check-square-o"></i><span class="billing-submenu-label">Invoice Paid</span></a>
   </div>
    <!--log-->
   <div class="dropdown-btn <?= $log; ?>"><i class=" fa fa-align-justify"></i> <?= $_log ?>
