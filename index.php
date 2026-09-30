@@ -227,6 +227,7 @@ if (!isset($_SESSION["mikhmon"])) {
   include_once('./include/headhtml.php');
 
   include_once('./include/menu.php');
+  include_once('./include/crudmodal.php');
 
   $disable_sci = '<script>
   document.getElementById("comment").onkeypress = function(e) {
@@ -299,13 +300,17 @@ if (!isset($_SESSION["mikhmon"])) {
 // Add router inside the router dashboard
   elseif ($admin == "router-add" && mikhmonIsAdmin()) {
     $id = "settings";
+    mikhmonCrudModalStart('./?admin=routers&session=' . rawurlencode($session), 'Add router');
     include_once('./settings/settings.php');
+    mikhmonCrudModalEnd();
   }
 
 // Router session settings inside the router dashboard
   elseif ($admin == "session-settings" && mikhmonIsAdmin()) {
     $id = "settings";
+    mikhmonCrudModalStart('./?admin=routers&session=' . rawurlencode($session), 'Edit router');
     include_once('./settings/settings.php');
+    mikhmonCrudModalEnd();
   }
 
 // Database backup inside the router dashboard
@@ -324,7 +329,9 @@ if (!isset($_SESSION["mikhmon"])) {
     include_once('./customer/billing.php');
   }
   elseif ($customer == "list" && $customerid != "") {
+    mikhmonCrudModalStart('./?customer=identity-list&session=' . rawurlencode($session), 'Edit customer identity');
     include_once('./customer/identityadd.php');
+    mikhmonCrudModalEnd();
   }
   elseif ($customer == "list") {
     include_once('./customer/customers.php');
@@ -333,13 +340,19 @@ if (!isset($_SESSION["mikhmon"])) {
     include_once('./customer/identities.php');
   }
   elseif ($customer == "identity-add" || $customer == "identity-edit" || $customer == "edit" || $customer == "add") {
+    mikhmonCrudModalStart('./?customer=identity-list&session=' . rawurlencode($session), in_array($customer, array('identity-edit', 'edit'), true) ? 'Edit customer identity' : 'Add customer identity');
     include_once('./customer/identityadd.php');
+    mikhmonCrudModalEnd();
   }
   elseif ($customer == "service-add") {
+    mikhmonCrudModalStart('./?customer=list&session=' . rawurlencode($session), 'Add customer service');
     include_once('./customer/serviceadd.php');
+    mikhmonCrudModalEnd();
   }
   elseif ($customer == "service-edit") {
+    mikhmonCrudModalStart('./?customer=list&session=' . rawurlencode($session), 'Edit customer service');
     include_once('./customer/serviceedit.php');
+    mikhmonCrudModalEnd();
   }
 
 // hotspot log
@@ -367,7 +380,9 @@ if (!isset($_SESSION["mikhmon"])) {
 // hotspot add users
   elseif ($hotspot == "add-user") {
     $_SESSION['hua'] = "";
+    mikhmonCrudModalStart('./?hotspot=users&profile=all&session=' . rawurlencode($session), 'Add hotspot user');
     include_once('./hotspot/adduser.php');
+    mikhmonCrudModalEnd();
   }
 
 // hotspot users
@@ -427,13 +442,17 @@ elseif ($hotspot == "list-quick-print") {
 
 // add hotspot user
   elseif ($hotspotuser == "add") {
+    mikhmonCrudModalStart('./?hotspot=users&profile=all&session=' . rawurlencode($session), 'Add hotspot user');
     include_once('./hotspot/adduser.php');
+    mikhmonCrudModalEnd();
     echo $disable_sci;
   }
 
 // add hotspot user
   elseif ($hotspotuser == "generate") {
+    mikhmonCrudModalStart('./?hotspot=users&profile=all&session=' . rawurlencode($session), 'Generate hotspot vouchers');
     include_once('./hotspot/generateuser.php');
+    mikhmonCrudModalEnd();
     echo $disable_sci;
   }
 
@@ -441,10 +460,14 @@ elseif ($hotspot == "list-quick-print") {
   elseif (substr($hotspotuser, 0, 1) == "*") {
     $_SESSION['ubn'] = $hotspotuser;
     $_SESSION['hua'] = "";
+    mikhmonCrudModalStart('./?hotspot=users&profile=all&session=' . rawurlencode($session), 'Edit hotspot user');
     include_once('./hotspot/userbyname.php');
+    mikhmonCrudModalEnd();
   } elseif ($hotspotuser != "") {
     $_SESSION['ubn'] = $hotspotuser;
+    mikhmonCrudModalStart('./?hotspot=users&profile=all&session=' . rawurlencode($session), 'Edit hotspot user');
     include_once('./hotspot/userbyname.php');
+    mikhmonCrudModalEnd();
   }
 
 // remove hotspot user
@@ -496,14 +519,20 @@ elseif ($removeexpiredhotspotuser != "") {
 
 // add  user profile
   elseif ($userprofile == "add") {
+    mikhmonCrudModalStart('./?hotspot=user-profiles&session=' . rawurlencode($session), 'Add hotspot profile');
     include_once('./hotspot/adduserprofile.php');
+    mikhmonCrudModalEnd();
   }
 
 // User profile by name
   elseif (substr($userprofile, 0, 1) == "*") {
+    mikhmonCrudModalStart('./?hotspot=user-profiles&session=' . rawurlencode($session), 'Edit hotspot profile');
     include_once('./hotspot/userprofilebyname.php');
+    mikhmonCrudModalEnd();
   } elseif ($userprofile != "") {
+    mikhmonCrudModalStart('./?hotspot=user-profiles&session=' . rawurlencode($session), 'Edit hotspot profile');
     include_once('./hotspot/userprofilebyname.php');
+    mikhmonCrudModalEnd();
   }
 
 
@@ -633,12 +662,16 @@ elseif ($report == "export") {
 
 // ppp addsecret
   elseif ($ppp == "addsecret") {
+    mikhmonCrudModalStart('./?ppp=secrets&session=' . rawurlencode($session), 'Add PPP user');
     include_once('./ppp/addsecret.php');
+    mikhmonCrudModalEnd();
   }
 
 // ppp secretbyname
   elseif ($secretbyname != "") {
+    mikhmonCrudModalStart('./?ppp=secrets&session=' . rawurlencode($session), 'Edit PPP user');
     include_once('./ppp/secretbyname.php');
+    mikhmonCrudModalEnd();
   }
 
 // remove enable disable secret
@@ -656,12 +689,16 @@ elseif ($report == "export") {
 
 // add ppp profile
   elseif ($ppp == "add-profile") {
+    mikhmonCrudModalStart('./?ppp=profiles&session=' . rawurlencode($session), 'Add PPP profile');
     include_once('./ppp/addpppprofile.php');
+    mikhmonCrudModalEnd();
   }
 
 // add ppp profile
 elseif ($ppp == "edit-profile") {
+  mikhmonCrudModalStart('./?ppp=profiles&session=' . rawurlencode($session), 'Edit PPP profile');
   include_once('./ppp/profilebyname.php');
+  mikhmonCrudModalEnd();
 }
 // remove enable disable profile
   elseif ($removepprofile != "") {

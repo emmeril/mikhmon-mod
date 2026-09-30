@@ -12,11 +12,23 @@ if (!is_array($profiles)) {
   $profiles = array();
 }
 ?>
+<style>
+  .ppp-profile-header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px}
+  .ppp-profile-header h3{margin:0}
+  .ppp-profile-header .btn,.ppp-profile-actions .btn{margin:0}
+  .ppp-profile-actions{display:flex;align-items:center;gap:6px}
+  @media(max-width:767px){
+    .ppp-profile-header{align-items:stretch;flex-direction:column;padding-top:10px;padding-bottom:10px}
+    .ppp-profile-header .btn,.ppp-profile-actions .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;box-sizing:border-box}
+    .ppp-profile-header .btn{width:100%}
+  }
+</style>
 <div class="row">
   <div class="col-12">
     <div class="card">
-      <div class="card-header">
-        <h3><i class="fa fa-pie-chart"></i> <?= $_ppp_profiles ?> &nbsp;|&nbsp; <a href="./?ppp=add-profile&session=<?= $session ?>"><i class="fa fa-plus"></i> <?= $_add ?></a></h3>
+      <div class="card-header ppp-profile-header">
+        <h3><i class="fa fa-pie-chart"></i> <?= $_ppp_profiles ?></h3>
+        <a class="btn bg-primary" href="./?ppp=add-profile&session=<?= $session ?>"><i class="fa fa-plus"></i> <?= $_add ?></a>
       </div>
       <div class="card-body">
         <div class="overflow box-bordered">
@@ -42,7 +54,7 @@ if (!is_array($profiles)) {
               ?>
                 <tr>
                   <td><i class="fa fa-minus-square text-danger pointer" onclick="if(confirm('Delete profile?'))loadpage('./?remove-pprofile=<?= rawurlencode($profile['.id']) ?>&session=<?= $session ?>')"></i></td>
-                  <td><a href="./?ppp=edit-profile&profile=<?= rawurlencode($profile['name']) ?>&session=<?= $session ?>"><i class="fa fa-edit"></i> <?= htmlspecialchars($profile['name']) ?></a></td>
+                  <td><?= htmlspecialchars($profile['name']) ?></td>
                   <td><?= htmlspecialchars(isset($profile['local-address']) ? $profile['local-address'] : '') ?></td>
                   <td><?= htmlspecialchars(isset($profile['remote-address']) ? $profile['remote-address'] : '') ?></td>
                   <td><?= htmlspecialchars(isset($profile['rate-limit']) ? $profile['rate-limit'] : '') ?></td>
@@ -51,7 +63,7 @@ if (!is_array($profiles)) {
                   <td><?= htmlspecialchars($meta['expmode']) ?></td>
                   <td><?= htmlspecialchars($meta['validity']) ?></td>
                   <td><?= htmlspecialchars($meta['comment']) ?></td>
-                  <td><a href="./?ppp=edit-profile&profile=<?= rawurlencode($profile['name']) ?>&session=<?= $session ?>"><i class="fa fa-edit"></i></a></td>
+                  <td><div class="ppp-profile-actions"><a class="btn bg-primary" href="./?ppp=edit-profile&profile=<?= rawurlencode($profile['name']) ?>&session=<?= $session ?>"><i class="fa fa-edit"></i> <?= $_edit ?></a></div></td>
                 </tr>
               <?php } ?>
             </tbody>

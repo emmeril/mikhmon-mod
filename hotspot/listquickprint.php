@@ -25,6 +25,7 @@ if (!isset($_SESSION["mikhmon"])) {
 	header("Location:../admin.php?id=login");
 } else {
 	$qpid = $_GET['qpid'];
+	$quickPrintEditing = isset($_GET['qpid']) && (string) $_GET['qpid'] !== '';
 	$rem = $_GET['remove'];
 	$charup = array(
 		"lower" => "abcd",
@@ -152,21 +153,32 @@ $getquickprint = $API->comm("/system/script/print", array("?.id" => "$qpid"));
 
 }
 ?>
-<div class="row">
+<style>
+	.quick-print-modal{position:fixed;inset:0;z-index:1200;display:none;align-items:flex-start;justify-content:center;padding:28px 16px;background:rgba(0,0,0,.58);overflow-y:auto;box-sizing:border-box}
+	.quick-print-modal.is-open{display:flex}
+	.quick-print-dialog{position:relative;width:min(760px,100%);max-height:calc(100dvh - 56px);overflow-y:auto}
+	.quick-print-dialog .card{margin:0}
+	.quick-print-close{position:absolute;z-index:3;top:4px;right:5px;width:44px;height:44px;margin:0;padding:0;border:0;font-size:25px;line-height:44px}
+	.quick-print-dialog .card-header{min-height:52px;box-sizing:border-box;display:flex;align-items:center}
+	.quick-print-dialog .card-header h3{width:100%;padding-right:48px;box-sizing:border-box}
+	.quick-print-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+	.quick-print-header h3{margin:0}
+	body.quick-print-modal-open{overflow:hidden}
+	.quick-print-page :focus-visible{outline:2px solid #f5a623;outline-offset:2px}
+	@media(max-width:750px){.quick-print-modal{padding:12px 8px}.quick-print-dialog{max-height:calc(100dvh - 24px)}}
+	@media(max-width:620px){.quick-print-dialog form>.table,.quick-print-dialog form>.table>tbody,.quick-print-dialog form>.table>tbody>tr,.quick-print-dialog form>.table>tbody>tr>td{display:block;width:100%;box-sizing:border-box}.quick-print-dialog form>.table>tbody>tr{padding:5px 0}.quick-print-dialog form>.table>tbody>tr>td{padding:5px;border:0}.quick-print-header{align-items:flex-start;flex-direction:column}.quick-print-header .btn{width:100%;min-height:44px;box-sizing:border-box}}
+</style>
+<div class="quick-print-page"><div class="row">
 	
-<div class="col-4">
-<div class="card box-bordered">
+<div id="quickPrintModal" class="quick-print-modal<?= $quickPrintEditing ? ' is-open' : ''; ?>" role="dialog" aria-modal="true" aria-labelledby="quickPrintModalTitle" aria-hidden="<?= $quickPrintEditing ? 'false' : 'true'; ?>">
+<div class="quick-print-dialog"><button class="btn bg-danger quick-print-close" type="button" aria-label="<?= htmlspecialchars($_close, ENT_QUOTES); ?>">&times;</button><div class="card box-bordered">
 	<div class="card-header">
-	<h3><i class="fa fa-ticket"></i> <?php if(isset($qpid)){echo $_edit;}else{echo $_add;} echo ' '. $_quick_print ?> <small id="loader" style="display: none;" ><i><i class='fa fa-circle-o-notch fa-spin'></i> <?= $_processing ?> </i></small></h3> 
+	<h3 id="quickPrintModalTitle"><i class="fa fa-ticket"></i> <?php if($quickPrintEditing){echo $_edit;}else{echo $_add;} echo ' '. $_quick_print ?> <small id="loader" style="display: none;" ><i><i class='fa fa-circle-o-notch fa-spin'></i> <?= $_processing ?> </i></small></h3>
 	</div>
 	<div class="card-body">
 <form autocomplete="off" method="post" action="">
 	<div>
-<?php if(isset($qpid)){echo "
-		<a class='btn bg-warning' href='./?hotspot=list-quick-print&session=".$session."'> <i class='fa fa-close'></i> ".$_cancel."</a>";
-}else{
-	echo "<a class='btn bg-warning' href='./?hotspot=quick-print&session=".$session."'> <i class='fa fa-close'></i> ".$_close."</a>";
-} ?>
+    <button type="button" class="btn bg-warning quick-print-cancel"><i class="fa fa-close"></i> <?= $quickPrintEditing ? $_cancel : $_close; ?></button>
 
     <button type="submit" name="save" onclick="loader()" class="btn bg-primary" title="Generate User"> <i class="fa fa-save"></i> <?= $_save ?></button>
 </div>
@@ -278,12 +290,12 @@ $getquickprint = $API->comm("/system/script/print", array("?.id" => "$qpid"));
 </form>
 </div>
 </div>
-</div>
+</div></div>
 
-<div class="col-8">
+<div class="col-12">
 	<div class="card">
-		<div class="card-header">
-			<h3><i class="fa fa-ticket"></i> <?= $_package.' '.  $_quick_print ?></h3>
+		<div class="card-header quick-print-header">
+			<h3><i class="fa fa-ticket"></i> <?= $_package.' '.  $_quick_print ?></h3><button id="openQuickPrintModal" class="btn bg-primary" type="button"><i class="fa fa-plus"></i> <?= $_add.' '.$_quick_print; ?></button>
 		</div>
 		<div class="card-body">
             <div class="row">
@@ -337,7 +349,7 @@ for ($i = 0; $i < $TotalReg; $i++) {
 ?>
 <tr>
 <td><i class='fa fa-minus-square text-danger pointer' onclick="if(confirm('Are you sure to delete (<?= $package; ?>)?')){loadpage('./?hotspot=list-quick-print&remove&qpid=<?= $qpid; ?>&session=<?= $session; ?>')}else{}" title='Remove <?= $package; ?>'></i>&nbsp</td>	
-<td><a title="Edit <?= $_package.' '. $package; ?>" href="./?hotspot=list-quick-print&qpid=<?= $qpid; ?>&session=<?= $session; ?>"><i class="fa fa-edit"></i> <?= $package; ?></a></td>
+<td><a class="btn bg-primary" title="Edit <?= $_package.' '. $package; ?>" href="./?hotspot=list-quick-print&qpid=<?= $qpid; ?>&session=<?= $session; ?>"><i class="fa fa-edit"></i> <?= $package; ?></a></td>
 <td><?= $server ?></td>
 <td><?= $usermode ?></td>
 <td><?= $userlength ?></td>
@@ -361,6 +373,18 @@ for ($i = 0; $i < $TotalReg; $i++) {
 </div>
 </div>
 <script>
+var quickPrintModal = document.getElementById('quickPrintModal');
+var quickPrintOpenButton = document.getElementById('openQuickPrintModal');
+var quickPrintCloseUrl = <?= json_encode('./?hotspot=list-quick-print&session=' . $session); ?>;
+var quickPrintEditing = <?= $quickPrintEditing ? 'true' : 'false'; ?>;
+function openQuickPrintModal(){quickPrintModal.classList.add('is-open');quickPrintModal.setAttribute('aria-hidden','false');document.body.classList.add('quick-print-modal-open');window.setTimeout(function(){var field=quickPrintModal.querySelector('input:not([type=hidden]),select');if(field)field.focus();},0);}
+function closeQuickPrintModal(){if(quickPrintEditing){window.location.assign(quickPrintCloseUrl);return;}quickPrintModal.classList.remove('is-open');quickPrintModal.setAttribute('aria-hidden','true');document.body.classList.remove('quick-print-modal-open');quickPrintOpenButton.focus();}
+quickPrintOpenButton.addEventListener('click',openQuickPrintModal);
+quickPrintModal.querySelector('.quick-print-close').addEventListener('click',closeQuickPrintModal);
+quickPrintModal.querySelector('.quick-print-cancel').addEventListener('click',closeQuickPrintModal);
+quickPrintModal.addEventListener('click',function(event){if(event.target===quickPrintModal)closeQuickPrintModal();});
+document.addEventListener('keydown',function(event){if(!quickPrintModal.classList.contains('is-open'))return;if(event.key==='Escape'){event.preventDefault();closeQuickPrintModal();return;}if(event.key!=='Tab')return;var items=Array.prototype.filter.call(quickPrintModal.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),a[href]'),function(item){return item.offsetParent!==null;});if(!items.length)return;var first=items[0],last=items[items.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}});
+if(quickPrintEditing)document.body.classList.add('quick-print-modal-open');
 // get valid $ price
 function GetVP(){
   var prof = document.getElementById('uprof').value;
@@ -370,4 +394,4 @@ function GetVP(){
   $("#GetValidPrice").load(getvalidprice);
 }
 </script>
-</div>
+</div></div>

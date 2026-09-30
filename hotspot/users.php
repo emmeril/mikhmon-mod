@@ -82,27 +82,52 @@ if (!isset($_SESSION["mikhmon"])) {
 }
 ?>
 
+<style>
+  .voucher-page-header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;box-sizing:border-box}
+  .voucher-page-title{display:flex;align-items:center;gap:7px;min-width:0;margin:0}
+  .voucher-page-title #loader{font-size:12px;font-weight:400}
+  .voucher-header-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px}
+  .voucher-header-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;margin:0;box-sizing:border-box}
+  .voucher-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 0}
+  .voucher-filter-panel{flex:1 1 480px;min-width:0;padding:0}
+  .voucher-filter-panel .input-group{width:100%}
+  .voucher-filter-panel .group-item{min-height:38px;box-sizing:border-box}
+  .voucher-print-actions{display:flex;flex:0 1 auto;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px;width:auto;padding:0}
+  .voucher-print-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;margin:0;box-sizing:border-box}
+  @media(max-width:900px){
+    .voucher-page-header{align-items:flex-start;flex-direction:column}
+    .voucher-header-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+    .voucher-toolbar{align-items:stretch;flex-direction:column}
+    .voucher-filter-panel{flex:0 0 auto;width:100%}
+    .voucher-print-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));width:100%}
+  }
+  @media(max-width:620px){
+    .voucher-header-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .voucher-header-actions .btn,.voucher-print-actions .btn{width:100%;min-height:44px;white-space:normal}
+    .voucher-filter-panel .input-group{display:grid;grid-template-columns:1fr;gap:8px}
+    .voucher-filter-panel .input-group>[class*=input-group-]{float:none;width:100%}
+    .voucher-filter-panel .group-item{min-height:44px;border-radius:3px}
+    .voucher-print-actions{grid-template-columns:1fr}
+  }
+  @media(max-width:360px){.voucher-header-actions{grid-template-columns:1fr}}
+</style>
+
 <div class="row">
 <div class="col-12">
 <div class="card">
-<div class="card-header">
-    <h3><i class="fa fa-ticket"></i> Vouchers
-      <span style="font-size: 14px">
-        <?php
-        if ($counttuser == 0 && $prof != "all" && !(function_exists('mikhmonIsMitra') && mikhmonIsMitra())) {
-          echo "<script>window.location='./?hotspot=users&profile=all&session=" . $session . "</script>";
-        } ?>
-         <?php if (!(function_exists('mikhmonIsMitra') && mikhmonIsMitra())): ?>&nbsp; | &nbsp; <a href="./?hotspot-user=add&session=<?= $session; ?>" title="Add User"><i class="fa fa-user-plus"></i> <?= $_add ?></a><?php endif; ?>
-        &nbsp; | &nbsp; <a href="./?hotspot-user=generate&session=<?= $session; ?>" title="Generate User"><i class="fa fa-users"></i> <?= $_generate ?></a>
-         &nbsp; | &nbsp; <a href="<?= str_replace("=users", "=export-users", $url); ?>&export=script" title="Download User List as Mikrotik Script"><i class="fa fa-download"></i> Script</a>&nbsp; | &nbsp; <a href="<?= str_replace("=users", "=export-users", $url); ?>&export=csv" title="Download User List as CSV"><i class="fa fa-download"></i> CSV</a>
-        </span>  &nbsp;
-        <small id="loader" style="display: none;" ><i><i class='fa fa-circle-o-notch fa-spin'></i> <?= $_processing ?> </i></small>
-    </h3>
-    
+<?php if ($counttuser == 0 && $prof != "all" && !(function_exists('mikhmonIsMitra') && mikhmonIsMitra())): ?><script>window.location='./?hotspot=users&profile=all&session=<?= $session; ?>'</script><?php endif; ?>
+<div class="card-header voucher-page-header">
+    <h3 class="voucher-page-title"><i class="fa fa-ticket"></i> Vouchers <small id="loader" style="display:none"><i class="fa fa-circle-o-notch fa-spin"></i> <?= $_processing ?></small></h3>
+    <div class="voucher-header-actions">
+      <?php if (!(function_exists('mikhmonIsMitra') && mikhmonIsMitra())): ?><a class="btn bg-primary" href="./?hotspot-user=add&session=<?= $session; ?>" title="Add User"><i class="fa fa-user-plus"></i> <?= $_add ?></a><?php endif; ?>
+      <a class="btn bg-green" href="./?hotspot-user=generate&session=<?= $session; ?>" title="Generate User"><i class="fa fa-users"></i> <?= $_generate ?></a>
+      <a class="btn bg-secondary" href="<?= str_replace("=users", "=export-users", $url); ?>&amp;export=script" title="Download User List as Mikrotik Script"><i class="fa fa-download"></i> Script</a>
+      <a class="btn bg-secondary" href="<?= str_replace("=users", "=export-users", $url); ?>&amp;export=csv" title="Download User List as CSV"><i class="fa fa-download"></i> CSV</a>
+    </div>
 </div>
 <div class="card-body">
-  <div class="row">
-   <div class="col-6 pd-t-5 pd-b-5">
+  <div class="voucher-toolbar">
+   <div class="voucher-filter-panel">
   <div class="input-group">
     <div class="input-group-4 col-box-4">
       <input id="filterTable" type="text" style="padding:5.8px;" class="group-item group-item-l" placeholder="<?= $_search ?>">
@@ -151,7 +176,7 @@ if (!isset($_SESSION["mikhmon"])) {
   </div>
   </div>
  
-  <div class="col-6">
+  <div class="voucher-print-actions">
     <?php if ($comm != "") { ?>
   <button class="btn bg-red" onclick="if(confirm('Are you sure to delete username by comment (<?= $comm; ?>)?')){loadpage('./?remove-hotspot-user-by-comment=<?= $comm; ?>&session=<?= $session; ?>');loader();}else{}" title="Remove user by comment <?= $comm; ?>">  <i class="fa fa-trash"></i> <?= $_by_comment ?></button>
     <?php ; }else if ($exp == "1"){ ?>

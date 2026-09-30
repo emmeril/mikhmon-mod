@@ -103,8 +103,9 @@ $isEditingMitra = $editMitra && mikhmonFindPartner($formMitra['id']);
   .mitra-modal{position:fixed;inset:0;z-index:1000;display:none;align-items:flex-start;justify-content:center;padding:32px 16px;background:rgba(0,0,0,.55);overflow-y:auto}
   .mitra-modal.is-open{display:flex}
   .mitra-dialog{width:min(720px,100%);margin:0;max-height:calc(100vh - 64px);overflow-y:auto}
-  .mitra-dialog-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-  .mitra-dialog-close{min-width:44px;min-height:44px;margin:-5px -10px -5px 0;font-size:24px;line-height:1;color:#2f353a}
+  .mitra-dialog-header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;box-sizing:border-box}
+  .mitra-dialog-header h3{min-width:0}
+  .mitra-dialog-close{flex:0 0 44px;width:44px;height:44px;margin:0;padding:0;font-size:24px;line-height:44px;color:#2f353a}
   .mitra-dialog-cancel{color:#2f353a}
   body.mitra-modal-open{overflow:hidden}
   .mitra-page :focus-visible{outline:2px solid #f5a623;outline-offset:2px}

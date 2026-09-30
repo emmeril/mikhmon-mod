@@ -98,15 +98,34 @@ $routerSessions = array();
 foreach ((array) $data as $routerName => $routerConfig) {
   if ($routerName !== 'mikhmon') $routerSessions[] = $routerName;
 }
+$userModalOpen = $editUser || $userError !== '';
 ?>
+<style>
+  .user-management-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .user-management-header h3{margin:0}
+  .user-form-modal{position:fixed;inset:0;z-index:1200;display:none;align-items:flex-start;justify-content:center;padding:28px 16px;background:rgba(0,0,0,.58);overflow-y:auto;box-sizing:border-box}
+  .user-form-modal.is-open{display:flex}
+  .user-form-dialog{position:relative;width:min(720px,100%);max-height:calc(100dvh - 56px);overflow-y:auto}
+  .user-form-dialog .card{margin:0}
+  .user-form-close{position:absolute;z-index:2;top:4px;right:5px;width:44px;height:44px;margin:0;padding:0;border:0;font-size:25px;line-height:44px}
+  .user-form-dialog .card-header{min-height:52px;box-sizing:border-box;display:flex;align-items:center}
+  .user-form-dialog .card-header h3{width:100%;padding-right:48px;box-sizing:border-box}
+  .user-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+  .user-management-page :focus-visible{outline:2px solid #f5a623;outline-offset:2px}
+  body.user-form-open{overflow:hidden}
+  @media(max-width:750px){.user-form-modal{padding:12px 8px}.user-form-dialog{max-height:calc(100dvh - 24px)}}
+  @media(max-width:620px){.user-form-dialog form>.table,.user-form-dialog form>.table>tbody,.user-form-dialog form>.table>tbody>tr,.user-form-dialog form>.table>tbody>tr>td{display:block;width:100%;box-sizing:border-box}.user-form-dialog form>.table>tbody>tr{padding:5px 0}.user-form-dialog form>.table>tbody>tr>td{padding:5px;border:0}.user-form-actions{flex-direction:column-reverse}.user-form-actions .btn{width:100%;min-height:44px;margin:0}.user-management-header{align-items:flex-start;flex-direction:column}.user-management-header .btn{width:100%;min-height:44px;box-sizing:border-box}}
+</style>
+<div class="user-management-page">
 <div class="row">
-  <div class="col-5">
+  <div id="userFormModal" class="user-form-modal<?= $userModalOpen ? ' is-open' : ''; ?>" role="dialog" aria-modal="true" aria-labelledby="userFormTitle" aria-hidden="<?= $userModalOpen ? 'false' : 'true'; ?>">
+    <div class="user-form-dialog">
+    <button class="btn bg-danger user-form-close" type="button" aria-label="Tutup modal">&times;</button>
     <div class="card">
-      <div class="card-header"><h3><i class="fa fa-user-plus"></i> <?= $editUser ? 'Edit Pengguna' : 'Tambah Pengguna'; ?></h3></div>
+      <div class="card-header"><h3 id="userFormTitle"><i class="fa <?= $editUser ? 'fa-edit' : 'fa-user-plus'; ?>"></i> <?= $editUser ? 'Edit Pengguna' : 'Tambah Pengguna'; ?></h3></div>
       <div class="card-body">
-        <?php if ($userMessage !== ''): ?><div class="box bg-success"><?= htmlspecialchars($userMessage, ENT_QUOTES); ?></div><?php endif; ?>
         <?php if ($userError !== ''): ?><div class="box bg-danger"><?= htmlspecialchars($userError, ENT_QUOTES); ?></div><?php endif; ?>
-        <form method="post" autocomplete="off">
+        <form id="userManagementForm" method="post" autocomplete="off" data-editing="<?= $editUser ? 'true' : 'false'; ?>">
           <input type="hidden" name="user_action" value="save">
           <input type="hidden" name="user_id" value="<?= htmlspecialchars($editUser ? $editUser['id'] : '', ENT_QUOTES); ?>">
           <table class="table">
@@ -117,16 +136,17 @@ foreach ((array) $data as $routerName => $routerConfig) {
             <tr><td><?= $editUser ? 'Password Baru' : 'Password'; ?></td><td><input class="form-control" type="password" name="password"<?= $editUser ? ' placeholder="Kosongkan jika tidak diubah"' : ' required'; ?>></td></tr>
             <tr><td>Status</td><td><label><input type="checkbox" name="active" value="1"<?= !$editUser || !empty($editUser['active']) ? ' checked' : ''; ?>> Aktif</label></td></tr>
           </table>
-          <?php if ($editUser): ?><a class="btn bg-warning" href="<?= htmlspecialchars($userManagementBaseUrl, ENT_QUOTES); ?>">Batal</a><?php endif; ?>
-          <button class="btn bg-primary" type="submit"><i class="fa fa-save"></i> Simpan</button>
+          <div class="user-form-actions"><button class="btn bg-warning user-form-cancel" type="button"><i class="fa fa-close"></i> Batal</button><button class="btn bg-primary" type="submit"><i class="fa fa-save"></i> Simpan</button></div>
         </form>
       </div>
     </div>
+    </div>
   </div>
-  <div class="col-7">
+  <div class="col-12">
     <div class="card">
-      <div class="card-header"><h3><i class="fa fa-users"></i> Manajemen User</h3></div>
+      <div class="card-header user-management-header"><h3><i class="fa fa-users"></i> Manajemen User</h3><button id="openUserForm" class="btn bg-primary" type="button"><i class="fa fa-user-plus"></i> Tambah Pengguna</button></div>
       <div class="card-body">
+        <?php if ($userMessage !== ''): ?><div class="box bg-success"><?= htmlspecialchars($userMessage, ENT_QUOTES); ?></div><?php endif; ?>
         <p><small>Mitra hanya melihat pelanggan yang ditetapkan admin. Biller hanya mengelola Billing pada router yang dipilih.</small></p>
         <div class="overflow box-bordered"><table class="table table-bordered table-hover text-nowrap">
           <thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Router</th><th>Status</th><th>Ringkasan Bulan Ini</th><th>Aksi</th></tr></thead>
@@ -139,6 +159,7 @@ foreach ((array) $data as $routerName => $routerConfig) {
       </div>
     </div>
   </div>
+</div>
 </div>
 <script>
 function updateUserRouterField() {
@@ -158,5 +179,53 @@ document.addEventListener('DOMContentLoaded', function () {
   var role = document.getElementById('user-role');
   if (role) role.addEventListener('change', updateUserRouterField);
   updateUserRouterField();
+  var modal = document.getElementById('userFormModal');
+  var openButton = document.getElementById('openUserForm');
+  var form = document.getElementById('userManagementForm');
+  var title = document.getElementById('userFormTitle');
+  var lastFocus = null;
+  function openUserModal() {
+    lastFocus = document.activeElement;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('user-form-open');
+    window.setTimeout(function () { form.elements.name.focus(); }, 0);
+  }
+  function closeUserModal() {
+    if (form.getAttribute('data-editing') === 'true') {
+      window.location.assign(<?= json_encode($userManagementBaseUrl); ?>);
+      return;
+    }
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('user-form-open');
+    (lastFocus || openButton).focus();
+  }
+  openButton.addEventListener('click', function () {
+    form.reset();
+    form.elements.user_id.value = '';
+    form.elements.password.required = true;
+    form.setAttribute('data-editing', 'false');
+    title.innerHTML = '<i class="fa fa-user-plus"></i> Tambah Pengguna';
+    updateUserRouterField();
+    openUserModal();
+  });
+  modal.querySelector('.user-form-close').addEventListener('click', closeUserModal);
+  modal.querySelector('.user-form-cancel').addEventListener('click', closeUserModal);
+  modal.addEventListener('click', function (event) { if (event.target === modal) closeUserModal(); });
+  document.addEventListener('keydown', function (event) {
+    if (!modal.classList.contains('is-open')) return;
+    if (event.key === 'Escape') { event.preventDefault(); closeUserModal(); return; }
+    if (event.key !== 'Tab') return;
+    var items = Array.prototype.filter.call(modal.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),a[href]'), function (item) { return item.offsetParent !== null; });
+    if (!items.length) return;
+    var first = items[0], last = items[items.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  });
+  if (modal.classList.contains('is-open')) {
+    document.body.classList.add('user-form-open');
+    window.setTimeout(function () { form.elements.name.focus(); }, 0);
+  }
 });
 </script>

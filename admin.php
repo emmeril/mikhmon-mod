@@ -72,6 +72,7 @@ include('./include/readcfg.php');
 include_once('./include/access.php');
 include_once('./include/systemlog.php');
 include_once('./include/headhtml.php');
+include_once('./include/crudmodal.php');
 
 include_once('./lib/routeros_api.class.php');
 include_once('./lib/formatbytesbites.php');
@@ -186,7 +187,10 @@ if ($id == "login" || substr($url, -1) == "p") {
   include_once('./settings/users.php');
 } elseif ($id == "settings" && !empty($session) || $id == "settings" && !empty($router)) {
   include_once('./include/menu.php');
+  $routerModalCloseUrl = './admin.php?id=sessions';
+  mikhmonCrudModalStart($routerModalCloseUrl, !empty($router) ? 'Add router' : 'Edit router');
   include_once('./settings/settings.php');
+  mikhmonCrudModalEnd();
   echo '
   <script type="text/javascript">
     document.getElementById("sessname").onkeypress = function(e) {

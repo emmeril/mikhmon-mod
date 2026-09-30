@@ -365,7 +365,6 @@ if($idleto != "disable"){
   <a href="./admin.php?id=users" class="menu <?= $susersadmin; ?>"><i class="fa fa-users"></i> Mitra &amp; Biller</a>
   <a href="./admin.php?id=fonnte" class="menu <?= $sfonnte; ?>"><i class="fa fa-whatsapp"></i> WhatsApp Gateway</a>
   <a href="./admin.php?id=payment-gateway" class="menu <?= $spaymentgateway; ?>"><i class="fa fa-credit-card"></i> Payment Gateway</a>
-  <a href="./admin.php?id=settings&router=new-<?= rand(1111,9999) ?>" class="menu <?= $snsettings ?>"><i class="fa fa-plus"></i> <?= $_add_router ?></a>
 
 </div>
 
@@ -457,8 +456,6 @@ include('./info.php');
   <div class="dropdown-container <?= $umenu; ?>">
     <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-ticket"></i> Voucher List</a>
     <a href="./?hotspot=users-by-profile&session=<?= $session; ?>" class="<?= $susersbp; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-bar-chart"></i> Jumlah Voucher</a>
-    <a href="./?customer=service-add&service=hotspot&session=<?= $session; ?>" class="<?= $sserviceadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_add_user ?></a>
-    <a href="./?hotspot-user=generate&session=<?= $session; ?>" class="<?= $sgenuser; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_generate ?></a>
   </div>
   <div class="dropdown-btn <?= $sactive . $susersbp . $smaclocks; ?>"><i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $hamenu . $hotspotmenu . $macmenu; ?>">
@@ -468,14 +465,11 @@ include('./info.php');
   <div class="dropdown-btn <?= $mppp; ?>"><i class="fa fa-exchange"></i> PPPoE <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $pppmenu; ?>">
     <a href="./?ppp=secrets&session=<?= $session; ?>" class="<?= $ssecrets; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-users"></i> <?= $_ppp_secrets ?></a>
-    <a href="./?customer=service-add&service=pppoe&session=<?= $session; ?>" class="<?= $sserviceadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_add_user ?></a>
     <a href="./?ppp=active&session=<?= $session; ?>" class="<?= $spactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi"></i> <?= $_ppp_active ?></a>
   </div>
   <div class="dropdown-btn <?= $mcustomers; ?>"><i class="fa fa-address-card"></i> Pelanggan <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $customermenu; ?>">
-    <a href="./?customer=identity-add&session=<?= $session; ?>" class="<?= $sidentityadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> Tambah Identitas</a>
     <a href="./?customer=identity-list&session=<?= $session; ?>" class="<?= $sidentitylist; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-id-card"></i> Daftar Identitas</a>
-    <a href="./?customer=service-add&session=<?= $session; ?>" class="<?= $sserviceadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-link"></i> Tambah Layanan</a>
     <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> Daftar Pelanggan</a>
   </div>
   <div class="dropdown-btn <?= $mbilling; ?>" role="button" tabindex="0" aria-label="Buka submenu Billing" aria-expanded="<?= $billingmenu === 'menu-open' ? 'true' : 'false'; ?>"><i class="fa fa-money"></i> Billing <i class="fa fa-caret-down"></i></div>
@@ -499,8 +493,6 @@ include('./info.php');
   <div class="dropdown-container <?= $umenu; ?>">
     <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-ticket "></i> Voucher List </a>
     <a href="./?hotspot=users-by-profile&session=<?= $session; ?>" class="<?= $susersbp; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-bar-chart"></i> Jumlah Voucher </a>
-    <a href="./?hotspot-user=add&session=<?= $session; ?>" class="<?= $sadduser; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus "></i> <?= $_add_user ?> </a>
-    <a href="./?hotspot-user=generate&session=<?= $session; ?>" class="<?= $sgenuser; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_generate ?> </a>
   </div>
   <!--hotspot-->
   <div class="dropdown-btn <?= $suserprof . $sactive . $smaclocks . $shosts . $sipbind . $scookies; ?>"><i class="fa fa-wifi"></i> Hotspot
@@ -513,8 +505,6 @@ include('./info.php');
   </div>
   <div class="dropdown-container <?= $upmenu; ?>">
     <a href="./?hotspot=user-profiles&session=<?= $session; ?>" class=" <?= $suserprofiles; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-list "></i> <?= $_user_profile_list ?> </a>
-    <a href="./?user-profile=add&session=<?= $session; ?>" class=" <?= $sadduserprof; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-plus-square "></i> <?= $_add_user_profile ?> </a>
-
   </div>
   <!--active-->
   <a href="./?hotspot=active&session=<?= $session; ?>" class="menu <?= $sactive; ?>"><i class="fa fa-wifi hotspot-submenu-icon"></i> <?= $_hotspot_active ?></a>
@@ -531,15 +521,12 @@ include('./info.php');
   <div class="dropdown-btn <?= $mppp; ?>"><i class="fa fa-exchange"></i> PPPoE <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $pppmenu; ?>">
     <a href="./?ppp=secrets&session=<?= $session; ?>" class="<?= $ssecrets; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-users"></i> <?= $_ppp_secrets ?></a>
-    <a href="./?ppp=addsecret&session=<?= $session; ?>" class="<?= $saddsecret; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> <?= $_add_user ?></a>
     <a href="./?ppp=profiles&session=<?= $session; ?>" class="<?= $spprofile; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-pie-chart"></i> <?= $_ppp_profiles ?></a>
     <a href="./?ppp=active&session=<?= $session; ?>" class="<?= $spactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi"></i> <?= $_ppp_active ?></a>
   </div>
   <div class="dropdown-btn <?= $mcustomers; ?>"><i class="fa fa-address-card"></i> Pelanggan <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $customermenu; ?>">
-    <a href="./?customer=identity-add&session=<?= $session; ?>" class="<?= $sidentityadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-user-plus"></i> Tambah Identitas</a>
     <a href="./?customer=identity-list&session=<?= $session; ?>" class="<?= $sidentitylist; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-id-card"></i> Daftar Identitas</a>
-    <a href="./?customer=service-add&session=<?= $session; ?>" class="<?= $sserviceadd; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-link"></i> Tambah Layanan</a>
     <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> Daftar Pelanggan</a>
   </div>
   <div class="dropdown-btn <?= $mbilling; ?>" role="button" tabindex="0" aria-label="Buka submenu Billing" aria-expanded="<?= $billingmenu === 'menu-open' ? 'true' : 'false'; ?>"><i class="fa fa-money"></i> Billing <i class="fa fa-caret-down"></i></div>
@@ -585,9 +572,7 @@ include('./info.php');
   <a href="./?admin=fonnte&session=<?= rawurlencode($session); ?>" class="menu <?= $sfonnte; ?>"> <i class="fa fa-whatsapp"></i> WhatsApp Gateway </a>
   <a href="./?admin=payment-gateway&session=<?= rawurlencode($session); ?>" class="menu <?= $spaymentgateway; ?>"> <i class="fa fa-credit-card"></i> Payment Gateway </a>
   <a href="./?admin=routers&session=<?= rawurlencode($session); ?>" class="menu <?= $srouterlist; ?>"> <i class="fa fa-server"></i> <?= $_router_list ?> </a>
-  <a href="./?admin=router-add&router=new-<?= rand(1111, 9999); ?>&return=routers&session=<?= rawurlencode($session); ?>" class="menu <?= $snsettings; ?>"> <i class="fa fa-plus"></i> <?= $_add_router ?> </a>
   <a href="./?admin=users&session=<?= rawurlencode($session); ?>" class="menu <?= $sroleusers; ?>"> <i class="fa fa-users"></i> Manajemen User </a>
-  <a href="./?admin=session-settings&session=<?= rawurlencode($session); ?>" class="menu <?= $ssettings; ?>"> <i class="fa fa-gear"></i> <?= $_session_settings ?> </a>
   <a href="./?hotspot=uplogo&session=<?= $session; ?>" class="menu <?= $uplogo; ?>"> <i class="fa fa-upload "></i> <?= $_upload_logo ?> </a>
   <a href="./?admin=database&session=<?= rawurlencode($session); ?>" class="menu <?= $sdatabase; ?>"><i class="fa fa-database"></i> Database Backup</a>
   <a href="./?hotspot=template-editor&template=default&session=<?= $session; ?>" class="menu <?= $teditor; ?>"> <i class="fa fa-edit "></i> <?= $_template_editor ?> </a>          

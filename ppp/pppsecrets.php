@@ -18,11 +18,30 @@ if (function_exists('mikhmonIsMitra') && mikhmonIsMitra()) {
 }
 $count = count($secrets);
 ?>
+<style>
+  .ppp-secret-header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px}
+  .ppp-secret-header h3{margin:0}
+  .ppp-secret-header-actions{display:flex;align-items:center;gap:8px}
+  .ppp-secret-header-actions .btn{margin:0}
+  .ppp-secret-actions{display:flex;align-items:center;gap:6px}
+  .ppp-secret-actions .btn{margin:0;white-space:nowrap}
+  #dataTable .ppp-password-cell{min-width:105px;text-align:center;font-weight:bold;cursor:pointer;user-select:none}
+  #dataTable .ppp-password-cell i{margin-left:5px;color:#888}
+  @media(max-width:767px){
+    .ppp-secret-header{align-items:stretch;flex-direction:column;padding-top:10px;padding-bottom:10px}
+    .ppp-secret-header-actions{align-items:stretch;flex-direction:column}
+    .ppp-secret-header-actions .btn,.ppp-secret-actions .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;box-sizing:border-box}
+    .ppp-secret-header-actions .btn{width:100%}
+  }
+</style>
 <div class="row"><div class="col-12"><div class="card">
-  <div class="card-header"><h3><i class="fa fa-users"></i> <?= $_ppp_secrets ?>
-    <?php if (!(function_exists('mikhmonIsMitra') && mikhmonIsMitra())): ?><span style="font-size:14px"> &nbsp;|&nbsp; <a href="./?ppp=addsecret&session=<?= $session ?>"><i class="fa fa-user-plus"></i> <?= $_add ?></a></span><?php endif; ?>
-    <small id="loader" style="display:none"><i class="fa fa-circle-o-notch fa-spin"></i> <?= $_processing ?></small>
-  </h3></div>
+  <div class="card-header ppp-secret-header">
+    <h3><i class="fa fa-users"></i> <?= $_ppp_secrets ?></h3>
+    <div class="ppp-secret-header-actions">
+      <small id="loader" style="display:none"><i class="fa fa-circle-o-notch fa-spin"></i> <?= $_processing ?></small>
+      <?php if (!(function_exists('mikhmonIsMitra') && mikhmonIsMitra())): ?><a class="btn bg-primary" href="./?ppp=addsecret&session=<?= $session ?>"><i class="fa fa-user-plus"></i> <?= $_add ?></a><?php endif; ?>
+    </div>
+  </div>
   <div class="card-body">
     <div class="row">
       <div class="col-6 pd-t-5 pd-b-5"><div class="input-group">
@@ -36,18 +55,14 @@ $count = count($secrets);
       </div></div>
       <div class="col-6 text-right"><button id="pppReset" type="button" class="btn bg-secondary"><i class="fa fa-refresh"></i> Reset Filter</button></div>
     </div>
-    <style>
-      #dataTable .ppp-password-cell { min-width:105px; text-align:center; font-weight:bold; cursor:pointer; user-select:none; }
-      #dataTable .ppp-password-cell i { margin-left:5px; color:#888; }
-    </style>
     <div class="overflow mr-t-10 box-bordered" style="max-height:75vh"><table id="dataTable" class="table table-bordered table-hover text-nowrap">
       <thead><tr><th id="pppVisibleCount" class="text-center"><?= $count ?></th><th><?= $_name ?></th><th><?= $_password ?></th><th><?= $_profile ?></th><th>Service</th><th>Caller ID</th><th>Status</th><th><?= $_action ?></th></tr></thead><tbody>
       <?php foreach ($secrets as $secret): $id = $secret['.id']; $name = $secret['name']; $disabled = ($secret['disabled'] === 'true' || $secret['disabled'] === 'yes'); ?>
       <tr class="ppp-secret-row" data-status="<?= $disabled ? 'disabled' : 'enabled'; ?>"><td class="text-center"><?php if (!(function_exists('mikhmonIsMitra') && mikhmonIsMitra())): ?><i class="fa fa-minus-square text-danger pointer" title="<?= $_delete ?>" onclick="if(confirm('Delete <?= htmlspecialchars(addslashes($name)) ?>?')){loadpage('./?remove-pppsecret=<?= rawurlencode($id) ?>&session=<?= $session ?>');loader()}"></i><?php else: ?><i class="fa fa-user"></i><?php endif; ?></td>
-        <td><?php if (!(function_exists('mikhmonIsMitra') && mikhmonIsMitra())): ?><a href="./?secret=<?= rawurlencode($name) ?>&session=<?= $session ?>"><i class="fa fa-edit"></i> <?= htmlspecialchars($name) ?></a><?php else: ?><?= htmlspecialchars($name) ?><?php endif; ?></td>
+        <td><?= htmlspecialchars($name) ?></td>
         <td class="ppp-password-cell" data-password="<?= htmlspecialchars(isset($secret['password']) ? $secret['password'] : '', ENT_QUOTES); ?>" data-pinned="false" role="button" tabindex="0" aria-label="Tampilkan password" aria-pressed="false" title="Arahkan kursor atau klik untuk melihat password"><span class="ppp-password-value">******</span><i class="fa fa-eye"></i></td><td><?= htmlspecialchars(isset($secret['profile']) ? $secret['profile'] : '') ?></td><td><?= htmlspecialchars(isset($secret['service']) ? $secret['service'] : 'any') ?></td><td><?= htmlspecialchars(isset($secret['caller-id']) ? $secret['caller-id'] : '') ?></td>
         <td><?php if ($disabled): ?><span class="text-red">Disabled</span><?php else: ?><span class="text-green">Enabled</span><?php endif; ?></td>
-        <td><?php if (function_exists('mikhmonIsMitra') && mikhmonIsMitra()): ?>- <?php elseif ($disabled): ?><a href="./?enable-pppsecret=<?= rawurlencode($id) ?>&session=<?= $session ?>"><i class="fa fa-unlock text-green"></i></a><?php else: ?><a href="./?disable-pppsecret=<?= rawurlencode($id) ?>&session=<?= $session ?>"><i class="fa fa-lock text-orange"></i></a><?php endif; ?></td>
+        <td><?php if (function_exists('mikhmonIsMitra') && mikhmonIsMitra()): ?>-<?php else: ?><div class="ppp-secret-actions"><a class="btn bg-primary" href="./?secret=<?= rawurlencode($name) ?>&session=<?= $session ?>"><i class="fa fa-edit"></i> <?= $_edit ?></a><?php if ($disabled): ?><a class="btn bg-green" href="./?enable-pppsecret=<?= rawurlencode($id) ?>&session=<?= $session ?>" title="Enable"><i class="fa fa-unlock"></i> Enable</a><?php else: ?><a class="btn bg-warning" href="./?disable-pppsecret=<?= rawurlencode($id) ?>&session=<?= $session ?>" title="Disable"><i class="fa fa-lock"></i> Disable</a><?php endif; ?></div><?php endif; ?></td>
       </tr><?php endforeach; ?>
       <tr id="pppNoResults" style="display:none"><td colspan="8" class="text-center">Data PPP Secret tidak ditemukan.</td></tr>
       </tbody></table></div>

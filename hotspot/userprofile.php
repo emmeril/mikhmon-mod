@@ -40,13 +40,21 @@ if (!isset($_SESSION["mikhmon"])) {
 	));
 }
 ?>
+<style>
+  .hotspot-profile-header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;box-sizing:border-box}
+  .hotspot-profile-header h3{margin:0}
+  .hotspot-profile-header .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;margin:0;box-sizing:border-box}
+  .hotspot-profile-name{display:flex;align-items:center;gap:7px;font-weight:600}
+  .hotspot-profile-actions{text-align:center;white-space:nowrap}
+  .hotspot-profile-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:38px;margin:0}
+  @media(max-width:620px){.hotspot-profile-header{align-items:flex-start;flex-direction:column}.hotspot-profile-header .btn{width:100%;min-height:44px}.hotspot-profile-actions .btn{min-height:44px}}
+</style>
 <div class="row">
 <div class="col-12">
 <div class="card">
-<div class="card-header align-middle">
-    <h3><i class=" fa fa-pie-chart"></i> User Profile 
-    &nbsp; | &nbsp; <a href="./?user-profile=add&session=<?= $session; ?>" title="Add User"><i class="fa fa-user-plus"></i> Add</a>
-	</h3>
+<div class="card-header align-middle hotspot-profile-header">
+    <h3><i class="fa fa-pie-chart"></i> User Profile</h3>
+    <a class="btn bg-primary" href="./?user-profile=add&session=<?= $session; ?>" title="Add User Profile"><i class="fa fa-user-plus"></i> <?= $_add ?></a>
 </div>
 <!-- /.card-header -->
 <div class="card-body">
@@ -61,7 +69,7 @@ if (!isset($_SESSION["mikhmon"])) {
 	} elseif ($countprofile > 1) {
 		echo "$countprofile items   ";
 	}
-	?></th>
+		?></th>
 		<th class="align-middle"><?= $_name ?></th>
 		<th class="align-middle">Shared<br>Users</th>
 		<th class="align-middle">Rate<br>Limit</th>
@@ -70,6 +78,7 @@ if (!isset($_SESSION["mikhmon"])) {
 		<th class="text-right align-middle" > <?= $_price." ".$currency; ?></th>
 		<th class="text-right align-middle" > <?= $_selling_price." ".$currency; ?></th>
 		<th class="align-middle"><?= $_lock_user ?></th>
+		<th class="text-center align-middle"><?= $_action ?></th>
     </tr>
   </thead>
   <tbody>
@@ -96,7 +105,7 @@ for ($i = 0; $i < $TotalReg; $i++) {
   <td style='text-align:center;'><i class='fa fa-minus-square text-danger pointer' onclick="if(confirm('Are you sure to delete profile (<?= $pname; ?>)?')){loadpage('./?remove-user-profile=<?= $pid; ?>&pname=<?= $pname ?>&session=<?= $session; ?>')}else{}" title='Remove <?= $pname; ?>'></i>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
   <?php
 	echo "<a title='Open User by profile " . $pname . "'  href='./?hotspot=users&profile=" . $pname . "&session=" . $session . "'><i class='fa fa-users'></i></a></td>";
-	echo "<td><a title='Open User Profile " . $pname . "' href='./?user-profile=" . $pid . "&session=" . $session . "'><i class='fa fa-edit'></i> <i class='fa fa-ci fa-circle ".$moncolor."'></i> $pname</a></td>";
+	echo "<td><span class='hotspot-profile-name'><i class='fa fa-ci fa-circle ".$moncolor."'></i> " . htmlspecialchars($pname, ENT_QUOTES) . "</span></td>";
 //$profiledetalis = $ARRAY[$i];echo "<td>" . $profiledetalis['name'];echo "</td>";
 	echo "<td>" . $psharedu;
 	echo "</td>";
@@ -161,6 +170,7 @@ for ($i = 0; $i < $TotalReg; $i++) {
 	$getgracep = explode(",", $ponlogin);
 	echo $getgracep[6];
 	echo "</td>";
+	echo "<td class='hotspot-profile-actions'><a class='btn bg-primary' title='Edit User Profile " . htmlspecialchars($pname, ENT_QUOTES) . "' href='./?user-profile=" . rawurlencode($pid) . "&session=" . rawurlencode($session) . "'><i class='fa fa-edit'></i> " . htmlspecialchars($_edit, ENT_QUOTES) . "</a></td>";
 	echo "</tr>";
 }
 ?>
