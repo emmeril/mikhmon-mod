@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 session_start();
-include_once(__DIR__ . '/../lib/billing_profile.php');
+include_once(__DIR__ . '/../lib/voucher_summary.php');
 // hide all error
 error_reporting(0);
 if (!isset($_SESSION["mikhmon"])) {
@@ -55,6 +55,7 @@ if (!isset($_SESSION["mikhmon"])) {
 // Counting thousands of users is the slowest dashboard query. Reuse the same
 // short-lived cache as the periodic dashboard endpoint while navigating.
   $dashboardHotspotCacheTtl = 120;
+  $dashboardHotspotProfiles = (array) $API->comm("/ip/hotspot/user/profile/print", array('.proplist' => 'name,on-login'));
   $hotspotCache = isset($_SESSION['dashboard_hotspot_cache'][$session]) ? $_SESSION['dashboard_hotspot_cache'][$session] : array();
   $hotspotCacheFresh = is_array($hotspotCache) && !empty($hotspotCache['at']) && (time() - (int) $hotspotCache['at']) < $dashboardHotspotCacheTtl;
   if ($hotspotCacheFresh) {
@@ -63,7 +64,7 @@ if (!isset($_SESSION["mikhmon"])) {
   } else {
     // Count only voucher users; Billing-managed profiles (Expired Mode = None) are excluded.
     $voucherProfiles = array();
-    foreach ((array) $API->comm("/ip/hotspot/user/profile/print", array('.proplist' => 'name,on-login')) as $profileRow) {
+    foreach ($dashboardHotspotProfiles as $profileRow) {
       if (isset($profileRow['name']) && mikhmonBillingProfileExpiredMode('hotspot', $profileRow) !== 'none') {
         $voucherProfiles[(string) $profileRow['name']] = true;
       }
@@ -98,6 +99,10 @@ if (!isset($_SESSION["mikhmon"])) {
   $dashboardCustomers = mikhmonVisibleServiceCustomers($session);
   $dashboardHotspotCustomers = mikhmonMitraUsernamesByService($session, 'hotspot');
   $dashboardPppoeCustomers = mikhmonMitraUsernamesByService($session, 'pppoe');
+  $dashboardRevenue = mikhmonDashboardRevenue($session, $dashboardHotspotProfiles);
+  $dashboardVoucherToday = mikhmonRevenueMoney($dashboardRevenue['voucher_today'], $currency);
+  $dashboardVoucherMonth = mikhmonRevenueMoney($dashboardRevenue['voucher_month'], $currency);
+  $dashboardCustomerMonth = mikhmonRevenueMoney($dashboardRevenue['customer_month'], $currency);
 
 /*
 // get selling report
@@ -137,87 +142,69 @@ if (!isset($_SESSION["mikhmon"])) {
 ?>
 
 <style>
+.dashboard-revenue-card h1{font-size:24px;line-height:1.25;margin-bottom:6px}.dashboard-revenue-card a{height:100%}
+@media screen and (max-width: 750px){.dashboard-revenue-card h1{font-size:20px}}
 @media screen and (min-width: 751px) {
   .dashboard-main-row {
-    display: flex;
-    align-items: stretch;
+    position: relative;
   }
   .dashboard-main-row > .dashboard-main-column {
     display: flex;
     flex-direction: column;
   }
-  .dashboard-main-right #r_3,
-  .dashboard-main-right #r_3 .card {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
+  .dashboard-main-right {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr);
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    float: none;
   }
-  .dashboard-main-right #r_3 .card-body {
+  .dashboard-main-right #r_1 > .col-4 {
+    float: none;
+    width: 100%;
+  }
+  .dashboard-main-right #r_1 .box {
+    min-height: 0;
+    padding: 6px 10px;
+  }
+  .dashboard-main-right #r_1 .box-group-icon {
+    width: 36px;
+    padding: 3px 6px;
+    font-size: 26px;
+  }
+  .dashboard-main-right #r_3 {
+    display: grid;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    height: auto;
+    min-height: 0;
+  }
+  .dashboard-main-right #r_3::after {
+    display: none;
+  }
+  .dashboard-main-right #r_3 > .card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .dashboard-main-right #r_3 > .card .card-body {
     display: flex;
     flex: 1;
     min-height: 0;
+    overflow: hidden;
   }
-  .dashboard-main-right #r_3 .overflow {
+  .dashboard-main-right #r_3 > .card .overflow {
     flex: 1;
     height: auto !important;
+    max-height: none !important;
+    min-height: 0;
     width: 100%;
   }
 }
 </style>
 
 <div id="reloadHome">
-
-    <div id="r_1" class="row">
-      <div class="col-4">
-        <div class="box bmh-75 box-bordered">
-          <div class="box-group">
-            <div class="box-group-icon"><i class="fa fa-calendar"></i></div>
-              <div class="box-group-area">
-                <span ><?= $_system_date_time ?><br>
-                    <?php 
-                    echo ucfirst($clock['date']) . " " . $clock['time'] . "<br>
-                    ".$_uptime." : " . formatDTM($resource['uptime']);
-                    $_SESSION[$session.'sdate'] = $clock['date'];
-                    ?>
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      <div class="col-4">
-        <div class="box bmh-75 box-bordered">
-          <div class="box-group">
-          <div class="box-group-icon"><i class="fa fa-info-circle"></i></div>
-              <div class="box-group-area">
-                <span >
-                    <?php
-                    echo $_board_name." : " . $resource['board-name'] . "<br/>
-                    ".$_model." : " . $routerboard['model'] . "<br/>
-                    Router OS : " . $resource['version'];
-                    ?>
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-    <div class="col-4">
-      <div class="box bmh-75 box-bordered">
-        <div class="box-group">
-          <div class="box-group-icon"><i class="fa fa-server"></i></div>
-              <div class="box-group-area">
-                <span >
-                    <?php
-                    echo $_cpu_load." : " . $resource['cpu-load'] . "%<br/>
-                    ".$_free_memory." : " . formatBytes($resource['free-memory'], 2) . "<br/>
-                    ".$_free_hdd." : " . formatBytes($resource['free-hdd-space'], 2)
-                    ?>
-                </span>
-                </div>
-              </div>
-            </div>
-          </div> 
-      </div>
-
         <div class="row dashboard-main-row">
           <div class="col-8 dashboard-main-column">
             <div id="r_2"class="row">
@@ -339,6 +326,37 @@ if (!isset($_SESSION["mikhmon"])) {
                     <a onclick="cancelPage()" href="./?customer=list&session=<?= $session; ?>">
                       <h1><?= count($dashboardPppoeCustomers); ?></h1>
                       <div><i class="fa fa-exchange"></i> PPPoE</div>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="r_income" class="card">
+            <div class="card-header"><h3><i class="fa fa-money"></i> Pendapatan</h3></div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-4 col-box-6">
+                  <div class="box bg-blue bmh-75 dashboard-revenue-card">
+                    <a href="./?report=selling&amp;idhr=<?= strtolower(date('M/d/Y')); ?>&amp;service=hotspot&amp;session=<?= $session; ?>">
+                      <h1><?= htmlspecialchars($dashboardVoucherToday, ENT_QUOTES); ?></h1>
+                      <div><i class="fa fa-ticket"></i> Voucher Hari Ini</div>
+                    </a>
+                  </div>
+                </div>
+                <div class="col-4 col-box-6">
+                  <div class="box bg-green bmh-75 dashboard-revenue-card">
+                    <a href="./?report=selling&amp;idbl=<?= strtolower(date('M')) . date('Y'); ?>&amp;service=hotspot&amp;session=<?= $session; ?>">
+                      <h1><?= htmlspecialchars($dashboardVoucherMonth, ENT_QUOTES); ?></h1>
+                      <div><i class="fa fa-calendar"></i> Voucher Bulan Ini</div>
+                    </a>
+                  </div>
+                </div>
+                <div class="col-4 col-box-6">
+                  <div class="box bg-yellow bmh-75 dashboard-revenue-card">
+                    <a href="./?billing=paid&amp;session=<?= $session; ?>">
+                      <h1><?= htmlspecialchars($dashboardCustomerMonth, ENT_QUOTES); ?></h1>
+                      <div><i class="fa fa-users"></i> Pelanggan Bulan Ini</div>
                     </a>
                   </div>
                 </div>
@@ -494,6 +512,11 @@ if (!isset($_SESSION["mikhmon"])) {
               </div>
             </div>
             <div class="col-4 dashboard-main-column dashboard-main-right">
+            <div id="r_1" class="row">
+              <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-calendar"></i></div><div class="box-group-area"><span><?= $_system_date_time ?><br><?php echo ucfirst($clock['date']) . ' ' . $clock['time'] . '<br>' . $_uptime . ' : ' . formatDTM($resource['uptime']); $_SESSION[$session.'sdate'] = $clock['date']; ?></span></div></div></div></div>
+              <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-info-circle"></i></div><div class="box-group-area"><span><?= $_board_name ?> : <?= htmlspecialchars($resource['board-name'], ENT_QUOTES); ?><br><?= $_model ?> : <?= htmlspecialchars($routerboard['model'], ENT_QUOTES); ?><br>Router OS : <?= htmlspecialchars($resource['version'], ENT_QUOTES); ?></span></div></div></div></div>
+              <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-server"></i></div><div class="box-group-area"><span><?= $_cpu_load ?> : <?= htmlspecialchars($resource['cpu-load'], ENT_QUOTES); ?>%<br><?= $_free_memory ?> : <?= htmlspecialchars(formatBytes($resource['free-memory'], 2), ENT_QUOTES); ?><br><?= $_free_hdd ?> : <?= htmlspecialchars(formatBytes($resource['free-hdd-space'], 2), ENT_QUOTES); ?></span></div></div></div></div>
+            </div>
             <div id="r_3" class="row">
             <div class="card">
               <div class="card-header">

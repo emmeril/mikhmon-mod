@@ -37,14 +37,15 @@ function mikhmonVoucherOwnerSummary($profiles, $users, $ownerUserId) {
   return array('total' => $total, 'unused' => $unused);
 }
 
-function mikhmonVoucherOwnerRevenue($session, $profiles, $ownerUserId, $month = '') {
-  $ownerUserId = trim((string) $ownerUserId);
+function mikhmonRevenueForPeriod($session, $profiles, $month = '', $ownerUserId = null, $day = '') {
   $month = preg_match('/^\d{6}$/', (string) $month) ? (string) $month : date('Ym');
+  $day = preg_match('/^\d{8}$/', (string) $day) ? (string) $day : '';
+  $ownerScoped = $ownerUserId !== null && trim((string) $ownerUserId) !== '';
+  $ownerUserId = $ownerScoped ? trim((string) $ownerUserId) : '';
   $revenue = array('voucher' => 0.0, 'customer' => 0.0);
-  if ($ownerUserId === '') return $revenue;
 
   $customerIds = array();
-  if (function_exists('mikhmonGetCustomers')) {
+  if ($ownerScoped && function_exists('mikhmonGetCustomers')) {
     foreach ((array) mikhmonGetCustomers($session) as $customer) {
       if ((string) ($customer['mitra_id'] ?? '') === $ownerUserId && isset($customer['id'])) {
         $customerIds[(string) $customer['id']] = true;
@@ -55,13 +56,15 @@ function mikhmonVoucherOwnerRevenue($session, $profiles, $ownerUserId, $month = 
   $portalVoucherUsernames = array();
   if (function_exists('mikhmonGetInvoices')) {
     foreach ((array) mikhmonGetInvoices($session) as $invoice) {
-      if (($invoice['status'] ?? '') !== 'paid' || !isset($customerIds[(string) ($invoice['customer_id'] ?? '')])) continue;
+      if (($invoice['status'] ?? '') !== 'paid') continue;
+      if ($ownerScoped && !isset($customerIds[(string) ($invoice['customer_id'] ?? '')])) continue;
       $isVoucher = ($invoice['kind'] ?? 'monthly') === 'voucher';
       if ($isVoucher && trim((string) ($invoice['voucher_username'] ?? '')) !== '') {
         $portalVoucherUsernames[strtolower(trim((string) $invoice['voucher_username']))] = true;
       }
       $paidAt = (int) ($invoice['paid_at'] ?? 0);
       if ($paidAt <= 0 || date('Ym', $paidAt) !== $month) continue;
+      if ($day !== '' && date('Ymd', $paidAt) !== $day) continue;
       $key = $isVoucher ? 'voucher' : 'customer';
       $revenue[$key] += (float) ($invoice['amount'] ?? 0);
     }
@@ -73,7 +76,7 @@ function mikhmonVoucherOwnerRevenue($session, $profiles, $ownerUserId, $month = 
     if ($name !== '' && mikhmonBillingProfileExpiredMode('hotspot', $profile) !== 'none') $voucherProfiles[$name] = true;
   }
   $sellingPrices = mikhmonReportProfileSellingPrices($profiles, array());
-  $ownerTag = '[mitra:' . $ownerUserId . ']';
+  $ownerTag = $ownerScoped ? '[mitra:' . $ownerUserId . ']' : '';
   $records = function_exists('mikhmonGetReportRecords') ? mikhmonGetReportRecords($session) : array();
   foreach (mikhmonFilterReportRecords((array) $records) as $record) {
     $parts = mikhmonReportParts($record);
@@ -83,12 +86,38 @@ function mikhmonVoucherOwnerRevenue($session, $profiles, $ownerUserId, $month = 
     $profile = trim((string) ($parts[7] ?? ''));
     $comment = (string) ($parts[8] ?? '');
     if ($startedAt <= 0 || date('Ym', $startedAt) !== $month || $service !== 'hotspot') continue;
-    if (!isset($voucherProfiles[$profile]) || strpos($comment, $ownerTag) === false) continue;
+    if ($day !== '' && date('Ymd', $startedAt) !== $day) continue;
+    if (!isset($voucherProfiles[$profile])) continue;
+    if ($ownerScoped && strpos($comment, $ownerTag) === false) continue;
     if ($username !== '' && isset($portalVoucherUsernames[$username])) continue;
     $revenue['voucher'] += mikhmonReportSellingPrice($record, $sellingPrices);
   }
 
   return $revenue;
+}
+
+function mikhmonVoucherOwnerRevenue($session, $profiles, $ownerUserId, $month = '') {
+  $ownerUserId = trim((string) $ownerUserId);
+  if ($ownerUserId === '') return array('voucher' => 0.0, 'customer' => 0.0);
+  return mikhmonRevenueForPeriod($session, $profiles, $month, $ownerUserId);
+}
+
+function mikhmonDashboardRevenue($session, $profiles, $ownerUserId = null, $now = null) {
+  $now = $now === null ? time() : (int) $now;
+  $month = date('Ym', $now);
+  $monthly = mikhmonRevenueForPeriod($session, $profiles, $month, $ownerUserId);
+  $daily = mikhmonRevenueForPeriod($session, $profiles, $month, $ownerUserId, date('Ymd', $now));
+  return array(
+    'voucher_today' => $daily['voucher'],
+    'voucher_month' => $monthly['voucher'],
+    'customer_month' => $monthly['customer'],
+  );
+}
+
+function mikhmonRevenueMoney($amount, $currency = 'Rp') {
+  $currency = trim((string) $currency) ?: 'Rp';
+  $isRupiah = in_array(strtolower(rtrim($currency, '.')), array('rp', 'idr'), true);
+  return $currency . ' ' . number_format((float) $amount, $isRupiah ? 0 : 2, $isRupiah ? ',' : '.', $isRupiah ? '.' : ',');
 }
 
 function mikhmonVoucherValiditySeconds($value) {

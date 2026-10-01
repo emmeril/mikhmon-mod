@@ -38,6 +38,16 @@ $revenue = mikhmonVoucherOwnerRevenue('router-a', $profiles, $ownerId, '202610')
 partnerRevenueTestAssert($revenue['voucher'] === 45000.0, 'voucher revenue combines manual sales and voucher invoices without counting portal vouchers twice');
 partnerRevenueTestAssert($revenue['customer'] === 150000.0, 'customer revenue includes only this partner monthly invoices in the selected month');
 
+$dashboardRevenue = mikhmonDashboardRevenue('router-a', $profiles, $ownerId, strtotime('2026-10-01 23:00:00'));
+partnerRevenueTestAssert($dashboardRevenue['voucher_today'] === 45000.0, 'partner dashboard shows voucher revenue for today');
+partnerRevenueTestAssert($dashboardRevenue['voucher_month'] === 45000.0, 'partner dashboard shows voucher revenue for the current month');
+partnerRevenueTestAssert($dashboardRevenue['customer_month'] === 150000.0, 'partner dashboard shows customer revenue for the current month');
+
+$adminDashboardRevenue = mikhmonDashboardRevenue('router-a', $profiles, null, strtotime('2026-10-01 23:00:00'));
+partnerRevenueTestAssert($adminDashboardRevenue['voucher_today'] === 70000.0, 'admin dashboard includes voucher income from every owner without duplicate portal usage');
+partnerRevenueTestAssert($adminDashboardRevenue['customer_month'] === 1149000.0, 'admin dashboard includes monthly customer income from every owner');
+partnerRevenueTestAssert(mikhmonRevenueMoney(125000, 'Rp') === 'Rp 125.000', 'dashboard revenue uses router currency formatting');
+
 @unlink($databasePath);
 @unlink($databasePath . '.routers');
 echo 'partner-revenue-tests: OK' . PHP_EOL;

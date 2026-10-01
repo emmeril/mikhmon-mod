@@ -1,6 +1,6 @@
 <?php
 
-include_once(__DIR__ . '/../lib/billing_profile.php');
+include_once(__DIR__ . '/../lib/voucher_summary.php');
 
 $clock = array('date' => date('M/d/Y'), 'time' => date('H:i:s'));
 $resource = array();
@@ -94,8 +94,14 @@ if (!empty($routerConnected)) {
 
 $hotspotCustomers = count($hotspotCustomerNames);
 $pppoeCustomers = count($pppoeCustomerNames);
+$mitraDashboardRevenue = mikhmonDashboardRevenue($session, $hotspotProfiles, mikhmonUserId());
+$mitraVoucherToday = mikhmonRevenueMoney($mitraDashboardRevenue['voucher_today'], $currency);
+$mitraVoucherMonth = mikhmonRevenueMoney($mitraDashboardRevenue['voucher_month'], $currency);
+$mitraCustomerMonth = mikhmonRevenueMoney($mitraDashboardRevenue['customer_month'], $currency);
 ?>
 <style>
+.dashboard-revenue-card h1{font-size:24px;line-height:1.25;margin-bottom:6px}.dashboard-revenue-card a{height:100%}
+@media screen and (max-width: 750px){.dashboard-revenue-card h1{font-size:20px}}
 @media screen and (min-width: 751px) {
   .mitra-dashboard-main-row {
     display: flex;
@@ -151,6 +157,12 @@ $pppoeCustomers = count($pppoeCustomerNames);
         <div class="col-4"><div class="box bg-blue bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= count($mitraCustomers); ?></h1><div><i class="fa fa-users"></i> Pelanggan</div></a></div></div>
         <div class="col-4"><div class="box bg-green bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= $hotspotCustomers; ?></h1><div><i class="fa fa-wifi"></i> Hotspot</div></a></div></div>
         <div class="col-4"><div class="box bg-yellow bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= $pppoeCustomers; ?></h1><div><i class="fa fa-exchange"></i> PPPoE</div></a></div></div>
+      </div></div></div></div>
+
+      <div id="r_income" class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-money"></i> Pendapatan</h3></div><div class="card-body"><div class="row">
+        <div class="col-4 col-box-6"><div class="box bg-blue bmh-75 dashboard-revenue-card"><a href="./?report=selling&amp;idhr=<?= strtolower(date('M/d/Y')); ?>&amp;service=hotspot&amp;session=<?= $session; ?>"><h1><?= htmlspecialchars($mitraVoucherToday, ENT_QUOTES); ?></h1><div><i class="fa fa-ticket"></i> Voucher Hari Ini</div></a></div></div>
+        <div class="col-4 col-box-6"><div class="box bg-green bmh-75 dashboard-revenue-card"><a href="./?report=selling&amp;idbl=<?= strtolower(date('M')) . date('Y'); ?>&amp;service=hotspot&amp;session=<?= $session; ?>"><h1><?= htmlspecialchars($mitraVoucherMonth, ENT_QUOTES); ?></h1><div><i class="fa fa-calendar"></i> Voucher Bulan Ini</div></a></div></div>
+        <div class="col-4 col-box-6"><div class="box bg-yellow bmh-75 dashboard-revenue-card"><a href="./?billing=paid&amp;session=<?= $session; ?>"><h1><?= htmlspecialchars($mitraCustomerMonth, ENT_QUOTES); ?></h1><div><i class="fa fa-users"></i> Pelanggan Bulan Ini</div></a></div></div>
       </div></div></div></div>
 
       <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-area-chart"></i> <?= $_traffic ?></h3></div><div class="card-body">
