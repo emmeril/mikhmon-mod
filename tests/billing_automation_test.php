@@ -86,6 +86,31 @@ billingAutomationTestAssert(!$duplicateBootstrap, 'bootstrap invoice generation 
 
 $customerId = mikhmonSaveCustomer('router-a', '', 'Pelanggan A', '08123456789', '', 'hotspot', 'cust-a', 'basic');
 billingAutomationTestAssert($customerId !== false, 'customer can be created');
+$immediateInvoice = array(
+  'id' => 'invoice-immediate-payment', 'number' => 'INV-IMMEDIATE', 'customer_id' => $customerId,
+  'customer_name' => 'Pelanggan A', 'amount' => 10000, 'due_date' => date('Y-m-d H:i:s'),
+  'next_due_date' => date('Y-m-d H:i:s', strtotime('+1 month')), 'status' => 'paid',
+  'paid_at' => strtotime('2026-09-01 23:00:00'), 'automation' => array('payment_notification_pending' => true),
+);
+mikhmonSaveInvoice('router-a', $immediateInvoice);
+$immediateInvoices = array($immediateInvoice);
+$immediateConfig = array_merge(mikhmonFonnteReadConfig(), array('enabled' => true, 'payment_enabled' => true, 'token' => 'test-token'));
+$immediateSendCount = 0;
+$immediateResult = mikhmonBillingAutomationProcessPaidNotification(
+  'router-a',
+  $immediateInvoices,
+  array($customerId => mikhmonFindCustomer('router-a', $customerId)),
+  $immediateInvoice,
+  'Rp',
+  'Mikhmon',
+  $immediateConfig,
+  strtotime('2026-09-01 23:00:00'),
+  function () use (&$immediateSendCount) { $immediateSendCount++; return array('status' => true); }
+);
+billingAutomationTestAssert($immediateResult === true && $immediateSendCount === 1, 'payment confirmation sends immediately outside business hours');
+$storedImmediateInvoice = array();
+foreach (mikhmonGetInvoices('router-a') as $candidateInvoice) if (($candidateInvoice['id'] ?? '') === 'invoice-immediate-payment') { $storedImmediateInvoice = $candidateInvoice; break; }
+billingAutomationTestAssert(!empty($storedImmediateInvoice['automation']['payment_sent_at']) && empty($storedImmediateInvoice['automation']['payment_notification_pending']), 'successful immediate payment notification is persisted and not queued again');
 $invoiceId = mikhmonSaveInvoice('router-a', array(
   'id' => 'invoice-a', 'number' => 'INV-A', 'customer_id' => $customerId,
   'customer_name' => 'Pelanggan A', 'amount' => 10000, 'due_date' => date('Y-m-d H:i:s', time() - 3600),

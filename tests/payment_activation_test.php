@@ -50,22 +50,28 @@ $duplicateResult = mikhmonPaymentActivationProcess('router-a', $invoiceId, $api,
 paymentActivationTestAssert(!empty($duplicateResult['success']) && !empty($duplicateResult['already_paid']), 'duplicate callback is idempotent');
 paymentActivationTestAssert(count(mikhmonGetInvoices('router-a')) === 2, 'duplicate callback does not create another billing cycle');
 
-$customerManual = mikhmonSaveCustomer('router-c', '', 'Pelanggan Tunai', '', '', 'hotspot', 'cust-c', 'basic');
+mikhmonFonnteWriteConfig(array('enabled' => true, 'payment_enabled' => true, 'token' => 'test-token'));
+$customerManual = mikhmonSaveCustomer('router-c', '', 'Pelanggan Tunai', '08123456789', '', 'hotspot', 'cust-c', 'basic');
 $invoiceManual = mikhmonSaveInvoice('router-c', array(
   'id' => 'invoice-paid-manual', 'number' => 'INV-MANUAL', 'customer_id' => $customerManual,
   'customer_name' => 'Pelanggan Tunai', 'services' => array(array('id'=>'service-c','service'=>'hotspot','username'=>'cust-c','profile'=>'basic','amount'=>100000)),
   'service_count' => 1, 'subtotal' => 100000, 'admin_fee' => 0, 'amount' => 100000,
   'due_date' => date('Y-m-d H:i:s', time() - 3600), 'status' => 'unpaid', 'created_at' => time() - 10,
 ));
+$manualNotificationCount = 0;
 $manualResult = mikhmonPaymentActivationProcess('router-c', $invoiceManual, new PaymentActivationFakeApi(), array(
   'allow_manual' => true, 'actor_name' => 'Biller Satu', 'paid_by_user_id' => 'user-biller',
   'biller_partner_id' => 'mitra-biller', 'biller_commission' => 2500,
+  'payment_sender' => function () use (&$manualNotificationCount) { $manualNotificationCount++; return array('status' => true); },
 ));
 paymentActivationTestAssert(!empty($manualResult['success']), 'manual biller payment can activate services');
+paymentActivationTestAssert(!empty($manualResult['payment_notification_sent']) && $manualNotificationCount === 1, 'marking an invoice paid sends its confirmation immediately');
 $manualInvoices = mikhmonGetInvoices('router-c');
+paymentActivationTestAssert(!empty($manualInvoices[0]['automation']['payment_sent_at']) && empty($manualInvoices[0]['automation']['payment_notification_pending']), 'immediate payment notification status is stored on the paid invoice');
 paymentActivationTestAssert($manualInvoices[0]['subtotal'] === 100000.0 && $manualInvoices[0]['admin_fee'] === 2500.0 && $manualInvoices[0]['amount'] === 102500.0, 'biller commission is added once as the customer admin fee');
 paymentActivationTestAssert($manualInvoices[0]['biller_partner_id'] === 'mitra-biller' && $manualInvoices[0]['biller_commission'] === 2500.0, 'paid invoice keeps the biller and commission snapshot');
 paymentActivationTestAssert($manualInvoices[1]['admin_fee'] === 0 && $manualInvoices[1]['amount'] === 100000.0, 'next invoice carries the service subtotal without the previous admin fee');
+mikhmonFonnteWriteConfig(array('enabled' => false));
 
 $customerFail = mikhmonSaveCustomer('router-b', '', 'Pelanggan B', '', '', 'hotspot', 'cust-b1', 'basic');
 mikhmonAddCustomerService('router-b', $customerFail, array('service'=>'hotspot','username'=>'cust-b2','profile'=>'basic'));

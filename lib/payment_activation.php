@@ -35,7 +35,12 @@ function mikhmonPaymentActivationInvoiceServices($invoice, $customer) {
 
 function mikhmonPaymentActivationRouterConfig($session) {
   $data = array();
+  $hadRequestUri = array_key_exists('REQUEST_URI', $_SERVER);
+  $requestUri = $hadRequestUri ? $_SERVER['REQUEST_URI'] : null;
+  if (!$hadRequestUri) $_SERVER['REQUEST_URI'] = '';
   include dirname(__DIR__) . '/include/config.php';
+  if ($hadRequestUri) $_SERVER['REQUEST_URI'] = $requestUri;
+  else unset($_SERVER['REQUEST_URI']);
   return isset($data[$session]) && is_array($data[$session]) ? $data[$session] : array();
 }
 
@@ -274,12 +279,38 @@ function mikhmonPaymentActivationProcess($session, $invoiceId, $api = null, $opt
       $invoice['activation_warning'] = 'Scheduler jatuh tempo berikutnya gagal dipasang.';
       mikhmonSaveInvoice($session, $invoice);
     }
+    $paymentNotificationStatus = 'disabled';
+    if (!empty($fonnteConfig['enabled']) && !empty($fonnteConfig['payment_enabled']) && trim((string) ($fonnteConfig['token'] ?? '')) !== '') {
+      $routerConfig = mikhmonPaymentActivationRouterConfig($session);
+      $currency = explode('&', (string) ($routerConfig[6] ?? '&Rp'), 2)[1] ?? 'Rp';
+      $brandname = 'MIKHMON';
+      include dirname(__DIR__) . '/include/brand.php';
+      $brand = trim((string) $brandname) ?: 'MIKHMON';
+      $notificationInvoices = array($invoice);
+      $notificationResult = mikhmonBillingAutomationProcessPaidNotification(
+        $session,
+        $notificationInvoices,
+        array((string) $customer['id'] => $customer),
+        $invoice,
+        $currency,
+        $brand,
+        $fonnteConfig,
+        $now,
+        $options['payment_sender'] ?? null
+      );
+      $paymentNotificationStatus = $notificationResult === true ? 'sent' : ($notificationResult === false ? 'failed' : 'deferred');
+      foreach (mikhmonGetInvoices($session) as $savedInvoice) {
+        if ((string) ($savedInvoice['id'] ?? '') === (string) ($invoice['id'] ?? '')) { $invoice = $savedInvoice; break; }
+      }
+    }
     return array(
       'success' => true,
       'message' => 'Pembayaran diproses dan ' . count($prepared['services']) . ' layanan berhasil diaktifkan.',
       'invoice' => $invoice,
       'next_invoice' => $nextInvoice,
       'scheduler_installed' => $schedulerInstalled,
+      'payment_notification_status' => $paymentNotificationStatus,
+      'payment_notification_sent' => $paymentNotificationStatus === 'sent',
     );
   } finally {
     if ($ownedApi && is_object($api) && method_exists($api, 'disconnect')) $api->disconnect();

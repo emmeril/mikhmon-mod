@@ -377,12 +377,16 @@ function mikhmonBillingAutomationEnsureUnpaidInvoice($session, &$invoices, $cust
   return $nextInvoice;
 }
 
-function mikhmonBillingAutomationProcessPaidNotification($session, &$invoices, $customersById, $invoice, $currency, $brand, $fonnteConfig, $now) {
+function mikhmonBillingAutomationProcessPaidNotification($session, &$invoices, $customersById, $invoice, $currency, $brand, $fonnteConfig, $now, $sender = null) {
   $customerId = (string) ($invoice['customer_id'] ?? '');
   if (!isset($customersById[$customerId])) return false;
   if (!mikhmonBillingAutomationRetryReady($invoice, 'payment', $now)) return null;
   $message = mikhmonBillingAutomationMessage($fonnteConfig['templates']['payment'] ?? '', $customersById[$customerId], $invoice, $currency, $brand, $invoice['due_date'] ?? '', $invoice['next_due_date'] ?? '', false);
-  $send = mikhmonBillingAutomationQueuedSend($customersById[$customerId]['phone'] ?? '', $message, $fonnteConfig, $now);
+  $send = is_callable($sender)
+    ? call_user_func($sender, $customersById[$customerId]['phone'] ?? '', $message, $fonnteConfig)
+    : mikhmonFonnteSend($customersById[$customerId]['phone'] ?? '', $message, $fonnteConfig);
+  if (!is_array($send)) $send = array('status' => false, 'reason' => 'Respons pengiriman Fonnte tidak valid.');
+  $send['attempted'] = true;
   if (!empty($send['status'])) {
     $invoice['automation']['payment_notification_pending'] = false;
     $invoice['automation']['payment_sent_at'] = $now;
@@ -532,7 +536,9 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
       else foreach ($invoices as $index => $row) if (($row['id'] ?? '') === ($invoice['id'] ?? '')) { $invoices[$index] = $invoice; break; }
     }
   }
-  if ($workHours && !empty($fonnteConfig['payment_enabled'])) foreach ($invoices as $invoice) {
+  // Payment confirmations are transactional messages. Send pending ones at
+  // any hour; only reminders and isolation notices follow business hours.
+  if (!empty($fonnteConfig['payment_enabled'])) foreach ($invoices as $invoice) {
     if (!mikhmonBillingAutomationIsMonthlyInvoice($invoice)) continue;
     if (($invoice['status'] ?? '') !== 'paid' || empty($invoice['automation']['payment_notification_pending'])) continue;
     $customerId = (string) ($invoice['customer_id'] ?? '');

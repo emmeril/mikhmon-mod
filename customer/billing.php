@@ -496,6 +496,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       else {
         $customerMessage = ($activationResult['message'] ?? 'Layanan berhasil diaktifkan.') . ' Jatuh tempo berikutnya: ' . ($activationResult['invoice']['next_due_date'] ?? '-') . '.';
         if (empty($activationResult['scheduler_installed'])) $customerMessage .= ' Scheduler jatuh tempo gagal dipasang.';
+        if (($activationResult['payment_notification_status'] ?? '') === 'sent') $customerMessage .= ' Notifikasi pembayaran langsung dikirim.';
+        elseif (($activationResult['payment_notification_status'] ?? '') === 'failed') $customerMessage .= ' Notifikasi pembayaran gagal dikirim dan akan dicoba kembali.';
         $invoices = billingMonthlyInvoicesOnly(mikhmonGetInvoices($session));
         foreach (mikhmonPaymentActivationInvoiceServices($activationResult['invoice'] ?? array(), $customer) as $serviceRow) {
           $service = ($serviceRow['service'] ?? '') === 'pppoe' ? 'pppoe' : 'hotspot';
