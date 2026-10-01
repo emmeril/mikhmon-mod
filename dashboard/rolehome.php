@@ -1,7 +1,6 @@
 <?php
 
 include_once(__DIR__ . '/../lib/billing_profile.php');
-include_once('./report/reportrecord.php');
 
 $clock = array('date' => date('M/d/Y'), 'time' => date('H:i:s'));
 $resource = array();
@@ -16,11 +15,7 @@ $mitraPppSecrets = array();
 $mitraPppActive = array();
 $mitraHotspotLogs = array();
 $interfaceName = '';
-$monthKey = strtolower(date('M')) . date('Y');
-$todayKey = strtolower(date('M/d/Y'));
-$monthReports = array();
 $hotspotProfiles = array();
-$pppProfiles = array();
 
 if (!empty($routerConnected)) {
   $clockRows = $API->comm('/system/clock/print');
@@ -39,8 +34,6 @@ if (!empty($routerConnected)) {
   if (!empty($clock['time-zone-name'])) {
     $_SESSION['timezone'] = $clock['time-zone-name'];
     date_default_timezone_set($clock['time-zone-name']);
-    $monthKey = strtolower(date('M')) . date('Y');
-    $todayKey = strtolower(date('M/d/Y'));
   }
 
   $hotspotProfiles = $API->comm('/ip/hotspot/user/profile/print');
@@ -97,51 +90,6 @@ if (!empty($routerConnected)) {
     if (isset($activePpp['name']) && isset($pppoeCustomerNames[(string) $activePpp['name']])) $mitraPppActive[] = $activePpp;
   }
 
-  $monthReports = mikhmonFilterReportRecords($API->comm('/system/script/print', array('?owner' => $monthKey)));
-  $mitraAllUsernames = mikhmonMitraUsernames($session);
-  $monthReports = array_values(array_filter($monthReports, function ($row) use ($mitraAllUsernames) {
-    $parts = mikhmonReportParts($row);
-    return mikhmonRowBelongsToCurrentMitra($row) || (isset($parts[2]) && isset($mitraAllUsernames[trim($parts[2])]));
-  }));
-  $pppProfiles = $API->comm('/ppp/profile/print');
-}
-
-// Include paid Billing invoices even when the router is temporarily offline.
-$monthReports = mikhmonReportMergeBillingRows($session, $monthReports, '', $monthKey);
-if (mikhmonIsMitra()) {
-  $mitraAllUsernames = mikhmonMitraUsernames($session);
-  $monthReports = array_values(array_filter($monthReports, function ($row) use ($mitraAllUsernames) {
-    $parts = mikhmonReportParts($row);
-    return mikhmonRowBelongsToCurrentMitra($row) || (isset($parts[2]) && isset($mitraAllUsernames[trim($parts[2])]));
-  }));
-}
-$profileCosts = mikhmonReportProfileCosts($hotspotProfiles, $pppProfiles);
-$profileSellingPrices = mikhmonReportProfileSellingPrices($hotspotProfiles, $pppProfiles);
-$reportTotals = array(
-  'all' => array('count' => 0, 'income' => 0, 'profit' => 0),
-  'hotspot' => array('count' => 0, 'income' => 0, 'profit' => 0),
-  'pppoe' => array('count' => 0, 'income' => 0, 'profit' => 0),
-  'today' => array('count' => 0, 'income' => 0, 'profit' => 0),
-);
-foreach ($monthReports as $reportRow) {
-  $parts = mikhmonReportParts($reportRow);
-  $service = (isset($parts[9]) && strtolower(trim($parts[9])) === 'pppoe') || (isset($parts[5]) && strtolower(trim($parts[5])) === 'pppoe') ? 'pppoe' : 'hotspot';
-  $income = mikhmonReportSellingPrice($reportRow, $profileSellingPrices);
-  $profit = mikhmonReportNetProfit($reportRow, $profileCosts, $profileSellingPrices);
-  foreach (array('all', $service) as $key) {
-    $reportTotals[$key]['count']++;
-    $reportTotals[$key]['income'] += $income;
-    $reportTotals[$key]['profit'] += $profit;
-  }
-  if (isset($parts[0]) && strtolower(trim($parts[0])) === $todayKey) {
-    $reportTotals['today']['count']++;
-    $reportTotals['today']['income'] += $income;
-    $reportTotals['today']['profit'] += $profit;
-  }
-}
-
-function mitraDashboardMoney($value, $currency) {
-  return $currency . ' ' . number_format((float) $value, 0, ',', '.');
 }
 
 $hotspotCustomers = count($hotspotCustomerNames);
@@ -292,8 +240,6 @@ $pppoeCustomers = count($pppoeCustomerNames);
     </div>
 
     <div class="col-4 mitra-dashboard-column mitra-dashboard-right">
-      <div id="r_4" class="row"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-money"></i></div><div class="box-group-area"><span><b><?= $_income ?></b><br><?= $_today ?> <?= $reportTotals['today']['count']; ?> trx : <?= htmlspecialchars(mitraDashboardMoney($reportTotals['today']['income'], $currency), ENT_QUOTES); ?><br><?= $_this_month ?> <?= $reportTotals['all']['count']; ?> trx : <?= htmlspecialchars(mitraDashboardMoney($reportTotals['all']['income'], $currency), ENT_QUOTES); ?><hr style="margin:5px 0;border:0;border-top:1px solid currentColor;opacity:.35"><b>Net Profit Mitra</b><br><?= $_today ?>: <?= htmlspecialchars(mitraDashboardMoney($reportTotals['today']['profit'], $currency), ENT_QUOTES); ?><br><?= $_this_month ?>: <?= htmlspecialchars(mitraDashboardMoney($reportTotals['all']['profit'], $currency), ENT_QUOTES); ?></span></div></div></div></div>
-
       <div class="row mitra-hotspot-log"><div class="card"><div class="card-header"><h3><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></h3></div><div class="card-body"><div style="padding: 5px; max-height: 320px;" class="mr-t-10 overflow">
         <table class="table table-sm table-bordered table-hover" style="font-size: 12px;">
           <thead><tr><th><?= $_time ?></th><th><?= $_users ?> (IP)</th><th><?= $_messages ?></th></tr></thead>

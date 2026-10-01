@@ -87,14 +87,13 @@ foreach ($modalSaveSources as $formName => $definition) {
 }
 $routerSettingsSource = file_get_contents(dirname(__DIR__) . '/settings/settings.php');
 $userManagementSource = file_get_contents(dirname(__DIR__) . '/settings/users.php');
-$partnerManagementSource = file_get_contents(dirname(__DIR__) . '/settings/mitras.php');
 crudModalAssert(strpos($routerSettingsSource, '$admin === \'session-settings\'') !== false, 'router edit returns to the router list after save');
-crudModalAssert(strpos($userManagementSource, "'&saved=' . \$savedAction") !== false, 'user management redirects after a successful modal save');
-crudModalAssert(strpos($partnerManagementSource, 'window.location.replace(') !== false, 'partner management redirects after a successful modal save');
-crudModalAssert(strpos($userManagementSource, 'class="user-form-actions"') !== false, 'user management uses a responsive modal action footer');
-crudModalAssert(strpos($partnerManagementSource, 'class="mitra-form-actions"') !== false, 'partner management uses a responsive modal action footer');
-crudModalAssert(strpos($partnerManagementSource, 'class="mitra-action-cell"><div class="mitra-actions">') !== false, 'partner row actions use a dedicated layout group');
-crudModalAssert(strpos($partnerManagementSource, '.mitra-actions{display:grid;grid-template-columns:repeat(2,minmax(82px,1fr))') !== false, 'partner row actions stay aligned side by side');
-crudModalAssert(strpos($partnerManagementSource, '.mitra-actions .btn{min-height:44px}') !== false, 'partner row actions keep a mobile tap target');
+crudModalAssert(strpos($userManagementSource, "'&saved=1'") !== false, 'unified user management redirects after a successful modal save');
+crudModalAssert(strpos($userManagementSource, 'class="managed-form-actions"') !== false, 'unified user management uses a responsive modal action footer');
+crudModalAssert(strpos($userManagementSource, 'class="managed-actions"') !== false, 'unified user rows use a dedicated action group');
+crudModalAssert(strpos($userManagementSource, '.managed-actions>a,.managed-actions>form{flex:1 1 0;min-width:110px}') !== false, 'unified user row actions have equal widths');
+crudModalAssert(strpos($userManagementSource, '.managed-actions{flex-direction:row;flex-wrap:nowrap}') !== false, 'unified user row actions stay inline on mobile');
+crudModalAssert(strpos($userManagementSource, '.managed-actions .btn{min-height:44px}') !== false, 'inline user row actions keep a mobile tap target');
+crudModalAssert(strpos($routerSource, "include_once('./settings/users.php');") !== false, 'legacy partner route opens unified user management');
 
 echo 'crud-modal-tests: OK' . PHP_EOL;

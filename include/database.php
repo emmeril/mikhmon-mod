@@ -535,6 +535,146 @@ function mikhmonDeleteUser($id) {
   return mikhmonWriteDatabase($database);
 }
 
+function mikhmonSaveManagedUser($input) {
+  $database = mikhmonReadDatabase();
+  $type = strtolower(trim((string) ($input['type'] ?? '')));
+  if (!in_array($type, array('admin', 'reseller', 'sales', 'biller'), true)) {
+    return array('status' => false, 'error' => 'Jenis pengguna tidak valid.');
+  }
+
+  $partnerId = trim((string) ($input['partner_id'] ?? ''));
+  $userId = trim((string) ($input['user_id'] ?? ''));
+  $name = trim(strip_tags((string) ($input['name'] ?? '')));
+  $session = $type === 'admin' ? 'mikhmon' : trim(strip_tags((string) ($input['session'] ?? '')));
+  $active = !empty($input['active']);
+  $loginEnabled = $type === 'admin' || !empty($input['login_enabled']);
+  $username = trim(strip_tags((string) ($input['username'] ?? '')));
+  $password = (string) ($input['password'] ?? '');
+  if ($name === '') return array('status' => false, 'error' => 'Nama wajib diisi.');
+  if ($type !== 'admin' && $session === '') return array('status' => false, 'error' => 'Router wajib dipilih.');
+
+  $existingPartner = false;
+  foreach ((array) ($database['partners'] ?? array()) as $partner) {
+    if ($partnerId !== '' && (string) ($partner['id'] ?? '') === $partnerId) {
+      $existingPartner = mikhmonNormalizePartner($partner);
+      break;
+    }
+  }
+  if ($existingPartner) $userId = $existingPartner['user_id'];
+
+  $existingUser = false;
+  foreach ((array) ($database['users'] ?? array()) as $user) {
+    if ($userId !== '' && (string) ($user['id'] ?? '') === $userId) {
+      $existingUser = $user;
+      break;
+    }
+  }
+  $targetRole = $type === 'admin' ? 'admin' : ($type === 'biller' ? 'biller' : 'mitra');
+  if ($existingUser && (($existingUser['role'] ?? '') === 'admin') !== ($targetRole === 'admin')) {
+    return array('status' => false, 'error' => 'Jenis administrator dan Mitra tidak dapat saling diubah.');
+  }
+  if ($existingPartner && $type === 'admin') {
+    return array('status' => false, 'error' => 'Profil Mitra tidak dapat diubah menjadi administrator.');
+  }
+  if ($existingUser && mikhmonAssignedCustomerCount($userId) > 0
+    && ((string) ($existingUser['session'] ?? '') !== $session || (string) ($existingUser['role'] ?? '') !== $targetRole)) {
+    return array('status' => false, 'error' => 'Pindahkan pelanggan sebelum mengganti router atau jenis akses pengguna.');
+  }
+
+  if ($loginEnabled) {
+    if ($username === '') return array('status' => false, 'error' => 'Username wajib diisi ketika akses login diaktifkan.');
+    if (!$existingUser && $password === '') return array('status' => false, 'error' => 'Password wajib diisi untuk akun baru.');
+    foreach ((array) ($database['users'] ?? array()) as $candidate) {
+      if (strtolower((string) ($candidate['username'] ?? '')) === strtolower($username)
+        && (string) ($candidate['id'] ?? '') !== $userId) {
+        return array('status' => false, 'error' => 'Username sudah digunakan.');
+      }
+    }
+    if ($userId === '') $userId = 'user-' . bin2hex(random_bytes(8));
+    $passwordHash = $password !== '' ? password_hash($password, PASSWORD_DEFAULT) : (string) ($existingUser['password_hash'] ?? '');
+    if ($passwordHash === '') return array('status' => false, 'error' => 'Password akun tidak tersedia.');
+    $savedUser = array(
+      'id' => $userId,
+      'name' => $name,
+      'username' => $username,
+      'role' => $targetRole,
+      'session' => $session,
+      'password_hash' => $passwordHash,
+      'active' => $active,
+      'updated_at' => time(),
+    );
+    $userSaved = false;
+    foreach ((array) ($database['users'] ?? array()) as $index => $candidate) {
+      if ((string) ($candidate['id'] ?? '') !== $userId) continue;
+      $database['users'][$index] = $savedUser;
+      $userSaved = true;
+      break;
+    }
+    if (!$userSaved) $database['users'][] = $savedUser;
+  } elseif ($userId !== '') {
+    if (mikhmonAssignedCustomerCount($userId) > 0) {
+      return array('status' => false, 'error' => 'Akses login belum dapat dihapus karena pengguna masih memiliki pelanggan.');
+    }
+    $database['users'] = array_values(array_filter((array) ($database['users'] ?? array()), function ($user) use ($userId) {
+      return (string) ($user['id'] ?? '') !== $userId;
+    }));
+    $userId = '';
+  }
+
+  if ($type !== 'admin') {
+    $partner = mikhmonNormalizePartner(array(
+      'id' => $partnerId,
+      'user_id' => $userId,
+      'session' => $session,
+      'name' => $name,
+      'category' => $type,
+      'voucher_stock' => $input['voucher_stock'] ?? ($existingPartner['voucher_stock'] ?? 0),
+      'phone' => $input['phone'] ?? ($existingPartner['phone'] ?? ''),
+      'email' => $input['email'] ?? ($existingPartner['email'] ?? ''),
+      'address' => $input['address'] ?? ($existingPartner['address'] ?? ''),
+      'commission' => $input['commission'] ?? ($existingPartner['commission'] ?? 0),
+      'active' => $active,
+      'updated_at' => time(),
+    ));
+    if ($partner['email'] !== '' && !filter_var($partner['email'], FILTER_VALIDATE_EMAIL)) {
+      return array('status' => false, 'error' => 'Format email tidak valid.');
+    }
+    $partnerSaved = false;
+    foreach ((array) ($database['partners'] ?? array()) as $index => $candidate) {
+      if ((string) ($candidate['id'] ?? '') !== $partner['id']) continue;
+      $database['partners'][$index] = $partner;
+      $partnerSaved = true;
+      break;
+    }
+    if (!$partnerSaved) $database['partners'][] = $partner;
+    $partnerId = $partner['id'];
+  }
+
+  if (!mikhmonWriteDatabase($database)) return array('status' => false, 'error' => 'Data pengguna gagal disimpan.');
+  return array('status' => true, 'partner_id' => $partnerId, 'user_id' => $userId);
+}
+
+function mikhmonSetManagedUserActive($partnerId, $userId, $active) {
+  $database = mikhmonReadDatabase();
+  $found = false;
+  foreach ((array) ($database['partners'] ?? array()) as $index => $partner) {
+    if ($partnerId === '' || (string) ($partner['id'] ?? '') !== (string) $partnerId) continue;
+    $database['partners'][$index]['active'] = (bool) $active;
+    $database['partners'][$index]['updated_at'] = time();
+    $userId = (string) ($partner['user_id'] ?? $userId);
+    $found = true;
+    break;
+  }
+  foreach ((array) ($database['users'] ?? array()) as $index => $user) {
+    if ($userId === '' || (string) ($user['id'] ?? '') !== (string) $userId) continue;
+    $database['users'][$index]['active'] = (bool) $active;
+    $database['users'][$index]['updated_at'] = time();
+    $found = true;
+    break;
+  }
+  return $found && mikhmonWriteDatabase($database);
+}
+
 function mikhmonAssignedCustomerCount($userId) {
   $count = 0;
   $database = mikhmonReadDatabase();

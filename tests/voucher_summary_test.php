@@ -36,4 +36,14 @@ voucherSummaryTestAssert($summary['notice']['expired'] === 1, 'notice mode reads
 voucherSummaryTestAssert($summary['remove-only']['expired_known'] === false, 'remove without record reports unavailable expiry history');
 voucherSummaryTestAssert(!isset($summary['billing']), 'billing profiles are excluded from voucher counts');
 
+$ownerSummary = mikhmonVoucherOwnerSummary($profiles, array(
+  array('name' => 'owner-unused', 'profile' => 'remove-record', 'comment' => 'vc-batch [mitra:user-1]'),
+  array('name' => 'owner-used', 'profile' => 'remove-record', 'comment' => 'sep/02/2026 [mitra:user-1]'),
+  array('name' => 'owner-expired', 'profile' => 'notice', 'comment' => 'up-batch [mitra:user-1]', 'limit-uptime' => '1s'),
+  array('name' => 'other-owner', 'profile' => 'remove-record', 'comment' => 'vc-batch [mitra:user-2]'),
+  array('name' => 'billing-user', 'profile' => 'billing', 'comment' => 'vc-batch [mitra:user-1]'),
+), 'user-1');
+voucherSummaryTestAssert($ownerSummary['total'] === 3, 'owner totals include only tagged users on voucher profiles');
+voucherSummaryTestAssert($ownerSummary['unused'] === 1, 'owner unused total excludes used and expired vouchers');
+
 echo 'voucher-summary-tests: OK' . PHP_EOL;

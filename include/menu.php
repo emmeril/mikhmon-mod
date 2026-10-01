@@ -106,7 +106,7 @@ if (!isset($_SESSION["mikhmon"])) {
     $mpage = "Komisi Saya";
   } elseif ($mitra == "list") {
     $smitralist = "active";
-    $mpage = "Partners";
+    $mpage = "Admin & Mitra";
   } elseif (in_array($billing, array("1", "unpaid", "paid"), true)) {
     $mbilling = "active";
     $billingmenu = "menu-open";
@@ -226,15 +226,13 @@ if (!isset($_SESSION["mikhmon"])) {
     $mpage = $_router_list;
   } elseif ($admin == "users") {
     $sroleusers = "active";
-    $ssett = "active";
-    $settmenu = "menu-open";
-    $mpage = "Manajemen User";
+    $mpage = "Admin & Mitra";
   } elseif ($id == "sessions" || $id == "remove" || $router == "new") {
     $ssesslist = "active";
     $mpage = $_admin_settings;
   } elseif ($id == "users") {
     $susersadmin = "active";
-    $mpage = "Mitra & Biller";
+    $mpage = "Admin & Mitra";
   } elseif ($id == "settings" && $session == "new") {
     $snsettings = "active";
     $mpage = $_add_router;
@@ -347,7 +345,7 @@ if($idleto != "disable"){
 <?php if ($id == "admin-settings") { ?>
   <a href="./admin.php?id=sessions" class="menu"><i class="fa fa-server"></i> Router</a>
   <a href="./admin.php?id=admin-settings" class="menu active"><i class="fa fa-tag"></i> Brand Setting</a>
-  <a href="./admin.php?id=users" class="menu"><i class="fa fa-users"></i> Mitra &amp; Biller</a>
+  <a href="./admin.php?id=users" class="menu"><i class="fa fa-users"></i> Admin &amp; Mitra</a>
 <?php } elseif (($id == "settings" && $session == "new") || ($id == "settings" && !empty($router) && explode("-", $router, 2)[0] == "new")) {
 }else if ($id == "settings" || $id == "editor"|| $id == "uplogo" || $id == "database" || $id == "connect"){
 ?>  
@@ -362,7 +360,7 @@ if($idleto != "disable"){
 } ?>  
   <a href="./admin.php?id=sessions" class="menu <?= $ssesslist; ?>"><i class="fa fa-server"></i> Router</a>
   <a href="./admin.php?id=admin-settings" class="menu"><i class="fa fa-tag"></i> Brand Setting</a>
-  <a href="./admin.php?id=users" class="menu <?= $susersadmin; ?>"><i class="fa fa-users"></i> Mitra &amp; Biller</a>
+  <a href="./admin.php?id=users" class="menu <?= $susersadmin; ?>"><i class="fa fa-users"></i> Admin &amp; Mitra</a>
   <a href="./admin.php?id=fonnte" class="menu <?= $sfonnte; ?>"><i class="fa fa-whatsapp"></i> WhatsApp Gateway</a>
   <a href="./admin.php?id=payment-gateway" class="menu <?= $spaymentgateway; ?>"><i class="fa fa-credit-card"></i> Payment Gateway</a>
 
@@ -485,7 +483,7 @@ include('./info.php');
   </div>
 <?php else: ?>
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
-  <a href="./?mitra=list&amp;session=<?= rawurlencode($session); ?>" class="menu <?= $smitralist; ?>"><i class="fa fa-handshake-o"></i> Partners</a>
+  <a href="./?admin=users&amp;session=<?= rawurlencode($session); ?>" class="menu <?= $sroleusers . $smitralist; ?>"><i class="fa fa-users"></i> Admin &amp; Mitra</a>
   <!--users-->
   <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-ticket"></i> Voucher
     <i class="fa fa-caret-down"></i>
@@ -572,7 +570,6 @@ include('./info.php');
   <a href="./?admin=fonnte&session=<?= rawurlencode($session); ?>" class="menu <?= $sfonnte; ?>"> <i class="fa fa-whatsapp"></i> WhatsApp Gateway </a>
   <a href="./?admin=payment-gateway&session=<?= rawurlencode($session); ?>" class="menu <?= $spaymentgateway; ?>"> <i class="fa fa-credit-card"></i> Payment Gateway </a>
   <a href="./?admin=routers&session=<?= rawurlencode($session); ?>" class="menu <?= $srouterlist; ?>"> <i class="fa fa-server"></i> <?= $_router_list ?> </a>
-  <a href="./?admin=users&session=<?= rawurlencode($session); ?>" class="menu <?= $sroleusers; ?>"> <i class="fa fa-users"></i> Manajemen User </a>
   <a href="./?hotspot=uplogo&session=<?= $session; ?>" class="menu <?= $uplogo; ?>"> <i class="fa fa-upload "></i> <?= $_upload_logo ?> </a>
   <a href="./?admin=database&session=<?= rawurlencode($session); ?>" class="menu <?= $sdatabase; ?>"><i class="fa fa-database"></i> Database Backup</a>
   <a href="./?hotspot=template-editor&template=default&session=<?= $session; ?>" class="menu <?= $teditor; ?>"> <i class="fa fa-edit "></i> <?= $_template_editor ?> </a>          

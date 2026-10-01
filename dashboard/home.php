@@ -99,13 +99,6 @@ if (!isset($_SESSION["mikhmon"])) {
   $dashboardHotspotCustomers = mikhmonMitraUsernamesByService($session, 'hotspot');
   $dashboardPppoeCustomers = mikhmonMitraUsernamesByService($session, 'pppoe');
 
-  if ($livereport == "disable") {
-    $logh = "457px";
-    $lreport = "style='display:none;'";
-  } else {
-    $logh = "350px";
-    $lreport = "style='display:block;'";
-  }
 /*
 // get selling report
     $thisD = date("d");
@@ -501,28 +494,6 @@ if (!isset($_SESSION["mikhmon"])) {
               </div>
             </div>
             <div class="col-4 dashboard-main-column dashboard-main-right">
-            <div id="r_4" class="row">
-              <div <?= $lreport; ?> class="box bmh-75 box-bordered">
-                <div class="box-group">
-                  <div class="box-group-icon"><i class="fa fa-money"></i></div>
-                    <div class="box-group-area">
-                      <span >
-                        <div id="reloadLreport">
-                          <?php 
-                          if ($_SESSION[$session.'sdate'] == $_SESSION[$session.'idhr']){
-                            echo "<b>" . $_income . "</b><br/>" . "
-                          ".$_today." " . $_SESSION[$session.'totalHr'] . " trx : " . $currency . " " . $_SESSION[$session.'dincome']. "<br/>
-                          ".$_this_month." " . $_SESSION[$session.'totalBl'] . " trx : " . $currency . " " . $_SESSION[$session.'mincome'] . "<hr style='margin:5px 0;border:0;border-top:1px solid currentColor;opacity:.35'><b>" . $_net_profit . "</b><br/>" . $_today . ": " . $currency . " " . (isset($_SESSION[$session.'dprofit']) ? $_SESSION[$session.'dprofit'] : '0') . "<br/>" . $_this_month . ": " . $currency . " " . (isset($_SESSION[$session.'mprofit']) ? $_SESSION[$session.'mprofit'] : '0');
-                          }else{
-                            echo "<div id='loader' ><i><span> <i class='fa fa-circle-o-notch fa-spin'></i> ". $_processing." </i></div>";
-                          }
-                          ?>                       
-                        </div>
-                    </span>
-                </div>
-              </div>
-            </div>
-            </div>
             <div id="r_3" class="row">
             <div class="card">
               <div class="card-header">

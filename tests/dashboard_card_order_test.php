@@ -20,6 +20,8 @@ foreach ($dashboardSources as $dashboardName => $source) {
   dashboardCardOrderAssert($pppoePosition !== false, $dashboardName . ' contains the PPPoE card');
   dashboardCardOrderAssert($customerPosition > $pppoePosition, $dashboardName . ' places the customer card after PPPoE');
   dashboardCardOrderAssert($trafficPosition > $customerPosition, $dashboardName . ' places the customer card before traffic');
+  dashboardCardOrderAssert(strpos($source, 'id="r_4"') === false, $dashboardName . ' does not contain the income card');
+  dashboardCardOrderAssert(strpos($source, '$_income') === false, $dashboardName . ' does not render income totals');
 }
 
 echo 'dashboard-card-order-tests: OK' . PHP_EOL;

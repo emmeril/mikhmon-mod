@@ -204,7 +204,7 @@ if (!isset($_SESSION["mikhmon"])) {
     exit;
   }
 
-  $localRoutes = array('logout', 'system-log', 'admin-mitra', 'admin-settings', 'admin-routers', 'admin-users', 'admin-fonnte', 'admin-payment-gateway', 'admin-router-add', 'admin-session-settings');
+  $localRoutes = array('logout', 'system-log', 'admin-mitra', 'admin-settings', 'admin-routers', 'admin-fonnte', 'admin-payment-gateway', 'admin-router-add', 'admin-session-settings');
   $routerConnected = false;
   $API = null;
   $identity = isset($hotspotname) ? $hotspotname : $session;
@@ -318,9 +318,9 @@ if (!isset($_SESSION["mikhmon"])) {
     include_once('./settings/database.php');
   }
 
-// customer database
+// Legacy partner route now opens the unified user and partner management page.
   elseif ($mitra == "list" && mikhmonIsAdmin()) {
-    include_once('./settings/mitras.php');
+    include_once('./settings/users.php');
   }
   elseif ($commission == "1") {
     include_once('./customer/commission.php');
@@ -751,7 +751,6 @@ if (!empty($routerConnected) && mikhmonIsAdmin() && ($hotspot == "dashboard" || 
         if ($(this).is(".router-offline") || $(this).find(".router-offline").length) {
           dashboardOffline = true;
           clearInterval(dashboard);
-          if (typeof livereport !== "undefined") clearInterval(livereport);
         }
       });
     }
@@ -766,23 +765,10 @@ if (!empty($routerConnected) && mikhmonIsAdmin() && ($hotspot == "dashboard" || 
   }, interval1);
 
 ';
-if ($livereport == "enable" || $livereport == "") {
-  echo '$("#r_4").load("./report/livereport.php?session=' . $session . ' #r_4");';
-  echo  '
-    var interval2 = "65432";
-    var livereport = setInterval(function() {
-    $("#r_4").load("./report/livereport.php?session=' . $session . ' #r_4"); 
-  }, interval2);
- ';}
-  echo ' 
+  echo '
   function cancelPage(){
     window.stop();
-    clearInterval(dashboard);';
-    if ($livereport == "enable" || $livereport == "") {
-    echo '
-    clearInterval(livereport);';
-    }
-  echo '
+    clearInterval(dashboard);
     }
 </script>';
 

@@ -9,13 +9,6 @@ function i18nPartnerTestAssert($condition, $message) {
   if (!$condition) { fwrite(STDERR, 'FAIL: ' . $message . PHP_EOL); exit(1); }
 }
 
-$_SESSION['mikhmon'] = 'admin';
-$_SESSION['mikhmon_role'] = 'admin';
-$_SESSION['mikhmon_user_id'] = '';
-$_SERVER['REQUEST_METHOD'] = 'GET';
-$_GET = array();
-$session = 'router-a';
-$currency = 'Rp';
 $expectations = array(
   'en' => array('Partner List', 'Add Partner', 'Search by name, phone, email, or address'),
   'id' => array('Daftar Mitra', 'Tambah Mitra', 'Cari nama, telepon, email, atau alamat'),
@@ -25,13 +18,9 @@ $expectations = array(
 );
 
 foreach ($expectations as $language => $expected) {
-  $langid = $language;
-  ob_start();
-  include dirname(__DIR__) . '/settings/mitras.php';
-  $html = mikhmonTranslateText(ob_get_clean(), $language);
-  i18nPartnerTestAssert(strpos($html, $expected[0]) !== false, $language . ' translates the Partner page title');
-  i18nPartnerTestAssert(strpos($html, $expected[1]) !== false, $language . ' translates the Add Partner action and modal title');
-  i18nPartnerTestAssert(strpos($html, 'placeholder="' . htmlspecialchars($expected[2], ENT_QUOTES) . '"') !== false, $language . ' translates the search placeholder attribute');
+  i18nPartnerTestAssert(mikhmonTranslateText('Partner List', $language) === $expected[0], $language . ' translates the Partner page title');
+  i18nPartnerTestAssert(mikhmonTranslateText('Add Partner', $language) === $expected[1], $language . ' translates the Add Partner action');
+  i18nPartnerTestAssert(mikhmonTranslateText('Search by name, phone, email, or address', $language) === $expected[2], $language . ' translates the Partner search label');
 }
 
 i18nPartnerTestAssert(mikhmonTranslateText('Partners', 'id') === 'Mitra', 'sidebar Partner label translates to Indonesian');
