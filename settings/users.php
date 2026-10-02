@@ -32,7 +32,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['managed_action'])) {
         'phone' => $_POST['phone'] ?? '',
         'email' => $_POST['email'] ?? '',
         'address' => $_POST['address'] ?? '',
-        'voucher_stock' => $_POST['voucher_stock'] ?? 0,
         'commission' => $_POST['commission'] ?? 0,
         'login_enabled' => isset($_POST['login_enabled']),
         'username' => $username,
@@ -183,7 +182,6 @@ if ($submittedSave) {
     'phone' => $_POST['phone'] ?? '',
     'email' => $_POST['email'] ?? '',
     'address' => $_POST['address'] ?? '',
-    'voucher_stock' => $_POST['voucher_stock'] ?? 0,
     'commission' => $_POST['commission'] ?? 0,
     'active' => $formActive,
   ));
@@ -232,7 +230,6 @@ $typeLabels = array('admin' => 'Administrator', 'reseller' => 'Reseller', 'sales
           <div class="partner-field"><label for="managed-router">Router</label><select id="managed-router" class="form-control" name="router_session"><option value="">Pilih router</option><?php foreach ($routerSessions as $routerName): ?><option value="<?= htmlspecialchars($routerName, ENT_QUOTES); ?>"<?= $formPartner['session'] === $routerName ? ' selected' : ''; ?>><?= htmlspecialchars($routerName, ENT_QUOTES); ?></option><?php endforeach; ?></select></div>
           <div class="partner-field"><label for="managed-phone">Telepon</label><input id="managed-phone" class="form-control" name="phone" maxlength="30" value="<?= htmlspecialchars($formPartner['phone'], ENT_QUOTES); ?>"></div>
           <div class="partner-field"><label for="managed-email">Email</label><input id="managed-email" class="form-control" type="email" name="email" maxlength="120" value="<?= htmlspecialchars($formPartner['email'], ENT_QUOTES); ?>"></div>
-          <div class="partner-field"><label for="managed-stock">Stok voucher</label><input id="managed-stock" class="form-control" type="number" min="0" step="1" name="voucher_stock" value="<?= (int) $formPartner['voucher_stock']; ?>"></div>
           <div class="partner-field"><label for="managed-commission">Komisi</label><input id="managed-commission" class="form-control" type="number" min="0" step="1" name="commission" value="<?= (float) $formPartner['commission']; ?>"></div>
           <div class="wide partner-field"><label for="managed-address">Alamat</label><textarea id="managed-address" class="form-control" name="address" maxlength="255"><?= htmlspecialchars($formPartner['address'], ENT_QUOTES); ?></textarea></div>
           <div class="managed-section"><h4>Akses Login</h4><p id="managedAccessHelp">Aktifkan jika pengguna perlu masuk ke aplikasi.</p></div>
