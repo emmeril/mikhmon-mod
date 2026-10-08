@@ -1,3 +1,3 @@
 <?php
-$brandname = 'Mugomulyo NET';
+$brandname = 'Emmeril Hotspot';
 ?>

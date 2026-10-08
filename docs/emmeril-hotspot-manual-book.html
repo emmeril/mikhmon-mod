@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manual Book Emmeril Hotspot</title>
+  <style>
+    :root{--ink:#17322d;--muted:#526b65;--paper:#f7f3ea;--white:#fffdf8;--green:#19745f;--deep:#0f4e41;--orange:#dc7b2d;--line:#c9d5ce;--soft:#e7eee8;--warn:#f6e5d4;--danger:#9b312c}
+    *{box-sizing:border-box}html,body{margin:0;padding:0;background:#ccd4d0}body{font-family:Arial,Helvetica,sans-serif;color:var(--ink);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    @page{size:A4 portrait;margin:0}.page{width:210mm;height:297mm;overflow:hidden;position:relative;page-break-after:always;background:var(--paper);padding:16mm 17mm 17mm}.page:last-child{page-break-after:auto}.page:after{content:"";position:absolute;left:0;right:0;bottom:0;height:4mm;background:linear-gradient(90deg,var(--deep) 0 72%,var(--orange) 72% 78%,#d9e0db 78%)}
+    .page-no{position:absolute;right:17mm;bottom:6mm;font-size:8pt;font-weight:700;color:#61736d}.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:7mm}.logo{width:26mm;max-height:13mm;object-fit:contain}.kicker{margin:0 0 2mm;color:var(--green);font-size:8pt;font-weight:700;letter-spacing:.08em;text-transform:uppercase}h1,h2,h3,p{margin-top:0}h1{font-size:32pt;line-height:1.04;letter-spacing:-.035em;margin-bottom:5mm}h2{font-size:22pt;line-height:1.1;letter-spacing:-.025em;margin-bottom:5mm}h3{font-size:12.5pt;line-height:1.25;margin-bottom:2mm}p,li,td,th{font-size:10.2pt;line-height:1.42}p{margin-bottom:3mm}ul,ol{margin:0;padding-left:6mm}li{margin-bottom:2mm}.lead{font-size:13.5pt;line-height:1.45;color:#294a43}.small{font-size:8.3pt;color:var(--muted);line-height:1.35}.muted{color:var(--muted)}.rule{width:24mm;height:1.4mm;background:var(--orange);margin:0 0 7mm}
+    .cover{background:#132824;color:#fff;padding:20mm}.cover:after{height:7mm;background:linear-gradient(90deg,var(--orange) 0 19%,#287d68 19%)}.cover .logo{width:55mm;max-height:none;margin:7mm 0 15mm}.cover .kicker{color:#e9a15e}.cover .lead{color:#d8e5df;max-width:154mm}.cover-meta{position:absolute;left:20mm;bottom:25mm;color:#c5d7d0;font-size:10pt;line-height:1.7}.cover .page-no{color:#c5d7d0}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:6mm}.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}.card{background:var(--white);border:.3mm solid var(--line);border-radius:2mm;padding:4.5mm}.card h3{color:var(--deep)}.dark{background:#132824;color:#eef7f3;border-color:#132824}.dark h3{color:#fff}.dark p,.dark li{color:#d6e4de}.path{display:flex;align-items:center;flex-wrap:wrap;gap:2mm;margin:0 0 6mm}.path span{background:var(--soft);color:var(--deep);border-radius:1mm;padding:2mm 2.8mm;font-size:8.5pt;font-weight:700}.path b{color:var(--orange)}
+    .steps{counter-reset:step;list-style:none;padding:0}.steps li{position:relative;padding:0 0 4mm 12mm;min-height:10mm;border-left:.6mm solid #aec4bb;margin-left:4mm}.steps li:last-child{border-left-color:transparent}.steps li:before{counter-increment:step;content:counter(step);position:absolute;left:-4.5mm;top:-.5mm;width:8mm;height:8mm;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--orange);color:#fff;font-size:8.5pt;font-weight:700}.steps strong{display:block;color:var(--deep);margin-bottom:1mm}
+    .table{width:100%;border-collapse:collapse;background:var(--white)}.table th,.table td{border:.3mm solid var(--line);padding:2.8mm;text-align:left;vertical-align:top}.table th{background:var(--deep);color:#fff;font-size:8.8pt}.table td{font-size:8.8pt}.table td:first-child{font-weight:700;color:var(--deep)}
+    .tip,.warning,.danger{padding:3.5mm 4mm;margin:4mm 0;font-size:9.2pt;line-height:1.4}.tip{background:var(--soft);border-left:1.2mm solid var(--green)}.warning{background:var(--warn);border-left:1.2mm solid var(--orange)}.danger{background:#f2dcd9;border-left:1.2mm solid var(--danger)}
+    .shot{width:100%;display:block;border:.4mm solid #93a69e;border-radius:2mm;box-shadow:0 2mm 5mm rgba(16,43,36,.13)}.figure{margin:3mm 0}.caption{font-size:8pt;color:var(--muted);margin-top:2mm}.label{display:inline-block;background:var(--deep);color:#fff;padding:1.3mm 2.4mm;border-radius:1mm;font-size:7.8pt;font-weight:700;margin:0 1mm 1mm 0}.check{list-style:none;padding:0}.check li{position:relative;padding-left:7mm}.check li:before{content:"✓";position:absolute;left:0;color:var(--green);font-weight:800}.toc{display:grid;grid-template-columns:1fr 1fr;gap:0 10mm}.toc div{display:flex;justify-content:space-between;border-bottom:.3mm solid var(--line);padding:2.1mm 0;font-size:9.3pt}.toc b{color:var(--orange)}.callout-title{font-size:9pt;font-weight:700;color:var(--deep);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2mm}.two-col-list{columns:2;column-gap:10mm}.two-col-list li{break-inside:avoid}.closing{background:var(--deep);color:#fff}.closing:after{background:linear-gradient(90deg,var(--orange) 0 25%,#287d68 25%)}.closing h2{font-size:29pt}.closing .lead{color:#dbe8e3}.closing .card{color:var(--ink)}.closing .page-no{color:#dbe8e3}
+  </style>
+</head>
+<body>
+  <section class="page cover">
+    <p class="kicker">Panduan penggunaan aplikasi</p>
+    <img class="logo" src="../img/login-logo.png" alt="Logo Emmeril Hotspot">
+    <h1>Manual Book<br>Emmeril Hotspot</h1>
+    <div class="rule"></div>
+    <p class="lead">Petunjuk operasional untuk Admin, Mitra, Biller, dan Pelanggan.</p>
+    <p class="cover-meta">Versi dokumen: 1 Oktober 2026<br>Bahasa: Indonesia<br>Dokumen operasional internal</p>
+    <span class="page-no">01</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Tentang panduan</p><h2>Cara menggunakan manual ini</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <p class="lead">Panduan ini mengikuti urutan pekerjaan yang umum dilakukan, mulai dari menyiapkan router sampai memproses pembayaran pelanggan.</p>
+    <div class="grid-2">
+      <div class="card"><h3>Siapa yang menggunakan</h3><ul><li>Admin untuk konfigurasi dan pengawasan penuh.</li><li>Mitra untuk voucher dan pelanggan yang ditugaskan.</li><li>Biller untuk penagihan serta komisi.</li><li>Pelanggan untuk portal mandiri.</li></ul></div>
+      <div class="card dark"><h3>Penanda dalam panduan</h3><p><span class="label">LANGKAH</span> Urutan tindakan yang perlu dilakukan.</p><p><span class="label" style="background:#dc7b2d">PERHATIAN</span> Risiko atau syarat sebelum melanjutkan.</p><p><span class="label" style="background:#19745f">HASIL</span> Kondisi yang seharusnya terlihat.</p></div>
+    </div>
+    <div class="warning"><strong>Catatan tampilan:</strong> menu yang terlihat bergantung pada peran akun dan router yang dipilih. Beberapa fungsi hanya aktif ketika RouterOS terhubung.</div>
+    <h3 style="margin-top:7mm">Urutan awal yang disarankan</h3>
+    <ol class="steps"><li><strong>Masuk sebagai Admin</strong>Pastikan kredensial aplikasi tersedia.</li><li><strong>Tambahkan dan hubungkan router</strong>Isi alamat API, pengguna RouterOS, serta data hotspot.</li><li><strong>Atur profil layanan</strong>Buat profil voucher dan profil billing sesuai kebutuhan.</li><li><strong>Tambahkan pengguna operasional</strong>Buat Mitra atau Biller setelah router siap.</li></ol>
+    <span class="page-no">02</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Daftar isi</p><h2>Isi manual book</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="toc">
+      <div><span>Persiapan penggunaan</span><b>04</b></div><div><span>Login Admin</span><b>05</b></div>
+      <div><span>Menambah router</span><b>06</b></div><div><span>Dashboard</span><b>07</b></div>
+      <div><span>Hak akses per peran</span><b>08</b></div><div><span>Admin dan Mitra</span><b>09</b></div>
+      <div><span>Membuat profil hotspot</span><b>10</b></div><div><span>Membuat voucher</span><b>11</b></div>
+      <div><span>Daftar dan cetak voucher</span><b>12</b></div><div><span>Kontrol hotspot</span><b>13</b></div>
+      <div><span>PPPoE</span><b>14</b></div><div><span>Identitas pelanggan</span><b>15</b></div>
+      <div><span>Menambah layanan</span><b>16</b></div><div><span>Daftar pelanggan</span><b>17</b></div>
+      <div><span>Invoice belum lunas</span><b>18</b></div><div><span>Pelunasan dan aktivasi</span><b>19</b></div>
+      <div><span>Invoice lunas dan komisi</span><b>20</b></div><div><span>Portal pelanggan</span><b>21</b></div>
+      <div><span>WhatsApp Fonnte</span><b>22</b></div><div><span>Payment Gateway</span><b>23</b></div>
+      <div><span>Laporan</span><b>24</b></div><div><span>Log dan trafik</span><b>25</b></div>
+      <div><span>Backup dan restore</span><b>26</b></div><div><span>Rutinitas operasional</span><b>27</b></div>
+      <div><span>Troubleshooting</span><b>28</b></div><div><span>Referensi cepat</span><b>29</b></div>
+    </div>
+    <div class="tip" style="margin-top:8mm">Gunakan daftar isi sebagai urutan pelatihan. Untuk pekerjaan harian, langsung buka bagian yang sesuai dengan menu aplikasi.</div>
+    <span class="page-no">03</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Persiapan</p><h2>Sebelum mulai menggunakan aplikasi</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="grid-2">
+      <div><h3>Siapkan akses</h3><ul class="check"><li>Alamat aplikasi Emmeril Hotspot.</li><li>Username dan password Admin.</li><li>Alamat IP atau IP Cloud MikroTik.</li><li>Username dan password API RouterOS.</li><li>Port API RouterOS sudah diaktifkan.</li><li>Koneksi aplikasi menuju router tersedia.</li></ul></div>
+      <div class="card dark"><h3>Untuk integrasi</h3><ul><li>Token Fonnte dan perangkat WhatsApp aktif.</li><li>Akun Midtrans beserta Merchant ID, Server Key, dan Client Key.</li><li>Nomor HP pelanggan tersimpan dengan benar.</li><li>Profil layanan serta harga telah disepakati.</li></ul></div>
+    </div>
+    <h3 style="margin-top:8mm">Pemeriksaan RouterOS</h3>
+    <table class="table"><thead><tr><th>Pemeriksaan</th><th>Tujuan</th></tr></thead><tbody><tr><td>API aktif</td><td>Aplikasi membutuhkan layanan API RouterOS untuk membaca dan mengubah data.</td></tr><tr><td>Pengguna API</td><td>Hak pengguna harus cukup untuk menu yang akan dikelola.</td></tr><tr><td>Waktu router</td><td>Tanggal dan waktu yang benar diperlukan untuk masa aktif, scheduler, dan laporan.</td></tr><tr><td>Hotspot atau PPPoE</td><td>Konfigurasi dasar layanan perlu tersedia sebelum akun pelanggan dibuat.</td></tr></tbody></table>
+    <div class="danger"><strong>Jangan membagikan</strong> password Admin, password router, token Fonnte, Server Key Midtrans, atau password pemulihan backup melalui grup umum.</div>
+    <span class="page-no">04</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Akses aplikasi</p><h2>Login sebagai Admin</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="figure"><img class="shot" src="meeting-assets/login-admin.png" alt="Halaman login Admin"><p class="caption">Halaman login Admin. Jangan menyimpan password pada komputer bersama.</p></div>
+    <ol class="steps"><li><strong>Buka alamat aplikasi</strong>Gunakan browser pada komputer atau ponsel yang memiliki akses ke server.</li><li><strong>Masukkan Username</strong>Gunakan akun Admin, Mitra, atau Biller yang telah dibuat.</li><li><strong>Masukkan Password</strong>Periksa huruf besar, huruf kecil, dan karakter yang digunakan.</li><li><strong>Tekan Login</strong>Sistem mengarahkan akun sesuai perannya.</li></ol>
+    <div class="tip"><strong>Hasil:</strong> Admin masuk ke area router atau dashboard. Mitra masuk ke router yang ditugaskan. Biller masuk ke Invoice Unpaid.</div>
+    <span class="page-no">05</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Konfigurasi awal</p><h2>Menambah dan menghubungkan router</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="path"><span>Router</span><b>›</b><span>Tambah Router</span></div>
+    <ol class="steps"><li><strong>Buka menu Router</strong>Tekan Tambah Router pada daftar router.</li><li><strong>Isi Session Name</strong>Gunakan nama unik yang mudah dikenali, misalnya nama lokasi.</li><li><strong>Isi data MikroTik</strong>Masukkan IP MikroTik, username, dan password API.</li><li><strong>Isi Router Data</strong>Tentukan Hotspot Name, DNS Name, mata uang, interval reload, idle timeout, dan interface trafik.</li><li><strong>Tekan Save</strong>Simpan konfigurasi terlebih dahulu.</li><li><strong>Uji koneksi</strong>Gunakan Ping untuk memeriksa jalur jaringan, lalu Connect untuk membuka router.</li></ol>
+    <table class="table"><thead><tr><th>Kolom</th><th>Keterangan</th></tr></thead><tbody><tr><td>IP MikroTik</td><td>Alamat IP atau IP Cloud yang dapat dijangkau server aplikasi.</td></tr><tr><td>DNS Name</td><td>Nama DNS dari Hotspot Server Profile.</td></tr><tr><td>Traffic Interface</td><td>Nomor interface yang dipakai oleh pemantau trafik.</td></tr><tr><td>Live Report</td><td>Aktifkan jika laporan langsung diperlukan.</td></tr></tbody></table>
+    <div class="warning"><strong>Jika Not Connected:</strong> periksa IP, user, password, port API, firewall, dan jalur VPN. Simpan perubahan sebelum mencoba Connect kembali.</div>
+    <span class="page-no">06</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Halaman utama</p><h2>Membaca dashboard</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <p class="lead">Dashboard dipakai untuk pemeriksaan singkat sebelum memulai pekerjaan operasional.</p>
+    <div class="grid-2">
+      <div class="card"><h3>Pendapatan</h3><ul><li>Voucher hari ini.</li><li>Voucher bulan berjalan.</li><li>Pembayaran pelanggan bulan berjalan.</li></ul></div>
+      <div class="card"><h3>Router</h3><ul><li>Tanggal dan waktu sistem.</li><li>Nama papan atau board.</li><li>Beban CPU.</li><li>Lalu lintas interface.</li></ul></div>
+      <div class="card"><h3>Aktivitas hotspot</h3><p>Gunakan ringkasan dan log hotspot untuk melihat kejadian pada layanan.</p></div>
+      <div class="card dark"><h3>Log aplikasi</h3><p>Periksa pesan sistem ketika ada proses yang gagal, koneksi bermasalah, atau tindakan pengguna perlu ditelusuri.</p></div>
+    </div>
+    <h3 style="margin-top:8mm">Cara membaca angka pendapatan</h3>
+    <ul class="check"><li>Pendapatan voucher berasal dari transaksi voucher yang tercatat.</li><li>Pendapatan pelanggan berasal dari invoice pelanggan yang sudah lunas.</li><li>Bandingkan dashboard dengan menu Laporan untuk rincian transaksi.</li><li>Gunakan periode bulan berjalan saat membandingkan data mitra.</li></ul>
+    <div class="tip">Jika kartu atau log kosong, pastikan router terhubung dan transaksi memang tersedia pada periode tersebut.</div>
+    <span class="page-no">07</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Hak akses</p><h2>Menu yang tersedia untuk setiap peran</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <table class="table"><thead><tr><th>Peran</th><th>Menu utama</th><th>Batas penggunaan</th></tr></thead><tbody>
+      <tr><td>Admin</td><td>Dashboard, Admin &amp; Mitra, Voucher, Hotspot, PPPoE, Pelanggan, Billing, Log, System, Trafik, Laporan, dan Settings.</td><td>Mengelola seluruh konfigurasi dan router.</td></tr>
+      <tr><td>Mitra</td><td>Dashboard, Voucher, Hotspot aktif, MAC Lock, PPPoE, Pelanggan, Billing, dan Laporan.</td><td>Data dibatasi ke router serta kepemilikan yang ditugaskan.</td></tr>
+      <tr><td>Biller</td><td>Invoice Unpaid, Invoice Paid, dan Komisi Saya.</td><td>Fokus pada penagihan dan pencatatan pembayaran.</td></tr>
+      <tr><td>Pelanggan</td><td>Portal pelanggan.</td><td>Hanya data milik nomor HP yang terverifikasi melalui OTP.</td></tr>
+    </tbody></table>
+    <h3 style="margin-top:8mm">Navigasi dasar</h3>
+    <ol class="steps"><li><strong>Pilih router</strong>Nama router aktif terlihat pada bagian atas atau daftar pilihan router.</li><li><strong>Buka kelompok menu</strong>Tekan Voucher, Hotspot, PPPoE, Pelanggan, Billing, atau Settings untuk melihat submenu.</li><li><strong>Gunakan pencarian dan filter</strong>Daftar panjang dapat disaring tanpa mengubah data.</li><li><strong>Keluar setelah selesai</strong>Tekan Keluar, terutama pada perangkat bersama.</li></ol>
+    <div class="warning">Jika sebuah menu tidak terlihat, periksa peran akun. Jangan menaikkan hak akses hanya untuk mengatasi kesalahan konfigurasi.</div>
+    <span class="page-no">08</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Pengguna operasional</p><h2>Mengelola Admin dan Mitra</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="figure"><img class="shot" src="meeting-assets/admin-mitra.png" alt="Halaman Admin dan Mitra"><p class="caption">Contoh data pada gambar telah disamarkan.</p></div>
+    <div class="path"><span>Admin &amp; Mitra</span><b>›</b><span>Tambah Pengguna</span></div>
+    <ol class="steps"><li><strong>Pilih jenis pengguna</strong>Tentukan Admin, Mitra, atau jenis operasional yang tersedia.</li><li><strong>Isi identitas</strong>Masukkan nama, router untuk Mitra, telepon, email, alamat, stok voucher, dan komisi bila diperlukan.</li><li><strong>Atur akses login</strong>Centang Izinkan login ke aplikasi, lalu isi username dan password.</li><li><strong>Aktifkan pengguna</strong>Pastikan Pengguna aktif dicentang, lalu tekan Simpan Pengguna.</li></ol>
+    <div class="tip">Tombol Kelola membuka formulir perubahan. Tombol Nonaktifkan menutup akses tanpa menghapus riwayat pengguna.</div>
+    <span class="page-no">09</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Hotspot</p><h2>Membuat profil voucher</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="path"><span>Hotspot</span><b>›</b><span>User Profile</span><b>›</b><span>Tambah</span></div>
+    <ol class="steps"><li><strong>Isi Name</strong>Gunakan nama tanpa spasi agar mudah dipakai pada voucher dan laporan.</li><li><strong>Pilih Address Pool</strong>Pilih pool RouterOS yang sesuai atau none bila tidak digunakan.</li><li><strong>Atur Shared Users</strong>Tentukan jumlah perangkat yang boleh memakai satu akun secara bersamaan.</li><li><strong>Isi Rate Limit</strong>Gunakan format upload/download, misalnya 512k/1M.</li><li><strong>Pilih Expired Mode</strong>Gunakan None untuk profil pelanggan bulanan. Gunakan mode selain None untuk voucher.</li><li><strong>Lengkapi harga dan masa aktif</strong>Isi Validity, Grace Period bila muncul, Price, dan Selling Price.</li><li><strong>Tentukan Lock User</strong>Aktifkan jika akun perlu dikunci ke MAC perangkat pertama.</li><li><strong>Tekan Save</strong>Profil tersimpan pada RouterOS.</li></ol>
+    <div class="grid-2"><div class="tip"><strong>Profil voucher:</strong> Expired Mode selain None. Profil ini tersedia pada Generate User dan portal pembelian voucher.</div><div class="warning"><strong>Profil billing:</strong> Expired Mode None. Profil ini tersedia saat menambah layanan pelanggan.</div></div>
+    <span class="page-no">10</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Voucher</p><h2>Membuat voucher dalam jumlah banyak</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="path"><span>Voucher</span><b>›</b><span>Voucher List</span><b>›</b><span>Generate</span></div>
+    <ol class="steps"><li><strong>Pilih server hotspot</strong>Gunakan all atau server tertentu sesuai lokasi.</li><li><strong>Isi jumlah voucher</strong>Tentukan Qty sesuai kebutuhan. Periksa batas stok Mitra bila digunakan.</li><li><strong>Pilih mode akun</strong>Mode voucher memakai username yang sama dengan password. Mode user/password membuat keduanya berbeda.</li><li><strong>Atur panjang dan karakter</strong>Pilih jumlah karakter, huruf, angka, atau kombinasi yang tersedia.</li><li><strong>Tambahkan prefix</strong>Prefix membantu membedakan batch atau area penjualan.</li><li><strong>Pilih profile</strong>Hanya profil dengan Expired Mode selain None yang dapat digunakan.</li><li><strong>Isi batas tambahan</strong>Gunakan Time Limit, Data Limit, dan komentar bila memang diperlukan.</li><li><strong>Simpan</strong>Sistem membuat akun pada RouterOS dan mengarahkan kembali ke daftar voucher.</li></ol>
+    <div class="danger"><strong>Sebelum menekan Generate:</strong> periksa Qty, profile, harga, dan pola username. Pembuatan batch langsung menambah akun pada router.</div>
+    <div class="tip"><strong>Untuk Mitra:</strong> komentar kepemilikan ditambahkan oleh sistem agar voucher dapat dihitung dan dibatasi sesuai akun Mitra.</div>
+    <span class="page-no">11</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Voucher</p><h2>Mencari, memeriksa, dan mencetak voucher</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="path"><span>Voucher</span><b>›</b><span>Voucher List</span></div>
+    <h3>Memeriksa daftar</h3>
+    <ol class="steps"><li><strong>Pilih profile atau gunakan All</strong>Filter membantu menemukan batch tertentu.</li><li><strong>Gunakan pencarian</strong>Cari username, komentar batch, atau informasi yang tersedia.</li><li><strong>Periksa status pemakaian</strong>Bedakan voucher belum terpakai dari voucher yang sudah mulai digunakan.</li><li><strong>Pilih voucher</strong>Gunakan kotak pilihan untuk tindakan pada beberapa akun.</li></ol>
+    <h3 style="margin-top:5mm">Mencetak voucher</h3>
+    <ol class="steps"><li><strong>Buka Print Center atau Quick Print</strong>Pilih voucher dan format cetak.</li><li><strong>Periksa pratinjau</strong>Pastikan logo, username, password, harga, dan masa berlaku terbaca.</li><li><strong>Pilih ukuran</strong>Gunakan template standar, kecil, atau thermal sesuai printer.</li><li><strong>Cetak atau simpan sebagai PDF</strong>Gunakan dialog cetak browser.</li></ol>
+    <div class="grid-2"><div class="card"><h3>Jumlah Voucher</h3><p>Gunakan ringkasan berdasarkan profile untuk melihat total dan stok belum terpakai.</p></div><div class="card dark"><h3>Hapus dengan hati-hati</h3><p>Penghapusan voucher memengaruhi akun di RouterOS. Pastikan batch yang dipilih benar.</p></div></div>
+    <span class="page-no">12</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Hotspot</p><h2>Mengontrol sesi dan perangkat</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <table class="table"><thead><tr><th>Menu</th><th>Kegunaan</th><th>Tindakan umum</th></tr></thead><tbody>
+      <tr><td>Hotspot Active</td><td>Melihat pengguna yang sedang terhubung.</td><td>Putuskan sesi jika akun perlu login ulang atau koneksi macet.</td></tr>
+      <tr><td>MAC Locks</td><td>Melihat akun yang terkunci ke perangkat.</td><td>Reset kunci saat pelanggan mengganti perangkat.</td></tr>
+      <tr><td>Hosts</td><td>Melihat perangkat yang terdeteksi oleh hotspot.</td><td>Periksa alamat IP, MAC, dan status perangkat.</td></tr>
+      <tr><td>IP Bindings</td><td>Mengelola pengecualian atau pengikatan IP hotspot.</td><td>Tambah, ubah, aktifkan, atau nonaktifkan aturan sesuai kebijakan jaringan.</td></tr>
+      <tr><td>Cookies</td><td>Melihat cookie login hotspot.</td><td>Hapus cookie jika perangkat perlu memasukkan kredensial kembali.</td></tr>
+    </tbody></table>
+    <h3 style="margin-top:7mm">Mengganti perangkat pelanggan</h3>
+    <ol class="steps"><li><strong>Pastikan akun yang benar</strong>Cocokkan username dengan pelanggan.</li><li><strong>Putuskan sesi aktif</strong>Lakukan jika akun masih terhubung pada perangkat lama.</li><li><strong>Buka MAC Locks</strong>Reset kunci untuk username tersebut.</li><li><strong>Hapus cookie bila perlu</strong>Lakukan jika browser tetap menggunakan sesi lama.</li><li><strong>Minta pelanggan login ulang</strong>Gunakan voucher atau kredensial yang sama pada perangkat baru.</li></ol>
+    <div class="warning">Reset MAC tidak mengganti password dan tidak memperpanjang masa aktif voucher.</div>
+    <span class="page-no">13</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">PPPoE</p><h2>Mengelola profil, akun, dan sesi PPPoE</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <h3>Membuat profil PPPoE</h3><div class="path"><span>PPPoE</span><b>›</b><span>PPPoE Profiles</span><b>›</b><span>Tambah</span></div>
+    <ol class="steps"><li><strong>Isi nama profil</strong>Gunakan nama paket yang mudah dikenali.</li><li><strong>Atur parameter layanan</strong>Isi local address, remote address, rate limit, dan parameter RouterOS lain yang diperlukan.</li><li><strong>Tentukan metadata billing</strong>Untuk pelanggan bulanan, gunakan profil yang dapat dikelola Billing.</li><li><strong>Simpan profil</strong>Periksa kembali pada daftar profil.</li></ol>
+    <h3 style="margin-top:5mm">Membuat akun PPPoE</h3><div class="path"><span>PPPoE</span><b>›</b><span>PPPoE Secrets</span><b>›</b><span>Tambah</span></div>
+    <ol class="steps"><li><strong>Isi username dan password</strong>Gunakan identitas akun yang unik.</li><li><strong>Pilih service PPPoE</strong>Pilih profil paket yang sesuai.</li><li><strong>Tambahkan komentar</strong>Gunakan nama pelanggan agar akun mudah ditelusuri.</li><li><strong>Simpan dan uji koneksi</strong>Lihat PPPoE Active setelah perangkat pelanggan tersambung.</li></ol>
+    <div class="tip">Untuk pelanggan yang akan ditagih melalui aplikasi, gunakan menu Pelanggan lalu Tambah Layanan. Cara tersebut mengaitkan akun RouterOS ke identitas dan invoice.</div>
+    <span class="page-no">14</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Pelanggan</p><h2>Menambah identitas pelanggan</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="path"><span>Pelanggan</span><b>›</b><span>Daftar Identitas</span><b>›</b><span>Tambah Identitas</span></div>
+    <ol class="steps"><li><strong>Isi Nama Pelanggan</strong>Nama wajib diisi dan dipakai pada daftar serta invoice.</li><li><strong>Isi Nomor HP</strong>Gunakan nomor WhatsApp aktif. Nomor ini dipakai untuk OTP dan notifikasi.</li><li><strong>Isi Alamat</strong>Masukkan alamat pemasangan atau petunjuk lokasi.</li><li><strong>Pilih Mitra</strong>Admin dapat menugaskan pelanggan ke Mitra pada router yang sama.</li><li><strong>Tekan Simpan Identitas</strong>Identitas siap menerima satu atau beberapa layanan.</li></ol>
+    <h3 style="margin-top:6mm">Tindakan pada Daftar Identitas</h3>
+    <table class="table"><thead><tr><th>Tombol</th><th>Fungsi</th></tr></thead><tbody><tr><td>Edit</td><td>Mengubah nama, nomor HP, alamat, atau penugasan Mitra.</td></tr><tr><td>Tambah Layanan</td><td>Mengaitkan akun Hotspot atau PPPoE ke identitas.</td></tr><tr><td>Hapus</td><td>Menghapus identitas dan dapat memengaruhi layanan MikroTik yang terkait.</td></tr></tbody></table>
+    <div class="danger"><strong>Sebelum menghapus:</strong> periksa jumlah layanan pada identitas. Tindakan ini tidak dapat dibatalkan tanpa restore backup.</div>
+    <span class="page-no">15</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Pelanggan</p><h2>Menambahkan layanan pelanggan</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="path"><span>Pelanggan</span><b>›</b><span>Daftar Pelanggan</span><b>›</b><span>Tambah Layanan</span></div>
+    <ol class="steps"><li><strong>Pilih Identitas Pelanggan</strong>Buat identitas lebih dahulu jika nama belum tersedia.</li><li><strong>Pilih Jenis Layanan</strong>Pilih Hotspot atau PPPoE.</li><li><strong>Isi Username</strong>Username harus unik pada data aplikasi dan RouterOS.</li><li><strong>Isi Password</strong>Password wajib diisi untuk layanan baru.</li><li><strong>Pilih Profile</strong>Hanya profil billing dengan Expired Mode None yang ditampilkan.</li><li><strong>Pilih Server Hotspot</strong>Kolom ini muncul untuk layanan Hotspot. Gunakan all atau server tertentu.</li><li><strong>Tekan Simpan Layanan</strong>Sistem membuat akun pada MikroTik dan mengaitkannya ke pelanggan.</li></ol>
+    <div class="warning">Router harus terhubung. Jika penyimpanan gagal, baca pesan yang tampil sebelum mencoba lagi. Jangan membuat username baru hanya untuk melewati pesan username sudah digunakan.</div>
+    <div class="tip"><strong>Hasil:</strong> layanan muncul pada Daftar Pelanggan dan dapat diproses pada menu Billing.</div>
+    <span class="page-no">16</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Pelanggan</p><h2>Mengelola Daftar Pelanggan</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="path"><span>Pelanggan</span><b>›</b><span>Daftar Pelanggan</span></div>
+    <p>Gunakan pencarian dan filter layanan, status, serta Mitra untuk mempersempit daftar.</p>
+    <table class="table"><thead><tr><th>Bagian</th><th>Cara menggunakan</th></tr></thead><tbody>
+      <tr><td>Jumlah Layanan</td><td>Menunjukkan berapa akun Hotspot atau PPPoE yang terkait dengan satu identitas.</td></tr>
+      <tr><td>Pilih Layanan</td><td>Ganti pilihan untuk melihat username, password, profil, dan status layanan lainnya.</td></tr>
+      <tr><td>Password</td><td>Arahkan kursor atau tekan bagian password untuk melihatnya. Jaga agar tidak terlihat orang lain.</td></tr>
+      <tr><td>Status</td><td>Aktif menunjukkan layanan tersedia. Isolir menunjukkan layanan dibatasi oleh proses billing.</td></tr>
+      <tr><td>Edit Identitas</td><td>Mengubah data orang atau organisasi pelanggan.</td></tr>
+      <tr><td>Edit Layanan</td><td>Mengubah username, password, profil, atau parameter layanan terpilih.</td></tr>
+      <tr><td>Layanan</td><td>Menambah layanan baru pada identitas yang sama.</td></tr>
+      <tr><td>Hapus</td><td>Membuka pilihan penghapusan. Baca konfirmasi dengan teliti.</td></tr>
+    </tbody></table>
+    <div class="tip">Satu pelanggan dapat memiliki beberapa layanan. Pilih layanan yang benar sebelum memakai Edit Layanan atau melakukan pemeriksaan teknis.</div>
+    <span class="page-no">17</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Billing</p><h2>Membuat dan mengirim invoice</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="path"><span>Billing</span><b>›</b><span>Invoice Unpaid</span></div>
+    <ol class="steps"><li><strong>Cari pelanggan</strong>Gunakan kolom pencarian atau filter All Data, Invoice Unpaid, Isolated, dan No Invoice.</li><li><strong>Pilih layanan</strong>Jika pelanggan memiliki beberapa layanan, pilih layanan pada baris untuk memeriksa profil dan status.</li><li><strong>Buat Invoice</strong>Tombol tersedia ketika status masih No Invoice.</li><li><strong>Unduh PDF bila diperlukan</strong>Tombol PDF tersedia setelah invoice dibuat.</li><li><strong>Buat Link Midtrans</strong>Gunakan jika Midtrans aktif dan pelanggan akan membayar daring.</li><li><strong>Kirim tagihan</strong>Gunakan Kirim untuk WhatsApp manual atau Fonnte untuk pengiriman melalui gateway.</li></ol>
+    <h3 style="margin-top:6mm">Ringkasan bagian atas</h3>
+    <div class="grid-2"><div class="card"><h3>Jumlah Invoice dan Unpaid</h3><p>Memperlihatkan jumlah data periode aktif yang belum selesai.</p></div><div class="card"><h3>Isolir dan Total Belum Dibayar</h3><p>Gunakan untuk menentukan prioritas penagihan.</p></div></div>
+    <div class="warning">Invoice baru dan aktivasi pembayaran dinonaktifkan ketika router tidak terhubung.</div>
+    <span class="page-no">18</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Billing</p><h2>Menandai lunas dan mengaktifkan layanan</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="path"><span>Billing</span><b>›</b><span>Invoice Unpaid</span><b>›</b><span>Tandai Lunas</span></div>
+    <ol class="steps"><li><strong>Pastikan pembayaran diterima</strong>Cocokkan nama, nomor invoice, jumlah, dan metode pembayaran.</li><li><strong>Tekan Tandai Lunas</strong>Baca konfirmasi bahwa semua layanan pelanggan akan diaktifkan.</li><li><strong>Setujui konfirmasi</strong>Sistem mencatat pembayaran dan menjalankan aktivasi.</li><li><strong>Periksa status layanan</strong>Status pelanggan seharusnya kembali aktif jika RouterOS menerima perubahan.</li><li><strong>Periksa notifikasi</strong>Jika Kirim setelah pembayaran aktif, konfirmasi langsung diproses tanpa menunggu jam kerja.</li></ol>
+    <div class="grid-2"><div class="card dark"><h3>Pembayaran manual</h3><p>Petugas menekan Tandai Lunas setelah verifikasi dana.</p></div><div class="card"><h3>Pembayaran gateway</h3><p>Jika pembayaran diterima tetapi aktivasi belum selesai, gunakan Aktifkan Layanan atau Coba Lagi Aktivasi.</p></div></div>
+    <div class="danger"><strong>Jangan menandai lunas berdasarkan bukti yang belum diverifikasi.</strong> Status lunas masuk ke laporan dan dapat mengaktifkan seluruh layanan pelanggan.</div>
+    <span class="page-no">19</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Billing</p><h2>Invoice Paid, ekspor, dan komisi</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="path"><span>Billing</span><b>›</b><span>Invoice Paid</span></div>
+    <ol class="steps"><li><strong>Pilih periode</strong>Isi Start Date dan End Date. Tanggal awal tidak boleh melewati tanggal akhir.</li><li><strong>Pilih sumber pembayaran</strong>Gunakan All Data, Manual Payment, atau Gateway Payment.</li><li><strong>Gunakan pencarian</strong>Cari nama, username, profil, atau nomor invoice.</li><li><strong>Tekan Export Excel</strong>File berisi baris yang sedang terlihat setelah filter diterapkan.</li></ol>
+    <h3 style="margin-top:6mm">Membaca ringkasan</h3>
+    <table class="table"><thead><tr><th>Ringkasan</th><th>Arti</th></tr></thead><tbody><tr><td>Total Komisi Mitra</td><td>Akumulasi komisi Mitra pada bulan berjalan.</td></tr><tr><td>Biaya Admin</td><td>Biaya admin yang tercatat pada pembayaran.</td></tr><tr><td>Total Bulan</td><td>Jumlah pembayaran invoice pada bulan berjalan.</td></tr></tbody></table>
+    <h3 style="margin-top:6mm">Komisi Saya</h3>
+    <p>Akun Biller membuka menu Komisi Saya, memilih bulan, lalu mencari pelanggan, username, atau invoice. Daftar hanya menampilkan komisi yang terkait dengan akun tersebut.</p>
+    <div class="tip">Gunakan hasil ekspor sebagai bahan rekonsiliasi. Data di layar tetap menjadi acuan saat filter diubah.</div>
+    <span class="page-no">20</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Portal pelanggan</p><h2>Login OTP, pembayaran, dan voucher</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="figure"><img class="shot" src="meeting-assets/portal-pelanggan.png" alt="Portal Pelanggan"><p class="caption">Halaman masuk portal pelanggan menggunakan nomor HP yang terdaftar.</p></div>
+    <ol class="steps"><li><strong>Masukkan nomor handphone</strong>Nomor harus sama dengan data identitas pelanggan.</li><li><strong>Tekan Kirim Kode OTP</strong>Fonnte mengirim kode enam digit melalui WhatsApp.</li><li><strong>Masukkan OTP</strong>Tekan Verifikasi dan Masuk.</li><li><strong>Pilih kebutuhan</strong>Pelanggan dapat mengganti password Hotspot, membayar langganan, membeli voucher, atau melihat riwayat.</li><li><strong>Selesaikan pembayaran</strong>Setelah voucher lunas melalui Midtrans, kode voucher dibuat otomatis dan tampil di portal.</li><li><strong>Tekan Keluar</strong>Lakukan setelah selesai, terutama pada perangkat bersama.</li></ol>
+    <div class="warning">Portal membutuhkan nomor pelanggan yang benar. Pembayaran daring dan pembelian voucher membutuhkan Payment Gateway aktif.</div>
+    <span class="page-no">21</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Integrasi WhatsApp</p><h2>Mengatur Fonnte dan otomasi billing</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="path"><span>Settings</span><b>›</b><span>WhatsApp Gateway</span></div>
+    <ol class="steps"><li><strong>Aktifkan Status Gateway</strong>Centang Aktif.</li><li><strong>Masukkan Token Fonnte</strong>Jika token sudah tersimpan, biarkan kolom kosong untuk mempertahankannya.</li><li><strong>Isi Kode Negara</strong>Gunakan kode negara yang sesuai untuk normalisasi nomor.</li><li><strong>Atur Otomasi Billing</strong>Aktifkan Pengingat, Isolir Otomatis, Notifikasi Bayar, atau Link Pembayaran sesuai SOP.</li><li><strong>Atur jeda pesan</strong>Tentukan rentang jeda antrean untuk pesan terjadwal.</li><li><strong>Tekan Simpan Pengaturan</strong>Lalu gunakan Cek Status Fonnte.</li><li><strong>Kirim Pesan Uji</strong>Masukkan nomor yang dapat diperiksa dan tekan Kirim.</li></ol>
+    <div class="grid-2"><div class="tip"><strong>Konfirmasi bayar:</strong> jika Kirim setelah pembayaran aktif, pesan langsung diproses setelah invoice lunas.</div><div class="warning"><strong>Pengingat terjadwal:</strong> mengikuti konfigurasi otomasi dan waktu kerja yang berlaku.</div></div>
+    <span class="page-no">22</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Pembayaran daring</p><h2>Mengatur Midtrans</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="path"><span>Settings</span><b>›</b><span>Payment Gateway</span></div>
+    <ol class="steps"><li><strong>Pilih mode</strong>Gunakan Sandbox untuk pengujian. Gunakan Production hanya dengan kredensial produksi.</li><li><strong>Isi Merchant ID</strong>Salin nilai dari akun Midtrans.</li><li><strong>Isi Server Key dan Client Key</strong>Pastikan pasangan key sesuai dengan mode yang dipilih.</li><li><strong>Atur masa berlaku</strong>Pilih durasi link invoice sesuai kebijakan pembayaran.</li><li><strong>Aktifkan pembayaran online</strong>Centang status setelah konfigurasi benar.</li><li><strong>Tekan Simpan Pengaturan</strong>Kosongkan key jika ingin mempertahankan key yang sudah tersimpan.</li><li><strong>Tekan Tes Midtrans</strong>Pastikan uji koneksi berhasil sebelum portal dipakai pelanggan.</li></ol>
+    <div class="danger"><strong>Jangan mencampur mode.</strong> Key Sandbox tidak boleh dipakai pada Production, dan sebaliknya. Pergantian mode dapat membuat link pembayaran lama tidak berlaku.</div>
+    <div class="tip">Portal memakai Snap pada browser. Server Key dipakai oleh server aplikasi, sedangkan Client Key dipakai saat tampilan pembayaran dibuka.</div>
+    <span class="page-no">23</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Laporan</p><h2>Melihat penjualan dan pendapatan</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="path"><span>Laporan</span><b>›</b><span>Semua / Hotspot / PPPoE</span></div>
+    <ol class="steps"><li><strong>Pilih jenis laporan</strong>Semua menggabungkan layanan. Hotspot dan PPPoE membatasi jenis transaksi.</li><li><strong>Pilih hari, bulan, dan tahun</strong>Gunakan periode yang sama saat membandingkan dashboard.</li><li><strong>Pilih profile bila diperlukan</strong>Filter ini membantu menilai paket tertentu.</li><li><strong>Gunakan pencarian</strong>Cari username, komentar, profile, atau informasi transaksi.</li><li><strong>Buka Resume</strong>Gunakan ringkasan untuk melihat total periode yang dipilih.</li><li><strong>Cetak laporan</strong>Gunakan fungsi cetak yang tersedia untuk arsip atau rekonsiliasi.</li></ol>
+    <h3 style="margin-top:6mm">Pemisahan yang perlu diperhatikan</h3>
+    <ul class="check"><li>Pendapatan voucher dan pembayaran pelanggan memiliki sumber data berbeda.</li><li>Harga dasar dan harga jual digunakan untuk menghitung hasil penjualan voucher.</li><li>Transaksi portal yang lunas perlu muncul satu kali, bukan dihitung ulang secara manual.</li><li>Pendapatan Mitra dilihat dari penugasan dan penanda kepemilikan data.</li></ul>
+    <div class="warning">Jangan menghapus record laporan sebelum rekonsiliasi selesai dan backup tersedia.</div>
+    <span class="page-no">24</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Pemantauan</p><h2>Log, scheduler, dan trafik</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <table class="table"><thead><tr><th>Menu</th><th>Dipakai ketika</th><th>Yang diperiksa</th></tr></thead><tbody>
+      <tr><td>Hotspot Log</td><td>Login hotspot atau sesi bermasalah.</td><td>Waktu kejadian, pesan RouterOS, dan username terkait.</td></tr>
+      <tr><td>User Log</td><td>Perlu melihat riwayat penggunaan berdasarkan periode.</td><td>Hari, bulan, tahun, dan akun pengguna.</td></tr>
+      <tr><td>System Logs</td><td>Proses aplikasi atau integrasi gagal.</td><td>Kategori, level, waktu, pengguna, serta detail kejadian.</td></tr>
+      <tr><td>Scheduler</td><td>Masa aktif atau tugas RouterOS perlu diperiksa.</td><td>Nama scheduler, waktu mulai, interval, dan status.</td></tr>
+      <tr><td>Traffic Monitor</td><td>Pemakaian interface perlu dipantau.</td><td>Interface yang dipilih, lalu lintas masuk, dan lalu lintas keluar.</td></tr>
+      <tr><td>DHCP Leases</td><td>Perangkat mendapat IP atau konflik alamat.</td><td>IP, MAC, hostname, dan status lease.</td></tr>
+    </tbody></table>
+    <h3 style="margin-top:7mm">Urutan pemeriksaan saat terjadi gangguan</h3>
+    <ol class="steps"><li><strong>Periksa status router</strong>Pastikan aplikasi masih Connected.</li><li><strong>Baca log yang paling dekat dengan waktu kejadian</strong>Catat pesan sebelum melakukan perubahan.</li><li><strong>Periksa sesi atau scheduler</strong>Cocokkan username dan status layanan.</li><li><strong>Uji satu perubahan</strong>Hindari banyak perubahan sekaligus agar penyebab tetap dapat ditelusuri.</li></ol>
+    <span class="page-no">25</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Pemulihan data</p><h2>Backup, sinkronisasi, dan restore</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="path"><span>Settings</span><b>›</b><span>Database Backup</span></div>
+    <table class="table"><thead><tr><th>Tindakan</th><th>Fungsi</th></tr></thead><tbody><tr><td>Backup Sekarang</td><td>Membuat snapshot data lokal saat ini.</td></tr><tr><td>Sync Backup Sekarang</td><td>Menyelaraskan backup dengan data router yang tersedia.</td></tr><tr><td>Restore</td><td>Menambahkan user yang belum ada di MikroTik dari backup terbaru atau versi riwayat.</td></tr><tr><td>Simpan Database ke MikroTik</td><td>Menyimpan backup pelanggan yang dilindungi password pemulihan ke router.</td></tr><tr><td>Pulihkan Database dari MikroTik</td><td>Mengambil database tersimpan menggunakan password yang sama.</td></tr></tbody></table>
+    <h3 style="margin-top:6mm">Prosedur restore</h3>
+    <ol class="steps"><li><strong>Buat backup kondisi sekarang</strong>Simpan titik kembali sebelum restore.</li><li><strong>Pilih jenis data</strong>Pilih Semua, Hotspot, atau PPPoE.</li><li><strong>Pilih versi</strong>Gunakan Backup terbaru atau snapshot riwayat yang benar.</li><li><strong>Baca konfirmasi</strong>Restore menambahkan user yang belum ada pada MikroTik.</li><li><strong>Jalankan dan verifikasi</strong>Periksa jumlah user serta beberapa sampel akun.</li></ol>
+    <div class="danger">Simpan password pemulihan di tempat yang aman. Tanpa password yang benar, database terenkripsi pada MikroTik tidak dapat dipulihkan.</div>
+    <span class="page-no">26</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">SOP operasional</p><h2>Pemeriksaan harian dan bulanan</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="grid-2">
+      <div class="card"><h3>Setiap awal hari</h3><ul class="check"><li>Periksa koneksi router.</li><li>Periksa log sistem terbaru.</li><li>Lihat invoice jatuh tempo dan pelanggan terisolasi.</li><li>Periksa status perangkat Fonnte.</li><li>Pastikan transaksi gateway yang masuk sudah diproses.</li></ul></div>
+      <div class="card dark"><h3>Setiap akhir hari</h3><ul><li>Cocokkan pembayaran manual dengan Invoice Paid.</li><li>Tinjau kegagalan notifikasi atau aktivasi.</li><li>Periksa penjualan voucher hari ini.</li><li>Catat gangguan yang belum selesai.</li></ul></div>
+      <div class="card"><h3>Setiap minggu</h3><ul class="check"><li>Jalankan backup.</li><li>Periksa stok voucher Mitra.</li><li>Tinjau akun tidak aktif.</li><li>Periksa log yang berulang.</li></ul></div>
+      <div class="card"><h3>Setiap bulan</h3><ul class="check"><li>Ekspor Invoice Paid.</li><li>Rekonsiliasi pendapatan pelanggan dan voucher.</li><li>Periksa komisi Mitra dan Biller.</li><li>Uji pemulihan backup pada prosedur yang aman.</li></ul></div>
+    </div>
+    <div class="warning" style="margin-top:7mm">Tentukan satu penanggung jawab untuk rekonsiliasi dan satu penanggung jawab teknis. Pembagian ini mengurangi perubahan ganda pada data yang sama.</div>
+    <span class="page-no">27</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Pemecahan masalah</p><h2>Masalah yang sering ditemui</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <table class="table"><thead><tr><th>Masalah</th><th>Pemeriksaan</th><th>Tindakan</th></tr></thead><tbody>
+      <tr><td>Router Not Connected</td><td>IP, API, user, password, firewall, VPN.</td><td>Simpan konfigurasi, uji Ping, lalu Connect kembali.</td></tr>
+      <tr><td>Profile tidak muncul</td><td>Expired Mode dan koneksi router.</td><td>Gunakan selain None untuk voucher, None untuk billing.</td></tr>
+      <tr><td>Username sudah digunakan</td><td>Daftar pelanggan dan akun RouterOS.</td><td>Cari pemilik username. Jangan membuat data ganda.</td></tr>
+      <tr><td>OTP tidak diterima</td><td>Nomor HP, token, status Fonnte, kuota.</td><td>Jalankan Cek Status dan Pesan Uji.</td></tr>
+      <tr><td>Link Midtrans gagal</td><td>Mode, Merchant ID, key, masa berlaku.</td><td>Jalankan Tes Midtrans dan buat link baru jika kedaluwarsa.</td></tr>
+      <tr><td>Sudah bayar tetapi belum aktif</td><td>Status invoice, koneksi router, status aktivasi.</td><td>Gunakan Aktifkan Layanan atau Coba Lagi Aktivasi.</td></tr>
+      <tr><td>Perangkat baru tidak bisa login</td><td>Sesi aktif, MAC Lock, cookie.</td><td>Putuskan sesi, reset MAC, lalu hapus cookie bila perlu.</td></tr>
+      <tr><td>Angka laporan berbeda</td><td>Periode, filter, jenis sumber, transaksi ganda.</td><td>Samakan periode dan cocokkan baris transaksi.</td></tr>
+    </tbody></table>
+    <div class="tip"><strong>Saat meminta bantuan:</strong> sertakan waktu kejadian, router, menu, username terkait, pesan kesalahan, dan tindakan terakhir. Jangan mengirim password atau token.</div>
+    <span class="page-no">28</span>
+  </section>
+
+  <section class="page closing">
+    <div class="header"><div><p class="kicker" style="color:#f1a45e">Referensi cepat</p><h2>Alur kerja utama</h2></div><img class="logo" src="../img/login-logo.png" alt=""></div>
+    <div class="grid-2">
+      <div class="card"><h3>Menjual voucher</h3><p>Profil Hotspot → Generate Voucher → Voucher List → Print Center → Pantau pemakaian dan laporan.</p></div>
+      <div class="card"><h3>Menambah pelanggan</h3><p>Tambah Identitas → Tambah Layanan → Buat Invoice → Kirim tagihan.</p></div>
+      <div class="card"><h3>Menerima pembayaran</h3><p>Verifikasi pembayaran → Tandai Lunas → Periksa aktivasi → Periksa notifikasi → Invoice Paid.</p></div>
+      <div class="card"><h3>Menangani gangguan</h3><p>Periksa koneksi → Catat waktu → Baca log → Periksa akun → Uji satu perbaikan.</p></div>
+    </div>
+    <h3 style="color:#fff;margin-top:9mm">Istilah penting</h3>
+    <table class="table"><tbody><tr><td>Identitas</td><td>Data pelanggan sebagai orang atau organisasi.</td></tr><tr><td>Layanan</td><td>Akun Hotspot atau PPPoE yang terkait dengan identitas.</td></tr><tr><td>Profile</td><td>Aturan paket, harga, batas, dan masa aktif.</td></tr><tr><td>Invoice</td><td>Catatan tagihan pelanggan.</td></tr><tr><td>Isolir</td><td>Status pembatasan layanan karena aturan billing.</td></tr><tr><td>Session</td><td>Nama konfigurasi router di aplikasi.</td></tr></tbody></table>
+    <p class="small" style="color:#cadbd5;margin-top:9mm">Manual ini disusun dari fungsi aplikasi yang tersedia per 1 Oktober 2026. Tampilan dapat berubah setelah pembaruan aplikasi. Data pada screenshot telah disamarkan.</p>
+    <span class="page-no">29</span>
+  </section>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const fromPage = Number(params.get('from') || 0);
+    const toPage = Number(params.get('to') || 0);
+    if (fromPage > 0 && toPage >= fromPage) {
+      document.querySelectorAll('.page').forEach((page, index) => {
+        const number = index + 1;
+        if (number < fromPage || number > toPage) page.remove();
+      });
+    }
+  </script>
+</body>
+</html>

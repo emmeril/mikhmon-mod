@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Emmeril Hotspot | Bahan Meeting</title>
+  <style>
+    :root {
+      --ink: #17322d;
+      --muted: #526b65;
+      --paper: #f6f2e9;
+      --paper-2: #fffdf7;
+      --green: #19745f;
+      --green-dark: #0e4d40;
+      --orange: #dc7b2d;
+      --line: #cad6cf;
+      --soft: #e7eee8;
+      --dark: #132824;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #cfd6d2; }
+    body {
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    @page { size: A4 landscape; margin: 0; }
+    .page {
+      width: 297mm;
+      height: 210mm;
+      overflow: hidden;
+      position: relative;
+      page-break-after: always;
+      background: var(--paper);
+      padding: 15mm 17mm 14mm;
+    }
+    .page:last-child { page-break-after: auto; }
+    .page::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 4mm;
+      background: linear-gradient(90deg, var(--green-dark) 0 68%, var(--orange) 68% 74%, #d8dfd9 74% 100%);
+    }
+    .page-no {
+      position: absolute;
+      right: 17mm;
+      bottom: 6mm;
+      color: #5f716c;
+      font-size: 8.5pt;
+      font-weight: 700;
+    }
+    .kicker {
+      margin: 0 0 3mm;
+      color: var(--green);
+      font-size: 9pt;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-size: 31pt; line-height: 1.03; letter-spacing: -.035em; margin-bottom: 5mm; }
+    h2 { font-size: 23pt; line-height: 1.08; letter-spacing: -.025em; margin-bottom: 7mm; }
+    h3 { font-size: 13pt; line-height: 1.2; margin-bottom: 2mm; }
+    p, li { font-size: 11.2pt; line-height: 1.42; }
+    p { margin-bottom: 3mm; }
+    ul { margin: 0; padding-left: 5mm; }
+    li { margin: 0 0 2mm; }
+    .lead { font-size: 15pt; line-height: 1.42; color: #294a43; max-width: 218mm; }
+    .small { font-size: 8.5pt; line-height: 1.35; color: var(--muted); }
+    .muted { color: var(--muted); }
+    .accent { color: var(--orange); }
+    .rule { width: 24mm; height: 1.4mm; background: var(--orange); margin: 0 0 7mm; }
+    .brand-mark { width: 40mm; height: auto; object-fit: contain; }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8mm;
+    }
+    .header .brand-mark { width: 28mm; max-height: 14mm; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4.5mm; }
+    .card {
+      background: var(--paper-2);
+      border: .35mm solid var(--line);
+      border-radius: 2mm;
+      padding: 5mm;
+    }
+    .card h3 { color: var(--green-dark); }
+    .card p:last-child, .card ul:last-child { margin-bottom: 0; }
+    .dark-card { background: var(--dark); color: #f8fbf8; border-color: var(--dark); }
+    .dark-card h3 { color: #f8fbf8; }
+    .dark-card p, .dark-card li { color: #d8e5df; }
+    .number {
+      display: inline-flex;
+      width: 9mm;
+      height: 9mm;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--orange);
+      color: white;
+      font-size: 10pt;
+      font-weight: 700;
+      margin-bottom: 3mm;
+    }
+    .tag {
+      display: inline-block;
+      padding: 1.4mm 2.5mm;
+      border-radius: 1mm;
+      background: var(--soft);
+      color: var(--green-dark);
+      font-size: 8pt;
+      font-weight: 700;
+      margin: 0 1mm 1mm 0;
+    }
+    .screenshot {
+      width: 100%;
+      display: block;
+      border: .45mm solid #9daca5;
+      border-radius: 2mm;
+      box-shadow: 0 2mm 5mm rgba(16, 43, 36, .12);
+    }
+    .screen-frame { position: relative; }
+    .screen-frame::before {
+      content: "TAMPILAN APLIKASI";
+      position: absolute;
+      z-index: 2;
+      top: 3mm;
+      left: 3mm;
+      background: rgba(14, 77, 64, .94);
+      color: white;
+      padding: 1.6mm 2.5mm;
+      border-radius: 1mm;
+      font-size: 7pt;
+      font-weight: 700;
+      letter-spacing: .06em;
+    }
+    .quote {
+      font-size: 17pt;
+      line-height: 1.35;
+      color: var(--green-dark);
+      border-top: 1.2mm solid var(--orange);
+      padding-top: 5mm;
+    }
+    .matrix { width: 100%; border-collapse: collapse; background: var(--paper-2); }
+    .matrix th, .matrix td { border: .3mm solid var(--line); padding: 3mm 3.5mm; text-align: left; vertical-align: top; }
+    .matrix th { background: var(--green-dark); color: white; font-size: 9pt; }
+    .matrix td { font-size: 9pt; line-height: 1.35; }
+    .matrix td:first-child { font-weight: 700; color: var(--green-dark); width: 24mm; }
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 5mm;
+      align-items: stretch;
+      margin: 8mm 0 9mm;
+    }
+    .flow-step {
+      position: relative;
+      min-height: 42mm;
+      padding: 5mm;
+      background: var(--paper-2);
+      border-top: 1.5mm solid var(--green);
+    }
+    .flow-step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      width: 5mm;
+      height: .7mm;
+      right: -5mm;
+      top: 20mm;
+      background: var(--orange);
+    }
+    .flow-step h3 { margin-bottom: 2.5mm; }
+    .flow-step p { font-size: 9.5pt; color: var(--muted); }
+    .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; }
+    .stat { padding: 5mm; background: var(--green-dark); color: white; min-height: 31mm; }
+    .stat span { display: block; font-size: 8pt; color: #bcd2ca; margin-bottom: 2mm; }
+    .stat strong { font-size: 13pt; line-height: 1.2; }
+    .check-list { list-style: none; padding: 0; }
+    .check-list li { position: relative; padding-left: 7mm; }
+    .check-list li::before { content: "✓"; position: absolute; left: 0; color: var(--green); font-weight: 800; }
+    .note {
+      background: #f5e5d4;
+      border-left: 1.2mm solid var(--orange);
+      padding: 4mm 5mm;
+      font-size: 9.5pt;
+      line-height: 1.4;
+    }
+    .cover { background: var(--dark); color: white; padding: 17mm; }
+    .cover::after { height: 7mm; background: linear-gradient(90deg, var(--orange) 0 18%, #287d68 18% 100%); }
+    .cover-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 14mm; height: 100%; align-items: center; }
+    .cover .kicker { color: #e9a15e; }
+    .cover h1 { font-size: 40pt; max-width: 165mm; }
+    .cover .lead { color: #d8e5df; max-width: 150mm; }
+    .cover-side { border-left: .5mm solid #4b6861; padding-left: 12mm; }
+    .cover-side .brand-mark { width: 50mm; margin-bottom: 12mm; filter: drop-shadow(0 3mm 4mm rgba(0,0,0,.22)); }
+    .cover-meta { margin-top: 13mm; font-size: 10pt; line-height: 1.6; color: #c6d7d1; }
+    .closing { background: var(--green-dark); color: white; }
+    .closing h2 { font-size: 34pt; max-width: 190mm; }
+    .closing .lead { color: #dbe8e3; }
+    .closing .card { background: #f8f6ee; color: var(--ink); }
+    .closing .page-no { color: #cbdcd6; }
+  </style>
+</head>
+<body>
+  <section class="page cover">
+    <div class="cover-grid">
+      <div>
+        <p class="kicker">Bahan meeting produk</p>
+        <h1>Emmeril Hotspot</h1>
+        <div class="rule"></div>
+        <p class="lead">Satu sistem untuk mengelola router, voucher hotspot, pelanggan PPPoE, tagihan, pembayaran, mitra, dan komunikasi WhatsApp.</p>
+        <p class="cover-meta">Ringkasan sistem dan fitur<br>1 Oktober 2026<br>Dokumen internal</p>
+      </div>
+      <div class="cover-side">
+        <img class="brand-mark" src="../img/login-logo.png" alt="Logo Emmeril Hotspot">
+        <p class="quote" style="color:#eef6f2;border-color:#dc7b2d">Operasional jaringan, penjualan, dan layanan pelanggan terlihat dari satu tempat.</p>
+      </div>
+    </div>
+    <span class="page-no">01</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Gambaran umum</p><h2>Masalah operasional yang ditangani</h2></div><img class="brand-mark" src="../img/login-logo.png" alt=""></div>
+    <div class="grid-2">
+      <div>
+        <p class="lead">Emmeril Hotspot menyatukan pekerjaan yang biasanya tersebar antara RouterOS, catatan penjualan voucher, daftar pelanggan, penagihan, dan pesan WhatsApp.</p>
+        <div class="quote">Tim dapat melihat hubungan antara layanan, pembayaran, pengguna, dan router tanpa memindahkan data secara manual antar alat.</div>
+      </div>
+      <div class="grid-2" style="gap:5mm">
+        <div class="card"><h3>Operasional router</h3><p>Kelola hotspot, PPPoE, profil layanan, pengguna aktif, trafik, serta cadangan konfigurasi.</p></div>
+        <div class="card"><h3>Penjualan voucher</h3><p>Buat voucher, pantau stok belum terpakai, cetak, dan catat pendapatan berdasarkan periode.</p></div>
+        <div class="card"><h3>Pelanggan bulanan</h3><p>Simpan identitas pelanggan, layanan yang digunakan, tagihan, pembayaran, dan status aktivasi.</p></div>
+        <div class="card dark-card"><h3>Komunikasi</h3><p>Kirim OTP, pengingat tagihan, konfirmasi pembayaran, dan pemberitahuan isolasi melalui WhatsApp.</p></div>
+      </div>
+    </div>
+    <span class="page-no">02</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Akses pengguna</p><h2>Empat peran, tanggung jawab yang jelas</h2></div><img class="brand-mark" src="../img/login-logo.png" alt=""></div>
+    <table class="matrix">
+      <thead><tr><th>Peran</th><th>Fokus kerja</th><th>Akses utama</th><th>Nilai untuk operasional</th></tr></thead>
+      <tbody>
+        <tr><td>Admin</td><td>Kontrol sistem dan konfigurasi</td><td>Router, profil, pengguna, pembayaran, laporan, gateway, log, pencadangan, serta pengaturan merek.</td><td>Satu pusat kendali untuk konfigurasi dan pengawasan.</td></tr>
+        <tr><td>Mitra</td><td>Penjualan dan layanan pada area yang ditugaskan</td><td>Voucher, pelanggan, pendapatan voucher, pendapatan pelanggan, serta komisi sesuai ruang lingkup akun.</td><td>Delegasi pekerjaan tanpa membuka seluruh pengaturan sistem.</td></tr>
+        <tr><td>Biller</td><td>Penagihan pelanggan</td><td>Daftar tagihan, pencatatan pembayaran, status pelanggan, dan komisi penagihan.</td><td>Proses penagihan lebih mudah dilacak.</td></tr>
+        <tr><td>Pelanggan</td><td>Akses mandiri</td><td>Login OTP, pembayaran tagihan, pembelian voucher, riwayat transaksi, dan perubahan kata sandi.</td><td>Pelanggan dapat menyelesaikan kebutuhan rutin tanpa menunggu admin.</td></tr>
+      </tbody>
+    </table>
+    <div class="note" style="margin-top:7mm">Ruang lingkup akses mengikuti peran dan penugasan data. Admin tetap memegang konfigurasi yang berdampak ke seluruh sistem.</div>
+    <span class="page-no">03</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Dashboard</p><h2>Ringkasan kerja harian dalam satu layar</h2></div><img class="brand-mark" src="../img/login-logo.png" alt=""></div>
+    <div class="stat-row">
+      <div class="stat"><span>Penjualan voucher</span><strong>Pendapatan hari ini</strong></div>
+      <div class="stat"><span>Penjualan voucher</span><strong>Pendapatan bulan ini</strong></div>
+      <div class="stat"><span>Pelanggan bulanan</span><strong>Pendapatan pelanggan</strong></div>
+      <div class="stat"><span>Router</span><strong>Trafik dan kesehatan sistem</strong></div>
+    </div>
+    <div class="grid-2" style="margin-top:8mm;grid-template-columns:1.15fr .85fr">
+      <div>
+        <h3>Informasi yang siap dipantau</h3>
+        <ul class="check-list">
+          <li>Status router, waktu sistem, nama perangkat, dan beban CPU.</li>
+          <li>Lalu lintas jaringan untuk melihat perubahan penggunaan.</li>
+          <li>Log hotspot dan log sistem aplikasi dalam area yang sejajar.</li>
+          <li>Pendapatan voucher dan pelanggan dipisahkan agar sumber pemasukan tidak tercampur.</li>
+        </ul>
+      </div>
+      <div class="card dark-card">
+        <h3>Tujuan halaman</h3>
+        <p>Dashboard memberi konteks sebelum tim membuka menu yang lebih rinci. Data operasional dan pendapatan berada pada halaman yang sama, tetapi tetap dibedakan menurut sumbernya.</p>
+      </div>
+    </div>
+    <span class="page-no">04</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Hotspot</p><h2>Voucher dari pembuatan sampai pemakaian</h2></div><img class="brand-mark" src="../img/login-logo.png" alt=""></div>
+    <div class="grid-2" style="grid-template-columns:.9fr 1.1fr">
+      <div>
+        <p class="lead">Profil voucher menjadi dasar durasi, harga, dan aturan layanan. Admin atau mitra kemudian membuat batch voucher dan memantau statusnya.</p>
+        <div class="grid-2" style="gap:4mm;margin-top:6mm">
+          <div class="card"><h3>Profil hotspot</h3><p>Atur masa aktif, batas penggunaan, harga jual, dan Expired Mode.</p></div>
+          <div class="card"><h3>Generator voucher</h3><p>Buat banyak akun sekaligus dengan pola username dan kata sandi yang konsisten.</p></div>
+          <div class="card"><h3>Stok voucher</h3><p>Bedakan total voucher dan voucher yang belum terpakai untuk kebutuhan penjualan.</p></div>
+          <div class="card"><h3>Kontrol pemakaian</h3><p>Lihat pengguna aktif, riwayat, masa kedaluwarsa, dan opsi penguncian MAC.</p></div>
+        </div>
+      </div>
+      <div>
+        <div class="flow" style="grid-template-columns:repeat(4,1fr);margin-top:0">
+          <div class="flow-step"><span class="number">1</span><h3>Susun profil</h3><p>Harga dan kebijakan pemakaian ditetapkan.</p></div>
+          <div class="flow-step"><span class="number">2</span><h3>Buat voucher</h3><p>Sistem menghasilkan akun sesuai jumlah yang dibutuhkan.</p></div>
+          <div class="flow-step"><span class="number">3</span><h3>Cetak atau jual</h3><p>Voucher dapat dicetak dan disalurkan melalui mitra.</p></div>
+          <div class="flow-step"><span class="number">4</span><h3>Pantau</h3><p>Status terpakai, stok, dan pendapatan tercatat.</p></div>
+        </div>
+        <div class="note">Pusat cetak membantu menyiapkan format voucher untuk distribusi fisik. Pembelian dari portal pelanggan melengkapi jalur penjualan digital.</div>
+      </div>
+    </div>
+    <span class="page-no">05</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Pelanggan dan PPPoE</p><h2>Identitas pelanggan terhubung ke layanan</h2></div><img class="brand-mark" src="../img/login-logo.png" alt=""></div>
+    <div class="grid-2">
+      <div class="card dark-card" style="min-height:112mm">
+        <h3>Data pelanggan</h3>
+        <p>Satu identitas pelanggan dapat menyimpan informasi kontak dan layanan yang digunakan. Penugasan ke mitra membantu membatasi area kerja.</p>
+        <p style="margin-top:8mm"><span class="tag">Identitas</span><span class="tag">Kontak</span><span class="tag">Mitra</span><span class="tag">Layanan</span><span class="tag">Status</span></p>
+        <p class="small" style="color:#bdd2ca;margin-top:9mm">Struktur ini memisahkan orang sebagai pelanggan dari akun teknis yang berjalan pada router.</p>
+      </div>
+      <div>
+        <h3>Pengelolaan PPPoE</h3>
+        <ul class="check-list">
+          <li>Profil PPPoE menyimpan paket dan aturan layanan.</li>
+          <li>Secret PPPoE menjadi akun teknis pelanggan pada router.</li>
+          <li>Daftar aktif menunjukkan sesi yang sedang terhubung.</li>
+          <li>Status layanan dapat diaktifkan kembali setelah pembayaran dicatat.</li>
+        </ul>
+        <h3 style="margin-top:8mm">Manfaat struktur data</h3>
+        <p>Tim dapat menelusuri siapa pemilik layanan, paket yang digunakan, tagihan yang terkait, dan siapa mitra atau biller yang menangani pelanggan tersebut.</p>
+        <div class="note" style="margin-top:7mm">Koneksi ke RouterOS tetap menjadi sumber tindakan jaringan. Aplikasi mengatur alur administrasi di sekelilingnya.</div>
+      </div>
+    </div>
+    <span class="page-no">06</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Penagihan</p><h2>Alur pembayaran sampai layanan aktif kembali</h2></div><img class="brand-mark" src="../img/login-logo.png" alt=""></div>
+    <div class="flow">
+      <div class="flow-step"><span class="number">1</span><h3>Tagihan tersedia</h3><p>Tagihan pelanggan muncul dengan status belum lunas.</p></div>
+      <div class="flow-step"><span class="number">2</span><h3>Pembayaran masuk</h3><p>Pembayaran dapat dicatat manual atau diterima melalui Midtrans.</p></div>
+      <div class="flow-step"><span class="number">3</span><h3>Status lunas</h3><p>Sistem mencatat pembayaran dan petugas yang menanganinya.</p></div>
+      <div class="flow-step"><span class="number">4</span><h3>Layanan diproses</h3><p>Akun pelanggan diaktifkan sesuai alur layanan yang tersedia.</p></div>
+      <div class="flow-step"><span class="number">5</span><h3>Konfirmasi dikirim</h3><p>Pesan pembayaran langsung masuk antrean kirim, tanpa menunggu jam kerja.</p></div>
+    </div>
+    <div class="grid-2">
+      <div>
+        <h3>Pembayaran manual</h3>
+        <p>Petugas dapat menandai tagihan sebagai lunas dari halaman pembayaran. Konfirmasi langsung diproses saat itu juga, termasuk di luar jam kerja.</p>
+      </div>
+      <div>
+        <h3>Pembayaran daring</h3>
+        <p>Integrasi Midtrans mendukung transaksi dari portal pelanggan. Status transaksi digunakan untuk melanjutkan pemenuhan layanan.</p>
+      </div>
+    </div>
+    <div class="note" style="margin-top:7mm">Jam kerja tetap relevan untuk pengingat terjadwal. Konfirmasi pembayaran berbeda: pelanggan menerima kabar segera setelah pembayaran dinyatakan lunas.</div>
+    <span class="page-no">07</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Portal pelanggan</p><h2>Akses mandiri melalui nomor WhatsApp</h2></div><img class="brand-mark" src="../img/login-logo.png" alt=""></div>
+    <div class="grid-2" style="grid-template-columns:1.15fr .85fr;align-items:start">
+      <div class="screen-frame"><img class="screenshot" src="meeting-assets/portal-pelanggan.png" alt="Halaman masuk portal pelanggan"></div>
+      <div>
+        <p class="lead">Pelanggan meminta kode OTP melalui WhatsApp, kemudian masuk ke portal tanpa perlu mengingat kata sandi tambahan untuk proses awal.</p>
+        <ul class="check-list">
+          <li>Melihat dan membayar tagihan bulanan.</li>
+          <li>Membeli voucher hotspot.</li>
+          <li>Melihat riwayat transaksi dan layanan.</li>
+          <li>Mengelola kata sandi yang tersedia pada akun.</li>
+        </ul>
+        <div class="note" style="margin-top:7mm">Nomor pelanggan perlu tersimpan dengan benar agar OTP dan notifikasi sampai ke tujuan.</div>
+      </div>
+    </div>
+    <p class="small" style="margin-top:3mm">Tangkapan layar menggunakan halaman aplikasi lokal. Tidak ada data pelanggan yang ditampilkan.</p>
+    <span class="page-no">08</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">WhatsApp dan otomasi</p><h2>Pesan mengikuti jenis kejadian</h2></div><img class="brand-mark" src="../img/login-logo.png" alt=""></div>
+    <div class="grid-3">
+      <div class="card"><h3>OTP portal</h3><p>Kode masuk dikirim ke nomor pelanggan melalui gateway Fonnte.</p></div>
+      <div class="card dark-card"><h3>Konfirmasi pembayaran</h3><p>Dikirim segera setelah tagihan ditandai lunas, tanpa bergantung pada jadwal jam kerja.</p></div>
+      <div class="card"><h3>Pengingat tagihan</h3><p>Pesan terjadwal membantu tim mengingatkan pelanggan sebelum atau saat jatuh tempo.</p></div>
+      <div class="card"><h3>Pemberitahuan isolasi</h3><p>Pelanggan dapat menerima informasi ketika layanan masuk proses isolasi.</p></div>
+      <div class="card"><h3>Status pengiriman</h3><p>Antrean dan hasil pengiriman memberi jejak untuk pengecekan operasional.</p></div>
+      <div class="card"><h3>Pengaturan gateway</h3><p>Admin mengatur koneksi Fonnte dan format pesan dari area konfigurasi.</p></div>
+    </div>
+    <div class="note" style="margin-top:8mm">Ketersediaan pengiriman bergantung pada koneksi gateway, token yang valid, format nomor, dan respons layanan WhatsApp pihak ketiga.</div>
+    <span class="page-no">09</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Admin dan Mitra</p><h2>Pengguna, cakupan kerja, dan hasil usaha</h2></div><img class="brand-mark" src="../img/login-logo.png" alt=""></div>
+    <div class="screen-frame"><img class="screenshot" src="meeting-assets/admin-mitra.png" alt="Halaman Admin dan Mitra"></div>
+    <div class="grid-3" style="margin-top:5mm">
+      <div><h3>Identitas ringkas</h3><p class="small">Nama dan username dipisahkan agar mudah dipindai tanpa simbol tambahan.</p></div>
+      <div><h3>Operasional mitra</h3><p class="small">Jumlah pelanggan, total voucher, dan voucher belum terpakai memperlihatkan beban serta stok.</p></div>
+      <div><h3>Nilai finansial</h3><p class="small">Pendapatan voucher, pendapatan pelanggan, dan komisi dipisahkan menurut sumbernya.</p></div>
+    </div>
+    <p class="small">Data pada tangkapan layar ini adalah data contoh yang telah disamarkan untuk bahan meeting.</p>
+    <span class="page-no">10</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Laporan</p><h2>Pendapatan dapat dibaca menurut sumber</h2></div><img class="brand-mark" src="../img/login-logo.png" alt=""></div>
+    <div class="grid-2">
+      <div>
+        <p class="lead">Sistem memisahkan transaksi voucher dan pembayaran pelanggan. Pemisahan ini membuat pembahasan pendapatan lebih mudah ditelusuri.</p>
+        <table class="matrix" style="margin-top:6mm">
+          <thead><tr><th>Sumber</th><th>Informasi yang tersedia</th></tr></thead>
+          <tbody>
+            <tr><td>Voucher</td><td>Penjualan harian dan bulanan, harga jual, biaya dasar, serta laba bersih pada laporan yang terkait.</td></tr>
+            <tr><td>Pelanggan</td><td>Pembayaran tagihan bulanan, status lunas, petugas atau mitra terkait, serta komisi.</td></tr>
+            <tr><td>Mitra</td><td>Pendapatan voucher dan pelanggan ditampilkan sebagai kolom terpisah agar kontribusi kanal terlihat.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card dark-card">
+        <h3>Pertanyaan yang dapat dijawab</h3>
+        <ul>
+          <li>Berapa pendapatan voucher hari ini dan bulan berjalan?</li>
+          <li>Berapa pendapatan pelanggan bulan berjalan?</li>
+          <li>Berapa stok voucher yang belum digunakan pada setiap mitra?</li>
+          <li>Komisi siapa yang terkait dengan pembayaran atau penjualan?</li>
+          <li>Apakah transaksi portal sudah tercatat tanpa duplikasi?</li>
+        </ul>
+      </div>
+    </div>
+    <span class="page-no">11</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Operasional dan kontrol</p><h2>Jejak sistem untuk pemeliharaan rutin</h2></div><img class="brand-mark" src="../img/login-logo.png" alt=""></div>
+    <div class="grid-4">
+      <div class="card"><h3>Log hotspot</h3><p>Catatan kejadian pada layanan hotspot membantu pemeriksaan aktivitas.</p></div>
+      <div class="card"><h3>Log aplikasi</h3><p>Aktivitas sistem memberi konteks saat tim menelusuri proses atau kegagalan.</p></div>
+      <div class="card dark-card"><h3>Cadangan router</h3><p>Backup, snapshot, dan pemulihan membantu menjaga salinan konfigurasi perangkat.</p></div>
+      <div class="card"><h3>Kontrol akses</h3><p>Peran pengguna, hashing kata sandi, dan perlindungan CSRF tersedia pada bagian aplikasi yang menerapkannya.</p></div>
+    </div>
+    <div class="grid-2" style="margin-top:8mm">
+      <div>
+        <h3>Rutinitas yang disarankan</h3>
+        <ul class="check-list">
+          <li>Periksa status sinkronisasi router dan gateway pesan.</li>
+          <li>Pastikan cadangan terbaru dapat ditemukan sebelum perubahan konfigurasi besar.</li>
+          <li>Tinjau log ketika notifikasi, pembayaran, atau aktivasi tidak sesuai harapan.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Batas tanggung jawab</h3>
+        <p>Aplikasi membantu pengelolaan, tetapi keberhasilan operasi tetap bergantung pada RouterOS, koneksi jaringan, database, Midtrans, dan Fonnte. Setiap komponen perlu dipantau sesuai tanggung jawabnya.</p>
+      </div>
+    </div>
+    <span class="page-no">12</span>
+  </section>
+
+  <section class="page">
+    <div class="header"><div><p class="kicker">Bahan keputusan</p><h2>Ukuran yang layak dipantau setelah digunakan</h2></div><img class="brand-mark" src="../img/login-logo.png" alt=""></div>
+    <p class="lead">Berikut usulan indikator meeting. Nilainya perlu diambil dari data operasional nyata, bukan diasumsikan dalam dokumen ini.</p>
+    <div class="grid-2" style="margin-top:7mm">
+      <div class="card"><h3>Keuangan</h3><ul><li>Pendapatan voucher per hari dan per bulan.</li><li>Pendapatan pelanggan per bulan.</li><li>Komisi per mitra atau biller.</li><li>Tagihan yang masih belum lunas.</li></ul></div>
+      <div class="card dark-card"><h3>Layanan</h3><ul><li>Waktu dari pembayaran sampai layanan aktif.</li><li>Jumlah pelanggan aktif dan terisolasi.</li><li>Keberhasilan pengiriman OTP serta konfirmasi.</li><li>Kegagalan transaksi yang perlu ditangani.</li></ul></div>
+      <div class="card"><h3>Penjualan voucher</h3><ul><li>Total voucher per mitra.</li><li>Stok voucher belum terpakai.</li><li>Voucher terjual melalui admin, mitra, dan portal.</li></ul></div>
+      <div class="card"><h3>Kesehatan sistem</h3><ul><li>Status router dan sinkronisasi.</li><li>Beban CPU serta trafik perangkat.</li><li>Usia cadangan terakhir dan hasil uji pemulihan.</li></ul></div>
+    </div>
+    <span class="page-no">13</span>
+  </section>
+
+  <section class="page closing">
+    <div class="header"><div><p class="kicker" style="color:#f1a45e">Agenda tindak lanjut</p><h2>Sistem siap dibahas berdasarkan proses nyata</h2></div><img class="brand-mark" src="../img/login-logo.png" alt=""></div>
+    <p class="lead">Meeting dapat difokuskan pada pembagian peran, sumber data, alur pembayaran, notifikasi, dan indikator yang akan dipakai setiap hari.</p>
+    <div class="grid-4" style="margin-top:11mm">
+      <div class="card"><span class="number">1</span><h3>Validasi peran</h3><p>Tetapkan siapa yang menjadi admin, mitra, biller, dan penanggung jawab gateway.</p></div>
+      <div class="card"><span class="number">2</span><h3>Rapikan data</h3><p>Pastikan pelanggan, nomor WhatsApp, profil layanan, harga, dan penugasan mitra benar.</p></div>
+      <div class="card"><span class="number">3</span><h3>Uji alur</h3><p>Simulasikan voucher, tagihan, pembayaran, aktivasi, OTP, dan konfirmasi WhatsApp.</p></div>
+      <div class="card"><span class="number">4</span><h3>Pantau hasil</h3><p>Sepakati indikator, jadwal pengecekan log, serta prosedur cadangan dan pemulihan.</p></div>
+    </div>
+    <p class="small" style="color:#cbdcd6;margin-top:13mm">Dokumen ini menjelaskan fungsi yang ditemukan pada aplikasi per 1 Oktober 2026. Data contoh pada gambar telah disamarkan.</p>
+    <span class="page-no">14</span>
+  </section>
+  <script>
+    const printPart = new URLSearchParams(window.location.search).get('part');
+    if (printPart === '1') {
+      document.querySelectorAll('.page:nth-of-type(n+8)').forEach((page) => page.remove());
+    }
+    if (printPart === '2') {
+      document.querySelectorAll('.page:nth-of-type(-n+7)').forEach((page) => page.remove());
+    }
+  </script>
+</body>
+</html>
