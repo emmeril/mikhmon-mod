@@ -21,8 +21,10 @@ crudModalAssert(strpos($html, 'data-close-url="./?customer=list&amp;session=rout
 crudModalAssert(strpos($html, 'event.key==="Escape"') !== false, 'modal closes with Escape');
 crudModalAssert(strpos($html, 'event.key!=="Tab"') !== false, 'modal traps keyboard focus');
 crudModalAssert(strpos($html, 'min-height:44px') !== false, 'mobile controls keep a minimum tap height');
-crudModalAssert(strpos($html, '.crud-modal-content .card-header{min-height:52px') !== false, 'header contains the close button');
-crudModalAssert(strpos($html, 'top:4px;right:5px;width:44px;height:44px') !== false, 'close button stays inside the dialog edge');
+crudModalAssert(strpos($html, '.crud-modal-content .card-header{position:relative;min-height:52px') !== false, 'card header anchors the close button');
+crudModalAssert(strpos($html, 'top:4px;right:4px;display:flex;align-items:center;justify-content:center;width:44px;height:44px') !== false, 'close button stays inside the card header edge');
+crudModalAssert(strpos($html, 'if(cardHeader)cardHeader.appendChild(closeButton);') !== false, 'close button follows the actual card width');
+crudModalAssert(strpos($html, 'aria-label="Tutup modal"') !== false, 'close button has a localized accessible label');
 crudModalAssert(strpos($html, 'max-height:calc(100dvh - 24px)') !== false, 'mobile modal stays inside the viewport');
 crudModalAssert(strpos($html, '.crud-form-actions{display:flex;flex-wrap:wrap') !== false, 'modal actions wrap cleanly on wider screens');
 crudModalAssert(strpos($html, '.crud-form-actions .btn{width:100%;min-height:44px}') !== false, 'modal actions stack as full-width mobile buttons');

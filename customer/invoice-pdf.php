@@ -8,14 +8,15 @@ include_once(dirname(__DIR__) . '/include/config.php');
 include_once(dirname(__DIR__) . '/include/brand.php');
 include_once(dirname(__DIR__) . '/include/access.php');
 include_once(dirname(__DIR__) . '/lib/invoice_pdf.php');
+include_once(dirname(__DIR__) . '/lib/billing_policy.php');
 
-if (!in_array(mikhmonRole(), array('admin', 'biller', 'mitra'), true) || !mikhmonRefreshStaffSession()) {
+if (!in_array(mikhmonRole(), array('admin', 'biller', 'mitra', 'finance', 'operator'), true) || !mikhmonRefreshStaffSession()) {
   http_response_code(403);
   exit('Akses ditolak.');
 }
 $session = (string) ($_GET['session'] ?? '');
 $invoiceId = (string) ($_GET['invoice_id'] ?? '');
-if ($session === '' || $invoiceId === '' || (!mikhmonIsAdmin() && mikhmonAssignedSession() !== '' && $session !== mikhmonAssignedSession())) {
+if ($session === '' || $invoiceId === '' || (!mikhmonIsAdmin() && !mikhmonIsFinance() && mikhmonAssignedSession() !== '' && $session !== mikhmonAssignedSession())) {
   http_response_code(400);
   exit('Parameter invoice tidak valid.');
 }
@@ -26,10 +27,13 @@ foreach (mikhmonVisibleInvoices($session) as $candidate) {
 }
 if (!$invoice) { http_response_code(404); exit('Invoice tidak ditemukan.'); }
 $invoiceStatus = (string) ($invoice['status'] ?? '');
-if ($invoiceStatus === 'unpaid' && mikhmonIsBiller()) {
-  $invoice['subtotal'] = (float) ($invoice['subtotal'] ?? $invoice['amount'] ?? 0);
-  $invoice['admin_fee'] = mikhmonBillerCommissionAmount(mikhmonUserId());
-  $invoice['amount'] = $invoice['subtotal'] + $invoice['admin_fee'];
+if (mikhmonIsBiller() && mikhmonInvoiceIsCollectible($invoice) && mikhmonInvoiceCollectionFee($invoice) <= 0) {
+  $partner = mikhmonFindPartner(mikhmonUserId(), 'user_id');
+  $invoice = mikhmonInvoiceApplyCollectionFee($invoice, mikhmonBillerCommissionAmount(), array(
+    'user_id' => mikhmonUserId(),
+    'partner_id' => $partner['id'] ?? '',
+    'name' => mikhmonUserName(),
+  ));
 }
 $customer = mikhmonFindCustomer($session, $invoice['customer_id'] ?? '');
 if (!$customer) $customer = array('name' => $invoice['customer_name'] ?? '-', 'phone' => '-');

@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['managed_action'])) {
       if (empty($result['status'])) {
         $managedError = $result['error'] ?? 'Data pengguna gagal disimpan.';
       } else {
-        mikhmonSystemLog('success', 'Admin & Mitra', 'Menyimpan data pengguna ' . trim((string) ($_POST['name'] ?? '')) . '.', mikhmonSystemLogCurrentUser(array('session' => $_POST['router_session'] ?? '')));
+        mikhmonSystemLog('success', 'Pengguna & Peran', 'Menyimpan data pengguna ' . trim((string) ($_POST['name'] ?? '')) . '.', mikhmonSystemLogCurrentUser(array('session' => $_POST['router_session'] ?? '')));
         echo '<script>window.location.replace(' . json_encode($managedBaseUrl . '&saved=1') . ')</script>';
         exit;
       }
@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['managed_action'])) {
   } elseif ($_POST['managed_action'] === 'toggle') {
     $active = (string) ($_POST['set_active'] ?? '') === '1';
     if (mikhmonSetManagedUserActive((string) ($_POST['partner_id'] ?? ''), (string) ($_POST['user_id'] ?? ''), $active)) {
-      mikhmonSystemLog('warning', 'Admin & Mitra', ($active ? 'Mengaktifkan' : 'Menonaktifkan') . ' pengguna ' . trim((string) ($_POST['name'] ?? '')) . '.', mikhmonSystemLogCurrentUser());
+      mikhmonSystemLog('warning', 'Pengguna & Peran', ($active ? 'Mengaktifkan' : 'Menonaktifkan') . ' pengguna ' . trim((string) ($_POST['name'] ?? '')) . '.', mikhmonSystemLogCurrentUser());
       echo '<script>window.location.replace(' . json_encode($managedBaseUrl . ($active ? '&activated=1' : '&deactivated=1')) . ')</script>';
       exit;
     }
@@ -118,6 +118,14 @@ foreach (mikhmonGetUsers('admin') as $account) {
     'account' => $account,
   );
 }
+foreach (array_merge(mikhmonGetUsers('finance'), mikhmonGetUsers('operator')) as $account) {
+  $managedRows[] = array(
+    'id' => (string) $account['id'], 'partner_id' => '', 'user_id' => (string) $account['id'],
+    'name' => (string) $account['name'], 'type' => (string) $account['role'], 'session' => (string) $account['session'],
+    'username' => (string) $account['username'], 'login' => true, 'active' => !empty($account['active']),
+    'customers' => 0, 'partner' => false, 'account' => $account,
+  );
+}
 foreach (mikhmonGetPartners($isRouterUserRoute ? (string) $session : '') as $partner) {
   $account = $partner['user_id'] !== '' ? mikhmonFindUser($partner['user_id']) : false;
   $voucherSource = $voucherSources[$partner['session']] ?? array('available' => false, 'profiles' => array(), 'users' => array(), 'label' => 'Belum ada data router');
@@ -168,7 +176,7 @@ $formLoginEnabled = $formType === 'admin' || !empty($formAccount);
 $submittedSave = $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['managed_action'] ?? '') === 'save' && $managedError !== '';
 if ($submittedSave) {
   $submittedType = strtolower((string) ($_POST['type'] ?? 'reseller'));
-  $formType = in_array($submittedType, array('admin', 'reseller', 'sales', 'biller'), true) ? $submittedType : 'reseller';
+  $formType = in_array($submittedType, array('admin', 'reseller', 'sales', 'biller', 'finance', 'operator'), true) ? $submittedType : 'reseller';
   $formName = trim((string) ($_POST['name'] ?? ''));
   $formPartnerId = trim((string) ($_POST['partner_id'] ?? ''));
   $formUserId = trim((string) ($_POST['user_id'] ?? ''));
@@ -188,7 +196,7 @@ if ($submittedSave) {
   $formAccount = $formLoginEnabled ? array('username' => trim((string) ($_POST['username'] ?? ''))) : array();
 }
 $modalOpen = $editRow || $managedError !== '';
-$typeLabels = array('admin' => 'Administrator', 'reseller' => 'Reseller', 'sales' => 'Sales', 'biller' => 'Biller');
+$typeLabels = array('admin' => 'Administrator', 'finance' => 'Keuangan', 'operator' => 'Operator', 'reseller' => 'Reseller', 'sales' => 'Sales', 'biller' => 'Biller');
 ?>
 <style>
   .managed-header{display:flex;align-items:center;justify-content:space-between;gap:12px}.managed-header h3{margin:0}
@@ -207,12 +215,12 @@ $typeLabels = array('admin' => 'Administrator', 'reseller' => 'Reseller', 'sales
   <?php if ($managedMessage !== ''): ?><div class="box bg-success" role="status"><i class="fa fa-check"></i> <?= htmlspecialchars($managedMessage, ENT_QUOTES); ?></div><?php endif; ?>
   <?php if ($managedError !== ''): ?><div class="box bg-danger" role="alert"><i class="fa fa-warning"></i> <?= htmlspecialchars($managedError, ENT_QUOTES); ?></div><?php endif; ?>
   <div class="card">
-    <div class="card-header managed-header"><h3><i class="fa fa-users"></i> Admin &amp; Mitra</h3><button id="openManagedForm" class="btn bg-primary" type="button"><i class="fa fa-user-plus"></i> Tambah Pengguna</button></div>
+    <div class="card-header managed-header"><h3><i class="fa fa-users"></i> Pengguna &amp; Peran</h3><button id="openManagedForm" class="btn bg-primary" type="button"><i class="fa fa-user-plus"></i> Tambah Pengguna</button></div>
     <div class="card-body">
       <p><small>Satu data mengatur profil, router, akses login, dan status pengguna. Pendapatan ditampilkan untuk bulan berjalan.</small></p>
       <div class="managed-toolbar data-toolbar" role="search" aria-label="Filter pengguna"><div class="data-toolbar__filters"><input id="managedSearch" class="form-control" type="search" placeholder="Cari nama atau username" aria-label="Cari nama atau username"><select id="managedTypeFilter" class="form-control" aria-label="Filter jenis pengguna"><option value="all">Semua jenis</option><?php foreach ($typeLabels as $typeValue => $typeLabel): ?><option value="<?= $typeValue; ?>"><?= $typeLabel; ?></option><?php endforeach; ?></select><select id="managedRouterFilter" class="form-control" aria-label="Filter router"><option value="all">Semua router</option><?php foreach ($routerSessions as $routerName): ?><option value="<?= htmlspecialchars($routerName, ENT_QUOTES); ?>"><?= htmlspecialchars($routerName, ENT_QUOTES); ?></option><?php endforeach; ?></select></div></div>
       <div class="overflow box-bordered"><table class="table table-bordered table-hover text-nowrap managed-table"><thead><tr><th>Nama</th><th>Username</th><th>Jenis</th><th>Router</th><th>Akses Login</th><th>Pelanggan</th><th>Total Voucher</th><th>Voucher Belum Terpakai</th><th>Pendapatan Voucher<br><small>Bulan ini</small></th><th>Pendapatan Pelanggan<br><small>Bulan ini</small></th><th>Komisi</th><th>Status</th><th class="text-center">Aksi</th></tr></thead><tbody>
-        <?php foreach ($managedRows as $row): ?><tr class="managed-row" data-type="<?= htmlspecialchars($row['type'], ENT_QUOTES); ?>" data-router="<?= htmlspecialchars($row['session'], ENT_QUOTES); ?>"><td><?= htmlspecialchars($row['name'], ENT_QUOTES); ?></td><td><?= $row['username'] !== '' ? htmlspecialchars($row['username'], ENT_QUOTES) : '-'; ?></td><td><?= htmlspecialchars($typeLabels[$row['type']] ?? ucfirst($row['type']), ENT_QUOTES); ?></td><td><?= $row['type'] === 'admin' ? 'Semua Router' : htmlspecialchars($row['session'], ENT_QUOTES); ?></td><td><?= $row['login'] ? '<span class="text-success">Tersedia</span>' : '<span>Tidak ada</span>'; ?></td><td class="text-right"><?= $row['type'] === 'admin' ? '-' : (int) $row['customers']; ?></td><td class="text-right"><?php if ($row['type'] === 'admin'): ?>-<?php elseif ($row['voucher_available']): ?><?= (int) $row['vouchers']['total']; ?><?php else: ?>-<br><small><?= htmlspecialchars($row['voucher_source'], ENT_QUOTES); ?></small><?php endif; ?></td><td class="text-right"><?= $row['type'] === 'admin' || !$row['voucher_available'] ? '-' : (int) $row['vouchers']['unused']; ?></td><td class="text-right"><?= $row['type'] === 'admin' ? '-' : htmlspecialchars($row['voucher_revenue'], ENT_QUOTES); ?></td><td class="text-right"><?= $row['type'] === 'admin' ? '-' : htmlspecialchars($row['customer_revenue'], ENT_QUOTES); ?></td><td class="text-right"><?= $row['type'] === 'admin' ? '-' : htmlspecialchars($row['commission'], ENT_QUOTES); ?></td><td class="managed-status <?= $row['active'] ? 'text-success' : 'text-danger'; ?>"><?= $row['active'] ? 'Aktif' : 'Nonaktif'; ?></td><td><div class="managed-actions"><a class="btn bg-primary" href="<?= htmlspecialchars($managedBaseUrl, ENT_QUOTES); ?>&amp;managed-id=<?= rawurlencode($row['id']); ?>"><i class="fa fa-edit"></i> Kelola</a><form method="post" onsubmit="return confirm('<?= $row['active'] ? 'Nonaktifkan pengguna ini tanpa menghapus riwayatnya?' : 'Aktifkan kembali pengguna ini?'; ?>');"><?= mikhmonCsrfField(); ?><input type="hidden" name="managed_action" value="toggle"><input type="hidden" name="partner_id" value="<?= htmlspecialchars($row['partner_id'], ENT_QUOTES); ?>"><input type="hidden" name="user_id" value="<?= htmlspecialchars($row['user_id'], ENT_QUOTES); ?>"><input type="hidden" name="name" value="<?= htmlspecialchars($row['name'], ENT_QUOTES); ?>"><input type="hidden" name="set_active" value="<?= $row['active'] ? '0' : '1'; ?>"><button class="btn <?= $row['active'] ? 'bg-warning' : 'bg-success'; ?>" type="submit"><i class="fa <?= $row['active'] ? 'fa-ban' : 'fa-check'; ?>"></i> <?= $row['active'] ? 'Nonaktifkan' : 'Aktifkan'; ?></button></form></div></td></tr><?php endforeach; ?>
+        <?php foreach ($managedRows as $row): $staffOnly = in_array($row['type'], array('admin','finance','operator'), true); ?><tr class="managed-row" data-type="<?= htmlspecialchars($row['type'], ENT_QUOTES); ?>" data-router="<?= htmlspecialchars($row['session'], ENT_QUOTES); ?>"><td><?= htmlspecialchars($row['name'], ENT_QUOTES); ?></td><td><?= $row['username'] !== '' ? htmlspecialchars($row['username'], ENT_QUOTES) : '-'; ?></td><td><?= htmlspecialchars($typeLabels[$row['type']] ?? ucfirst($row['type']), ENT_QUOTES); ?></td><td><?= in_array($row['type'], array('admin','finance'), true) ? 'Semua Router' : htmlspecialchars($row['session'], ENT_QUOTES); ?></td><td><?= $row['login'] ? '<span class="text-success">Tersedia</span>' : '<span>Tidak ada</span>'; ?></td><td class="text-right"><?= $staffOnly ? '-' : (int) $row['customers']; ?></td><td class="text-right"><?php if ($staffOnly): ?>-<?php elseif ($row['voucher_available']): ?><?= (int) $row['vouchers']['total']; ?><?php else: ?>-<br><small><?= htmlspecialchars($row['voucher_source'], ENT_QUOTES); ?></small><?php endif; ?></td><td class="text-right"><?= $staffOnly || !$row['voucher_available'] ? '-' : (int) $row['vouchers']['unused']; ?></td><td class="text-right"><?= $staffOnly ? '-' : htmlspecialchars($row['voucher_revenue'], ENT_QUOTES); ?></td><td class="text-right"><?= $staffOnly ? '-' : htmlspecialchars($row['customer_revenue'], ENT_QUOTES); ?></td><td class="text-right"><?= $staffOnly ? '-' : htmlspecialchars($row['commission'], ENT_QUOTES); ?></td><td class="managed-status <?= $row['active'] ? 'text-success' : 'text-danger'; ?>"><?= $row['active'] ? 'Aktif' : 'Nonaktif'; ?></td><td><div class="managed-actions"><a class="btn bg-primary" href="<?= htmlspecialchars($managedBaseUrl, ENT_QUOTES); ?>&amp;managed-id=<?= rawurlencode($row['id']); ?>"><i class="fa fa-edit"></i> Kelola</a><form method="post" onsubmit="return confirm('<?= $row['active'] ? 'Nonaktifkan pengguna ini tanpa menghapus riwayatnya?' : 'Aktifkan kembali pengguna ini?'; ?>');"><?= mikhmonCsrfField(); ?><input type="hidden" name="managed_action" value="toggle"><input type="hidden" name="partner_id" value="<?= htmlspecialchars($row['partner_id'], ENT_QUOTES); ?>"><input type="hidden" name="user_id" value="<?= htmlspecialchars($row['user_id'], ENT_QUOTES); ?>"><input type="hidden" name="name" value="<?= htmlspecialchars($row['name'], ENT_QUOTES); ?>"><input type="hidden" name="set_active" value="<?= $row['active'] ? '0' : '1'; ?>"><button class="btn <?= $row['active'] ? 'bg-warning' : 'bg-success'; ?>" type="submit"><i class="fa <?= $row['active'] ? 'fa-ban' : 'fa-check'; ?>"></i> <?= $row['active'] ? 'Nonaktifkan' : 'Aktifkan'; ?></button></form></div></td></tr><?php endforeach; ?>
         <?php if (!$managedRows): ?><tr class="managed-empty"><td colspan="13" class="text-center">Belum ada pengguna. Pilih Tambah Pengguna untuk membuat data pertama.</td></tr><?php endif; ?>
         <tr id="managedNoResults" style="display:none"><td colspan="13" class="text-center">Tidak ada pengguna yang cocok dengan filter.</td></tr>
       </tbody></table></div>
@@ -225,9 +233,9 @@ $typeLabels = array('admin' => 'Administrator', 'reseller' => 'Reseller', 'sales
       <div class="card-body"><form id="managedForm" method="post" autocomplete="off" data-editing="<?= $editRow ? 'true' : 'false'; ?>">
         <?= mikhmonCsrfField(); ?><input type="hidden" name="managed_action" value="save"><input type="hidden" name="partner_id" value="<?= htmlspecialchars($formPartnerId, ENT_QUOTES); ?>"><input type="hidden" name="user_id" value="<?= htmlspecialchars($formUserId, ENT_QUOTES); ?>">
         <div class="managed-form">
-          <div><label for="managed-type">Jenis pengguna</label><select id="managed-type" class="form-control" name="type" required><?php foreach ($typeLabels as $typeValue => $typeLabel): ?><option value="<?= $typeValue; ?>"<?= $formType === $typeValue ? ' selected' : ''; ?><?= $editRow && (($formType === 'admin') !== ($typeValue === 'admin')) ? ' disabled' : ''; ?>><?= $typeLabel; ?></option><?php endforeach; ?></select></div>
+          <div><label for="managed-type">Jenis pengguna</label><select id="managed-type" class="form-control" name="type" required><?php $formIsStaff = in_array($formType, array('admin','finance','operator'), true); foreach ($typeLabels as $typeValue => $typeLabel): $optionIsStaff = in_array($typeValue, array('admin','finance','operator'), true); ?><option value="<?= $typeValue; ?>"<?= $formType === $typeValue ? ' selected' : ''; ?><?= $editRow && $formIsStaff !== $optionIsStaff ? ' disabled' : ''; ?>><?= $typeLabel; ?></option><?php endforeach; ?></select></div>
           <div><label for="managed-name">Nama</label><input id="managed-name" class="form-control" name="name" maxlength="100" required value="<?= htmlspecialchars($formName, ENT_QUOTES); ?>"></div>
-          <div class="partner-field"><label for="managed-router">Router</label><select id="managed-router" class="form-control" name="router_session"><option value="">Pilih router</option><?php foreach ($routerSessions as $routerName): ?><option value="<?= htmlspecialchars($routerName, ENT_QUOTES); ?>"<?= $formPartner['session'] === $routerName ? ' selected' : ''; ?>><?= htmlspecialchars($routerName, ENT_QUOTES); ?></option><?php endforeach; ?></select></div>
+          <div class="partner-field managed-router-field"><label for="managed-router">Router</label><select id="managed-router" class="form-control" name="router_session"><option value="">Pilih router</option><?php $managedSelectedSession = !empty($formPartner['session']) ? $formPartner['session'] : ($formAccount['session'] ?? ''); foreach ($routerSessions as $routerName): ?><option value="<?= htmlspecialchars($routerName, ENT_QUOTES); ?>"<?= ($managedSelectedSession === $routerName) ? ' selected' : ''; ?>><?= htmlspecialchars($routerName, ENT_QUOTES); ?></option><?php endforeach; ?></select></div>
           <div class="partner-field"><label for="managed-phone">Telepon</label><input id="managed-phone" class="form-control" name="phone" maxlength="30" value="<?= htmlspecialchars($formPartner['phone'], ENT_QUOTES); ?>"></div>
           <div class="partner-field"><label for="managed-email">Email</label><input id="managed-email" class="form-control" type="email" name="email" maxlength="120" value="<?= htmlspecialchars($formPartner['email'], ENT_QUOTES); ?>"></div>
           <div class="partner-field"><label for="managed-commission">Komisi</label><input id="managed-commission" class="form-control" type="number" min="0" step="1" name="commission" value="<?= (float) $formPartner['commission']; ?>"></div>
@@ -248,13 +256,14 @@ $typeLabels = array('admin' => 'Administrator', 'reseller' => 'Reseller', 'sales
 (function () {
   var modal = document.getElementById('managedModal'), form = document.getElementById('managedForm'), openButton = document.getElementById('openManagedForm'), type = document.getElementById('managed-type'), loginEnabled = document.getElementById('managed-login-enabled'), lastFocus = null;
   function updateManagedFields() {
-    var isAdmin = type.value === 'admin';
-    Array.prototype.forEach.call(form.querySelectorAll('.partner-field'), function (field) { field.style.display = isAdmin ? 'none' : ''; });
-    document.getElementById('managed-router').required = !isAdmin;
-    loginEnabled.checked = isAdmin || loginEnabled.checked;
-    loginEnabled.disabled = isAdmin;
-    document.getElementById('managedAccessHelp').textContent = isAdmin ? 'Administrator selalu memiliki akses login ke semua router.' : 'Aktifkan jika pengguna perlu masuk ke aplikasi.';
-    var showLogin = isAdmin || loginEnabled.checked;
+    var isGlobalStaff = type.value === 'admin' || type.value === 'finance', isStaff = isGlobalStaff || type.value === 'operator';
+    Array.prototype.forEach.call(form.querySelectorAll('.partner-field'), function (field) { field.style.display = isStaff ? 'none' : ''; });
+    document.querySelector('.managed-router-field').style.display = isGlobalStaff ? 'none' : '';
+    document.getElementById('managed-router').required = !isGlobalStaff;
+    loginEnabled.checked = isStaff || loginEnabled.checked;
+    loginEnabled.disabled = isStaff;
+    document.getElementById('managedAccessHelp').textContent = isStaff ? 'Peran staf selalu memiliki akses login sesuai lingkup tugasnya.' : 'Aktifkan jika pengguna perlu masuk ke aplikasi.';
+    var showLogin = isStaff || loginEnabled.checked;
     Array.prototype.forEach.call(form.querySelectorAll('.login-field'), function (field) { field.style.display = showLogin ? '' : 'none'; });
     document.getElementById('managed-username').required = showLogin;
     document.getElementById('managed-password').required = showLogin && !form.elements.user_id.value;

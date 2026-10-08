@@ -6,6 +6,7 @@ require_once dirname(__DIR__) . '/lib/fonnte.php';
 require_once dirname(__DIR__) . '/lib/payment_gateway.php';
 require_once dirname(__DIR__) . '/lib/payment_activation.php';
 require_once dirname(__DIR__) . '/lib/billing_profile.php';
+require_once dirname(__DIR__) . '/lib/billing_policy.php';
 require_once dirname(__DIR__) . '/ppp/profilemeta.php';
 
 function mikhmonCustomerPortalOtp($phone, $ttl = 300) {
@@ -125,7 +126,7 @@ function mikhmonCustomerPortalSyncPayments($session, $customer, $api = null) {
     elseif (empty($notification['deferred']) && empty($notification['skipped'])) $result['errors'][] = $notification['message'] ?? 'Notifikasi voucher gagal dikirim.';
   }
   foreach (mikhmonGetInvoices($session) as $invoice) {
-    if ((string) ($invoice['customer_id'] ?? '') !== (string) ($customer['id'] ?? '') || ($invoice['status'] ?? '') !== 'unpaid') continue;
+    if ((string) ($invoice['customer_id'] ?? '') !== (string) ($customer['id'] ?? '') || !mikhmonInvoiceIsCollectible($invoice)) continue;
     if (($invoice['payment_gateway'] ?? '') !== 'midtrans' || empty($invoice['payment_order_id'])) continue;
     if (!empty($invoice['payment_environment']) && $invoice['payment_environment'] !== $config['midtrans']['environment']) continue;
     $result['checked']++;
@@ -239,7 +240,7 @@ function mikhmonCustomerPortalCreateMonthlyInvoice($session, $customer, $api) {
   // never duplicated or silently changed by the portal.
   $invoice = array();
   foreach (mikhmonGetInvoices($session) as $existing) {
-    if (($existing['kind'] ?? 'monthly') !== 'monthly' || ($existing['status'] ?? '') !== 'unpaid' || (string) ($existing['customer_id'] ?? '') !== (string) $customer['id']) continue;
+    if (($existing['kind'] ?? 'monthly') !== 'monthly' || (!mikhmonInvoiceIsCollectible($existing) && ($existing['status'] ?? '') !== 'draft') || (string) ($existing['customer_id'] ?? '') !== (string) $customer['id']) continue;
     if (!$invoice || (int) ($existing['created_at'] ?? 0) > (int) ($invoice['created_at'] ?? 0)) $invoice = $existing;
   }
   if ($invoice && !empty($invoice['payment_url'])) return array('success' => true, 'invoice' => $invoice, 'payment_url' => $invoice['payment_url']);
@@ -253,7 +254,12 @@ function mikhmonCustomerPortalCreateMonthlyInvoice($session, $customer, $api) {
   if ($amount < 1) return array('success' => false, 'message' => 'Nominal invoice langganan tidak valid.');
   if (!$invoice) {
     $number = 'INV-' . date('YmdHis') . '-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
-    $invoice = array('id' => 'invoice-' . bin2hex(random_bytes(8)), 'number' => $number, 'customer_id' => $customer['id'], 'customer_name' => $customer['name'] ?? '', 'kind' => 'monthly', 'services' => $services, 'service_count' => count($services), 'subtotal' => $amount, 'admin_fee' => 0, 'amount' => $amount, 'due_date' => date('Y-m-d H:i:s'), 'status' => 'unpaid', 'created_at' => time());
+    $dueAt = mikhmonBillingUpcomingDueTimestamp();
+    if (!empty($customer['active_date']) && !empty($customer['prorate_first_invoice'])) {
+      foreach ($services as $index => $service) $services[$index]['amount'] = mikhmonBillingInitialProration($service['amount'] ?? 0, $customer['active_date']);
+      $amount = array_sum(array_map(function ($row) { return (float) ($row['amount'] ?? 0); }, $services));
+    }
+    $invoice = array('id' => 'invoice-' . bin2hex(random_bytes(8)), 'number' => $number, 'customer_id' => $customer['id'], 'customer_name' => $customer['name'] ?? '', 'kind' => 'monthly', 'services' => $services, 'service_count' => count($services), 'subtotal' => $amount, 'admin_fee' => 0, 'collection_fee' => 0, 'amount' => $amount, 'due_date' => date('Y-m-d H:i:s', $dueAt), 'status' => 'issued', 'issued_at' => time(), 'created_at' => time());
   }
   $number = (string) ($invoice['number'] ?? $invoice['id']);
   $orderId = $number . '-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));

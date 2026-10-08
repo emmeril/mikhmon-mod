@@ -42,6 +42,7 @@ $fonnteVariables = array(
 	'{{total_tagihan}}' => 'Total tagihan',
 	'{{jatuh_tempo}}' => 'Tanggal jatuh tempo',
 	'{{detail_layanan}}' => 'Rincian layanan pelanggan',
+	'{{rincian_biaya}}' => 'Subtotal layanan dan komisi penagihan',
 	'{{tanggal_bayar}}' => 'Tanggal pembayaran diterima',
 	'{{jatuh_tempo_berikutnya}}' => 'Jatuh tempo berikutnya',
 );

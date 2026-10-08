@@ -6,6 +6,7 @@
 require_once dirname(__DIR__) . '/ppp/profilemeta.php';
 require_once dirname(__DIR__) . '/lib/billing_profile.php';
 require_once dirname(__DIR__) . '/lib/payment_gateway.php';
+require_once dirname(__DIR__) . '/lib/billing_policy.php';
 
 function mikhmonBillingAutomationDueTimestamp($value) {
   $value = trim((string) $value);
@@ -14,12 +15,12 @@ function mikhmonBillingAutomationDueTimestamp($value) {
   $lower = strtolower($value);
   if (preg_match('/^([a-z]{3})\/(\d{1,2})(?:\/(\d{4}))?(?:\s+(\d{1,2}:\d{2}:\d{2}))?$/', $lower, $matches) && isset($months[$matches[1]])) {
     $year = !empty($matches[3]) ? (int) $matches[3] : (int) date('Y');
-    $time = !empty($matches[4]) ? $matches[4] : '00:00:00';
+    $time = !empty($matches[4]) ? $matches[4] : '23:59:59';
     $timestamp = strtotime(sprintf('%04d-%02d-%02d %s', $year, $months[$matches[1]], (int) $matches[2], $time));
     if (empty($matches[3]) && $timestamp < time() - 86400) $timestamp = strtotime('+1 year', $timestamp);
     return $timestamp ?: 0;
   }
-  return strtotime($value) ?: 0;
+  return mikhmonBillingDueTimestamp($value);
 }
 
 /**
@@ -27,10 +28,7 @@ function mikhmonBillingAutomationDueTimestamp($value) {
  * The day is intentionally centralized so the web UI and cron worker agree.
  */
 function mikhmonBillingAutomationUpcomingDueTimestamp($now = null) {
-  $now = $now === null ? time() : (int) $now;
-  $candidate = mktime(0, 0, 0, (int) date('n', $now), 5, (int) date('Y', $now));
-  if ($candidate <= $now) $candidate = mktime(0, 0, 0, (int) date('n', $now) + 1, 5, (int) date('Y', $now));
-  return $candidate;
+  return mikhmonBillingUpcomingDueTimestamp($now);
 }
 
 function mikhmonBillingAutomationNextDueTimestamp($baseTimestamp = null, $now = null) {
@@ -38,7 +36,7 @@ function mikhmonBillingAutomationNextDueTimestamp($baseTimestamp = null, $now = 
   if ($baseTimestamp <= 0) $baseTimestamp = time();
   // Advance exactly one billing cycle from the invoice being paid. A late
   // payment must not skip outstanding monthly periods to the current month.
-  return mktime(0, 0, 0, (int) date('n', $baseTimestamp) + 1, 5, (int) date('Y', $baseTimestamp));
+  return mikhmonBillingNextDueTimestamp($baseTimestamp);
 }
 
 function mikhmonBillingAutomationIsWorkHour($timestamp = null) {
@@ -157,6 +155,11 @@ function mikhmonBillingAutomationMessage($template, $customer, $invoice, $curren
   foreach (mikhmonBillingAutomationInvoiceServices($invoice, $customer) as $service) {
     $services[] = '- ' . strtoupper((string) ($service['service'] ?? 'hotspot')) . ' / ' . (string) ($service['username'] ?? '') . ' / ' . (string) ($service['profile'] ?? '') . ' / ' . mikhmonBillingAutomationAmount($service['amount'] ?? 0, $currency);
   }
+  $feeDetails = array('Subtotal Layanan: ' . mikhmonBillingAutomationAmount(mikhmonInvoiceSubtotal($invoice), $currency));
+  $collectionFee = mikhmonInvoiceCollectionFee($invoice);
+  if ($collectionFee > 0) $feeDetails[] = 'Komisi Penagihan: ' . mikhmonBillingAutomationAmount($collectionFee, $currency);
+  $feeBreakdown = implode("\n", $feeDetails);
+  $hasFeePlaceholder = strpos((string) $template, '{{rincian_biaya}}') !== false;
   $message = mikhmonFonnteRenderTemplate($template, array(
     'nama_pelanggan' => $customer['name'] ?? '',
     'nama_brand' => $brand,
@@ -164,10 +167,12 @@ function mikhmonBillingAutomationMessage($template, $customer, $invoice, $curren
     'total_tagihan' => mikhmonBillingAutomationAmount($invoice['amount'] ?? 0, $currency),
     'jatuh_tempo' => $invoice['due_date'] ?? $dueDate,
     'detail_layanan' => implode("\n", $services),
+    'rincian_biaya' => $feeBreakdown,
     'tanggal_bayar' => !empty($invoice['paid_at']) ? date('Y-m-d H:i:s', (int) $invoice['paid_at']) : date('Y-m-d H:i:s'),
     'jatuh_tempo_berikutnya' => $nextDueDate,
     'link_pembayaran' => $invoice['payment_url'] ?? '',
   ));
+  if (!$hasFeePlaceholder && $collectionFee > 0) $message .= "\n\nRincian Tagihan:\n" . $feeBreakdown;
   $paymentUrl = trim((string) ($invoice['payment_url'] ?? ''));
   if ($includePaymentLink && $paymentUrl !== '' && strpos($message, $paymentUrl) === false) $message .= "\n\nLink Pembayaran: " . $paymentUrl;
   return $message;
@@ -177,7 +182,7 @@ function mikhmonBillingAutomationMessage($template, $customer, $invoice, $curren
 function mikhmonBillingAutomationEnsurePaymentLink($session, &$invoice, $customer, $currency, $brand, $fonnteConfig, $paymentGatewayConfig, $now = null, $sendMessage = true) {
   $now = $now === null ? time() : (int) $now;
   $result = array('created' => false, 'sent' => false, 'error' => '');
-  if (($invoice['status'] ?? '') !== 'unpaid' || !empty($invoice['gateway_payment_received'])) return $result;
+  if (!mikhmonInvoiceIsCollectible($invoice) || !empty($invoice['gateway_payment_received'])) return $result;
   if (empty($fonnteConfig['payment_link_enabled']) || empty($paymentGatewayConfig['enabled']) || empty($paymentGatewayConfig['midtrans']['enabled']) || empty($paymentGatewayConfig['midtrans']['server_key'])) return $result;
 
   $provider = (string) ($invoice['payment_gateway'] ?? '');
@@ -275,7 +280,8 @@ function mikhmonBillingAutomationLatestUnpaid($invoices, $customerId) {
   $latest = array();
   foreach ((array) $invoices as $invoice) {
     if (!mikhmonBillingAutomationIsMonthlyInvoice($invoice)) continue;
-    if (($invoice['status'] ?? '') !== 'unpaid' || (string) ($invoice['customer_id'] ?? '') !== (string) $customerId) continue;
+    if (!mikhmonInvoiceIsCollectible($invoice) && ($invoice['status'] ?? '') !== 'draft') continue;
+    if ((string) ($invoice['customer_id'] ?? '') !== (string) $customerId) continue;
     if (!$latest || (int) ($invoice['created_at'] ?? 0) > (int) ($latest['created_at'] ?? 0)) $latest = $invoice;
   }
   return $latest;
@@ -337,13 +343,21 @@ function mikhmonBillingAutomationEnsureInitialInvoice($api, $session, &$invoices
     $detail['due_date'] = date('Y-m-d H:i:s', $dueAt);
     $services[] = $detail; $amount += (float) $detail['amount'];
   }
+  if (!empty($customer['active_date']) && !empty($customer['prorate_first_invoice'])) {
+    $amount = 0;
+    foreach ($services as $index => $service) {
+      $services[$index]['monthly_amount'] = (float) ($service['amount'] ?? 0);
+      $services[$index]['amount'] = mikhmonBillingInitialProration($service['amount'] ?? 0, $customer['active_date']);
+      $amount += (float) $services[$index]['amount'];
+    }
+  }
   if (!$services || $amount <= 0) return array();
   $invoice = array(
     'id' => 'invoice-' . uniqid(), 'number' => 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5)),
     'customer_id' => $customerId, 'customer_name' => $customer['name'] ?? '',
     'services' => $services, 'service_count' => count($services),
-    'subtotal' => $amount, 'admin_fee' => 0, 'amount' => $amount,
-    'due_date' => date('Y-m-d H:i:s', $dueAt), 'status' => 'unpaid', 'created_at' => time(),
+    'subtotal' => $amount, 'admin_fee' => 0, 'collection_fee' => 0, 'amount' => $amount,
+    'due_date' => date('Y-m-d H:i:s', $dueAt), 'status' => 'issued', 'issued_at' => time(), 'created_at' => time(),
     'generated_from' => 'bootstrap',
   );
   if (mikhmonSaveInvoice($session, $invoice) === false) return array();
@@ -360,14 +374,20 @@ function mikhmonBillingAutomationEnsureUnpaidInvoice($session, &$invoices, $cust
   $paidDueAt = mikhmonBillingAutomationDueTimestamp($paid['due_date'] ?? '');
   $dueAt = mikhmonBillingAutomationNextDueTimestamp($paidDueAt > 0 ? $paidDueAt : ($paid['paid_at'] ?? time()));
   $dueDate = date('Y-m-d H:i:s', $dueAt);
+  $nextServices = mikhmonBillingAutomationInvoiceServices($paid, $customer);
+  $nextSubtotal = 0;
+  foreach ($nextServices as $index => $service) {
+    $nextServices[$index]['amount'] = (float) ($service['monthly_amount'] ?? $service['amount'] ?? 0);
+    $nextSubtotal += $nextServices[$index]['amount'];
+  }
   $nextInvoice = array(
     'id' => 'invoice-' . uniqid(), 'number' => 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5)),
     'customer_id' => $customerId, 'customer_name' => $customer['name'] ?? '',
-    'services' => mikhmonBillingAutomationInvoiceServices($paid, $customer),
-    'service_count' => count(mikhmonBillingAutomationInvoiceServices($paid, $customer)),
-    'subtotal' => (float) ($paid['subtotal'] ?? $paid['amount'] ?? 0), 'admin_fee' => 0,
-    'amount' => (float) ($paid['subtotal'] ?? $paid['amount'] ?? 0), 'due_date' => $dueDate,
-    'status' => 'unpaid', 'created_at' => time(), 'generated_from' => $paid['id'] ?? '',
+    'services' => $nextServices,
+    'service_count' => count($nextServices),
+    'subtotal' => $nextSubtotal, 'admin_fee' => 0, 'collection_fee' => 0,
+    'amount' => $nextSubtotal, 'due_date' => $dueDate,
+    'status' => 'draft', 'created_at' => time(), 'generated_from' => $paid['id'] ?? '',
   );
   if (mikhmonSaveInvoice($session, $nextInvoice) === false) return array();
   $paid['next_invoice_id'] = $nextInvoice['id'];
@@ -503,6 +523,13 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
     $dueAt = mikhmonBillingAutomationDueTimestamp($invoice['due_date'] ?? ($customer['due_date'] ?? ''));
     if ($dueAt <= 0) continue;
     $reminderAt = $dueAt - ((int) ($fonnteConfig['reminder_days'] ?? 7) * 86400);
+    $graceDays = array_key_exists('grace_days', $customer) ? (int) $customer['grace_days'] : (int) ($fonnteConfig['grace_days'] ?? 0);
+    $oldStatus = (string) ($invoice['status'] ?? 'draft');
+    if ($oldStatus === 'draft' && $now >= $reminderAt) {
+      $invoice['status'] = 'issued';
+      $invoice['issued_at'] = $now;
+    }
+    if (in_array($invoice['status'] ?? '', array('issued', 'unpaid'), true) && $now > $dueAt) $invoice['status'] = 'overdue';
     if (!empty($fonnteConfig['payment_link_enabled']) && mikhmonBillingAutomationPaymentWindowOpen($dueAt, $fonnteConfig['reminder_days'] ?? 7, $now)) {
       $linkResult = mikhmonBillingAutomationEnsurePaymentLink($session, $invoice, $customer, $currency, $brand, $fonnteConfig, $paymentGatewayConfig, $now);
       if (!empty($linkResult['sent'])) $result['payment_links']++;
@@ -516,10 +543,11 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
       if (!empty($send['status'])) { $invoice['automation']['reminder_sent_at'] = $now; mikhmonBillingAutomationClearFailure($invoice, 'reminder'); $result['reminders']++; }
       elseif (!empty($send['attempted'])) { mikhmonBillingAutomationRecordFailure($invoice, 'reminder', $send['reason'] ?? 'Fonnte error', $now); $result['errors']++; }
     }
-    $isolationAt = $dueAt + ((int) ($fonnteConfig['grace_days'] ?? 0) * 86400);
+    $isolationAt = mikhmonBillingIsolationTimestamp($dueAt, $graceDays);
     if (!empty($fonnteConfig['automation_enabled']) && !empty($fonnteConfig['isolation_enabled']) && empty($automation['isolated_at']) && $now >= $isolationAt) {
       if (mikhmonBillingAutomationSetServices($api, $customer, true)) {
         $invoice['automation']['isolated_at'] = $now;
+        $invoice['status'] = 'isolated';
         mikhmonBillingAutomationClearFailure($invoice, 'isolation');
         $result['isolated']++;
       } else { mikhmonBillingAutomationRecordFailure($invoice, 'isolation', 'Gagal mengubah status layanan MikroTik.', $now); $result['errors']++; }
@@ -530,7 +558,7 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
       if (!empty($send['status'])) { $invoice['automation']['isolation_sent_at'] = $now; mikhmonBillingAutomationClearFailure($invoice, 'isolation_message'); }
       elseif (!empty($send['attempted'])) { mikhmonBillingAutomationRecordFailure($invoice, 'isolation_message', $send['reason'] ?? 'Fonnte error', $now); $result['errors']++; }
     }
-    if (!empty($invoice['automation']) && $invoice['automation'] !== ($automation ?? array())) {
+    if (($invoice['status'] ?? '') !== $oldStatus || (!empty($invoice['automation']) && $invoice['automation'] !== ($automation ?? array()))) {
       $saved = mikhmonSaveInvoice($session, $invoice);
       if ($saved === false) $result['errors']++;
       else foreach ($invoices as $index => $row) if (($row['id'] ?? '') === ($invoice['id'] ?? '')) { $invoices[$index] = $invoice; break; }

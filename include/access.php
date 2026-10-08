@@ -1,6 +1,7 @@
 <?php
 
 include_once(__DIR__ . '/database.php');
+include_once(dirname(__DIR__) . '/lib/billing_policy.php');
 
 function mikhmonCsrfToken() {
   if (empty($_SESSION['mikhmon_csrf'])) $_SESSION['mikhmon_csrf'] = bin2hex(random_bytes(32));
@@ -38,6 +39,14 @@ function mikhmonIsMitra() {
 
 function mikhmonIsBiller() {
   return mikhmonRole() === 'biller';
+}
+
+function mikhmonIsFinance() {
+  return mikhmonRole() === 'finance';
+}
+
+function mikhmonIsOperator() {
+  return mikhmonRole() === 'operator';
 }
 
 function mikhmonIsCustomer() {
@@ -132,7 +141,7 @@ function mikhmonRefreshStaffSession() {
     return true;
   }
   $user = mikhmonFindUser(mikhmonUserId());
-  if (!$user || empty($user['active']) || !in_array($user['role'], array('mitra', 'biller'), true)) return false;
+  if (!$user || empty($user['active']) || !in_array($user['role'], array('mitra', 'biller', 'finance', 'operator'), true)) return false;
   mikhmonSetLoginSession($user);
   return true;
 }
@@ -165,7 +174,7 @@ function mikhmonVisibleInvoices($session, $invoices = null) {
 }
 
 function mikhmonCanManageCustomer($customer) {
-  if (mikhmonIsAdmin()) return true;
+  if (mikhmonIsAdmin() || mikhmonIsOperator()) return true;
   return mikhmonIsMitra() && isset($customer['mitra_id']) && (string) $customer['mitra_id'] === mikhmonUserId();
 }
 
@@ -211,8 +220,10 @@ function mikhmonCanManageHotspotUser($session, $row) {
 function mikhmonCanOpenMainRoute($route) {
   if (mikhmonIsAdmin()) return true;
   if (mikhmonIsCustomer()) return in_array($route, array('customer-portal', 'logout'), true);
-  if (mikhmonIsBiller()) return in_array($route, array('billing', 'commission', 'logout'), true);
-  if (mikhmonIsMitra()) return in_array($route, array('home', 'billing', 'customer-list', 'customer-identity-list', 'customer-identity-add', 'customer-identity-edit', 'customer-service-add', 'customer-service-edit', 'report-selling', 'report-resume', 'hotspot-generate', 'hotspot-active', 'hotspot-mac-locks', 'hotspot-vouchers', 'hotspot-users', 'hotspot-print-center', 'hotspot-user-edit', 'hotspot-user-mutate', 'pppoe-users', 'pppoe-active', 'logout'), true);
+  if (mikhmonIsBiller()) return in_array($route, array('billing', 'billing-reports', 'commission', 'logout'), true);
+  if (mikhmonIsFinance()) return in_array($route, array('billing', 'billing-reports', 'logout'), true);
+  if (mikhmonIsOperator()) return in_array($route, array('home', 'billing', 'billing-reports', 'customer-list', 'customer-identity-list', 'customer-identity-add', 'customer-identity-edit', 'customer-service-add', 'customer-service-edit', 'hotspot-active', 'pppoe-active', 'logout'), true);
+  if (mikhmonIsMitra()) return in_array($route, array('home', 'billing', 'billing-reports', 'customer-list', 'customer-identity-list', 'customer-identity-add', 'customer-identity-edit', 'customer-service-add', 'customer-service-edit', 'report-selling', 'report-resume', 'hotspot-generate', 'hotspot-active', 'hotspot-mac-locks', 'hotspot-vouchers', 'hotspot-users', 'hotspot-print-center', 'hotspot-user-edit', 'hotspot-user-mutate', 'pppoe-users', 'pppoe-active', 'logout'), true);
   return false;
 }
 

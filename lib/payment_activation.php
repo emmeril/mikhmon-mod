@@ -198,7 +198,7 @@ function mikhmonPaymentActivationProcess($session, $invoiceId, $api = null, $opt
     $invoice = $rows['invoice'];
     $customer = $rows['customer'];
     if (($invoice['status'] ?? '') === 'paid') return array('success' => true, 'already_paid' => true, 'message' => 'Invoice sudah dibayar.', 'invoice' => $invoice);
-    if (($invoice['status'] ?? '') !== 'unpaid') return mikhmonPaymentActivationRecordFailure($session, $invoice, 'Status invoice tidak dapat diaktifkan.');
+    if (!mikhmonInvoiceIsCollectible($invoice)) return mikhmonPaymentActivationRecordFailure($session, $invoice, 'Status invoice tidak dapat diaktifkan.');
     if (empty($options['allow_manual']) && empty($invoice['gateway_payment_received'])) return mikhmonPaymentActivationRecordFailure($session, $invoice, 'Pembayaran gateway belum dikonfirmasi.');
 
     if (!is_object($api) || !method_exists($api, 'comm')) {
@@ -220,13 +220,22 @@ function mikhmonPaymentActivationProcess($session, $invoiceId, $api = null, $opt
     $provider = strtoupper((string) ($invoice['payment_gateway'] ?? 'gateway'));
     $invoice['status'] = 'paid';
     $invoice['paid_at'] = !empty($invoice['gateway_paid_at']) ? (int) $invoice['gateway_paid_at'] : $now;
-    $invoice['paid_by_user_id'] = (string) ($options['paid_by_user_id'] ?? '');
-    $invoice['paid_by_name'] = !empty($options['actor_name']) ? (string) $options['actor_name'] : 'Otomatis ' . $provider;
-    $invoice['biller_partner_id'] = (string) ($options['biller_partner_id'] ?? '');
-    $invoice['biller_commission'] = max(0, (float) ($options['biller_commission'] ?? 0));
-    $invoice['subtotal'] = max(0, (float) ($invoice['subtotal'] ?? ((float) ($invoice['amount'] ?? 0) - (float) ($invoice['admin_fee'] ?? 0))));
-    $invoice['admin_fee'] = $invoice['biller_commission'];
-    $invoice['amount'] = $invoice['subtotal'] + $invoice['admin_fee'];
+    $storedCollectionFee = mikhmonInvoiceCollectionFee($invoice);
+    $optionCommission = max(0, (float) ($options['biller_commission'] ?? 0));
+    $collectionFee = $optionCommission > 0 ? $optionCommission : $storedCollectionFee;
+    $storedCollectorUserId = (string) ($invoice['collection_biller_user_id'] ?? '');
+    $storedCollectorName = (string) ($invoice['collection_biller_name'] ?? '');
+    $invoice['paid_by_user_id'] = (string) (($options['paid_by_user_id'] ?? '') ?: ($collectionFee > 0 ? $storedCollectorUserId : ''));
+    if ($optionCommission > 0 && !empty($options['actor_name'])) $invoice['paid_by_name'] = (string) $options['actor_name'];
+    elseif ($collectionFee > 0 && $storedCollectorName !== '') $invoice['paid_by_name'] = $storedCollectorName;
+    else $invoice['paid_by_name'] = !empty($options['actor_name']) ? (string) $options['actor_name'] : 'Otomatis ' . $provider;
+    $invoice['biller_partner_id'] = (string) (($options['biller_partner_id'] ?? '') ?: ($invoice['collection_biller_partner_id'] ?? ''));
+    $invoice['biller_commission'] = $collectionFee;
+    $invoice = mikhmonInvoiceApplyCollectionFee($invoice, $collectionFee, array(
+      'user_id' => $invoice['paid_by_user_id'],
+      'partner_id' => $invoice['biller_partner_id'],
+      'name' => ($options['actor_name'] ?? '') ?: ($invoice['collection_biller_name'] ?? ''),
+    ));
     $invoice['next_due_date'] = $nextDueDate;
     $invoice['activation_status'] = 'success';
     $invoice['activation_last_attempt_at'] = $now;
@@ -239,18 +248,25 @@ function mikhmonPaymentActivationProcess($session, $invoiceId, $api = null, $opt
       if ((string) ($candidate['generated_from'] ?? '') === (string) ($invoice['id'] ?? '')) { $nextInvoice = $candidate; break; }
     }
     if (!$nextInvoice) {
+      $nextServices = mikhmonPaymentActivationInvoiceServices($invoice, $customer);
+      $nextSubtotal = 0;
+      foreach ($nextServices as $index => $service) {
+        $nextServices[$index]['amount'] = (float) ($service['monthly_amount'] ?? $service['amount'] ?? 0);
+        $nextSubtotal += $nextServices[$index]['amount'];
+      }
       $nextInvoice = array(
         'id' => 'invoice-' . uniqid(),
         'number' => 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5)),
         'customer_id' => $customer['id'],
         'customer_name' => $customer['name'] ?? '',
-        'services' => mikhmonPaymentActivationInvoiceServices($invoice, $customer),
-        'service_count' => count(mikhmonPaymentActivationInvoiceServices($invoice, $customer)),
-        'subtotal' => (float) ($invoice['subtotal'] ?? 0),
+        'services' => $nextServices,
+        'service_count' => count($nextServices),
+        'subtotal' => $nextSubtotal,
         'admin_fee' => 0,
-        'amount' => (float) ($invoice['subtotal'] ?? 0),
+        'collection_fee' => 0,
+        'amount' => $nextSubtotal,
         'due_date' => $nextDueDate,
-        'status' => 'unpaid',
+        'status' => 'draft',
         'created_at' => $now,
         'generated_from' => $invoice['id'],
       );

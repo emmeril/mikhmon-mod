@@ -118,14 +118,14 @@ function mikhmonReadDatabase() {
     return $GLOBALS['_mikhmon_database_cache'];
   }
   if (!is_file($path)) {
-    $empty = array('version' => 6, 'customers' => array(), 'invoices' => array(), 'report_records' => array(), 'users' => array(), 'partners' => array(), 'customer_auth' => array());
+    $empty = array('version' => 7, 'customers' => array(), 'invoices' => array(), 'report_records' => array(), 'users' => array(), 'partners' => array(), 'customer_auth' => array(), 'finance_entries' => array());
     $GLOBALS['_mikhmon_database_cache'] = $empty;
     $GLOBALS['_mikhmon_database_cache_path'] = $path;
     return $empty;
   }
   $data = json_decode((string) @file_get_contents($path), true);
   if (!is_array($data)) {
-    $empty = array('version' => 6, 'customers' => array(), 'invoices' => array(), 'report_records' => array(), 'users' => array(), 'partners' => array(), 'customer_auth' => array());
+    $empty = array('version' => 7, 'customers' => array(), 'invoices' => array(), 'report_records' => array(), 'users' => array(), 'partners' => array(), 'customer_auth' => array(), 'finance_entries' => array());
     $GLOBALS['_mikhmon_database_cache'] = $empty;
     $GLOBALS['_mikhmon_database_cache_path'] = $path;
     return $empty;
@@ -162,6 +162,7 @@ function mikhmonReadDatabase() {
   if (!isset($data['customer_auth']) || !is_array($data['customer_auth'])) {
     $data['customer_auth'] = array();
   }
+  if (!isset($data['finance_entries']) || !is_array($data['finance_entries'])) $data['finance_entries'] = array();
   $changed = false;
   $partnerUserIds = array();
   foreach ($data['partners'] as $partnerIndex => $partner) {
@@ -204,7 +205,7 @@ function mikhmonReadDatabase() {
     }
   }
   if ($changed) {
-    $data['version'] = 6;
+    $data['version'] = 7;
     mikhmonWriteDatabase($data);
   }
   $GLOBALS['_mikhmon_database_cache'] = $data;
@@ -352,6 +353,11 @@ function mikhmonNormalizeCustomer($customer) {
   $customer['username'] = $first['username'];
   $customer['profile'] = $first['profile'];
   $customer['server'] = $first['server'];
+  $activeDate = trim((string) ($customer['active_date'] ?? ''));
+  $customer['active_date'] = preg_match('/^\d{4}-\d{2}-\d{2}$/', $activeDate) ? $activeDate : '';
+  $customer['billing_day'] = 5;
+  $customer['prorate_first_invoice'] = array_key_exists('prorate_first_invoice', $customer) ? (bool) $customer['prorate_first_invoice'] : true;
+  $customer['grace_days'] = max(0, min(30, (int) ($customer['grace_days'] ?? 0)));
   return $customer;
 }
 
@@ -453,13 +459,13 @@ function mikhmonFindUser($value, $field = 'id') {
 
 function mikhmonSaveUser($id, $name, $username, $role, $session, $password = '', $active = true) {
   $database = mikhmonReadDatabase();
-  $role = in_array($role, array('admin', 'mitra', 'biller'), true) ? $role : '';
+  $role = in_array($role, array('admin', 'mitra', 'biller', 'finance', 'operator'), true) ? $role : '';
   $username = trim(strip_tags($username));
   $name = trim(strip_tags($name));
   $session = trim(strip_tags($session));
   // Admin accounts are global and do not need to be tied to a router.
-  if ($role === 'admin') $session = 'mikhmon';
-  if ($role === '' || $username === '' || $name === '' || ($role !== 'admin' && $session === '')) return false;
+  if (in_array($role, array('admin', 'finance'), true)) $session = 'mikhmon';
+  if ($role === '' || $username === '' || $name === '' || (!in_array($role, array('admin', 'finance'), true) && $session === '')) return false;
 
   foreach ($database['users'] as $existing) {
     if (isset($existing['username']) && strtolower($existing['username']) === strtolower($username)
@@ -489,7 +495,7 @@ function mikhmonSaveUser($id, $name, $username, $role, $session, $password = '',
     }
   }
   if (!$found) $database['users'][] = $user;
-  if ($role !== 'admin') {
+  if (in_array($role, array('mitra', 'biller'), true)) {
     $partnerFound = false;
     foreach ((array) ($database['partners'] ?? array()) as $partnerIndex => $partner) {
       if ((string) ($partner['user_id'] ?? '') !== $user['id']) continue;
@@ -538,20 +544,20 @@ function mikhmonDeleteUser($id) {
 function mikhmonSaveManagedUser($input) {
   $database = mikhmonReadDatabase();
   $type = strtolower(trim((string) ($input['type'] ?? '')));
-  if (!in_array($type, array('admin', 'reseller', 'sales', 'biller'), true)) {
+  if (!in_array($type, array('admin', 'reseller', 'sales', 'biller', 'finance', 'operator'), true)) {
     return array('status' => false, 'error' => 'Jenis pengguna tidak valid.');
   }
 
   $partnerId = trim((string) ($input['partner_id'] ?? ''));
   $userId = trim((string) ($input['user_id'] ?? ''));
   $name = trim(strip_tags((string) ($input['name'] ?? '')));
-  $session = $type === 'admin' ? 'mikhmon' : trim(strip_tags((string) ($input['session'] ?? '')));
+  $session = in_array($type, array('admin', 'finance'), true) ? 'mikhmon' : trim(strip_tags((string) ($input['session'] ?? '')));
   $active = !empty($input['active']);
-  $loginEnabled = $type === 'admin' || !empty($input['login_enabled']);
+  $loginEnabled = in_array($type, array('admin', 'finance', 'operator'), true) || !empty($input['login_enabled']);
   $username = trim(strip_tags((string) ($input['username'] ?? '')));
   $password = (string) ($input['password'] ?? '');
   if ($name === '') return array('status' => false, 'error' => 'Nama wajib diisi.');
-  if ($type !== 'admin' && $session === '') return array('status' => false, 'error' => 'Router wajib dipilih.');
+  if (!in_array($type, array('admin', 'finance'), true) && $session === '') return array('status' => false, 'error' => 'Router wajib dipilih.');
 
   $existingPartner = false;
   foreach ((array) ($database['partners'] ?? array()) as $partner) {
@@ -569,12 +575,14 @@ function mikhmonSaveManagedUser($input) {
       break;
     }
   }
-  $targetRole = $type === 'admin' ? 'admin' : ($type === 'biller' ? 'biller' : 'mitra');
-  if ($existingUser && (($existingUser['role'] ?? '') === 'admin') !== ($targetRole === 'admin')) {
-    return array('status' => false, 'error' => 'Jenis administrator dan Mitra tidak dapat saling diubah.');
+  $targetRole = in_array($type, array('admin', 'finance', 'operator'), true) ? $type : ($type === 'biller' ? 'biller' : 'mitra');
+  $existingStaffRole = $existingUser && in_array($existingUser['role'] ?? '', array('admin', 'finance', 'operator'), true);
+  $targetStaffRole = in_array($targetRole, array('admin', 'finance', 'operator'), true);
+  if ($existingUser && $existingStaffRole !== $targetStaffRole) {
+    return array('status' => false, 'error' => 'Peran staf dan Mitra tidak dapat saling diubah. Buat akun baru untuk menjaga riwayat kepemilikan.');
   }
-  if ($existingPartner && $type === 'admin') {
-    return array('status' => false, 'error' => 'Profil Mitra tidak dapat diubah menjadi administrator.');
+  if ($existingPartner && $targetStaffRole) {
+    return array('status' => false, 'error' => 'Profil Mitra tidak dapat diubah menjadi peran staf.');
   }
   if ($existingUser && mikhmonAssignedCustomerCount($userId) > 0
     && ((string) ($existingUser['session'] ?? '') !== $session || (string) ($existingUser['role'] ?? '') !== $targetRole)) {
@@ -621,7 +629,7 @@ function mikhmonSaveManagedUser($input) {
     $userId = '';
   }
 
-  if ($type !== 'admin') {
+  if (in_array($type, array('reseller', 'sales', 'biller'), true)) {
     $partner = mikhmonNormalizePartner(array(
       'id' => $partnerId,
       'user_id' => $userId,
@@ -959,6 +967,9 @@ function mikhmonSaveCustomerIdentity($session, $id, $name, $phone, $address, $mi
     'services' => mikhmonCustomerServices($existingCustomer),
     'mitra_id' => $mitraId !== null ? trim(strip_tags((string) $mitraId)) : ($existingCustomer['mitra_id'] ?? ''),
     'due_date' => $existingCustomer['due_date'] ?? '',
+    'active_date' => $existingCustomer['active_date'] ?? '',
+    'prorate_first_invoice' => $existingCustomer['prorate_first_invoice'] ?? true,
+    'grace_days' => $existingCustomer['grace_days'] ?? 0,
     'updated_at' => time(),
   ));
   foreach ($database['customers'][$session] as $index => $existing) {
@@ -1115,6 +1126,9 @@ function mikhmonSaveCustomerWithServices($session, $id, $name, $phone, $address,
     'services' => $normalizedServices,
     'mitra_id' => $matchedByName && mikhmonCustomerValueIsEmpty($mitraId) ? ($existingCustomer['mitra_id'] ?? '') : ($mitraId !== null ? trim(strip_tags($mitraId)) : (isset($existingCustomer['mitra_id']) ? $existingCustomer['mitra_id'] : '')),
     'due_date' => $existingCustomer['due_date'] ?? '',
+    'active_date' => $existingCustomer['active_date'] ?? '',
+    'prorate_first_invoice' => $existingCustomer['prorate_first_invoice'] ?? true,
+    'grace_days' => $existingCustomer['grace_days'] ?? 0,
     'updated_at' => time(),
   );
   $customer = mikhmonNormalizeCustomer($customer);
@@ -1133,6 +1147,41 @@ function mikhmonSaveCustomerWithServices($session, $id, $name, $phone, $address,
     $database['customers'][$session][] = $customer;
   }
   return mikhmonWriteDatabase($database) ? $customer['id'] : false;
+}
+
+function mikhmonSaveCustomerBillingPolicy($session, $customerId, $activeDate, $prorate = true, $graceDays = 0) {
+  $database = mikhmonReadDatabase();
+  $activeDate = trim((string) $activeDate);
+  if ($activeDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $activeDate)) return false;
+  foreach ((array) ($database['customers'][$session] ?? array()) as $index => $customer) {
+    if ((string) ($customer['id'] ?? '') !== (string) $customerId) continue;
+    $database['customers'][$session][$index]['active_date'] = $activeDate;
+    $database['customers'][$session][$index]['billing_day'] = 5;
+    $database['customers'][$session][$index]['prorate_first_invoice'] = (bool) $prorate;
+    $database['customers'][$session][$index]['grace_days'] = max(0, min(30, (int) $graceDays));
+    $database['customers'][$session][$index]['updated_at'] = time();
+    return mikhmonWriteDatabase($database);
+  }
+  return false;
+}
+
+function mikhmonGetFinanceEntries($session) {
+  $database = mikhmonReadDatabase();
+  return array_values((array) ($database['finance_entries'][$session] ?? array()));
+}
+
+function mikhmonSaveFinanceEntry($session, $entry) {
+  $database = mikhmonReadDatabase();
+  if (!isset($database['finance_entries'][$session]) || !is_array($database['finance_entries'][$session])) $database['finance_entries'][$session] = array();
+  $type = ($entry['type'] ?? '') === 'income' ? 'income' : 'expense';
+  $amount = max(0, (float) ($entry['amount'] ?? 0));
+  $description = trim(strip_tags((string) ($entry['description'] ?? '')));
+  if ($amount <= 0 || $description === '') return false;
+  $date = trim((string) ($entry['date'] ?? date('Y-m-d')));
+  if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return false;
+  $row = array('id' => 'finance-' . bin2hex(random_bytes(8)), 'type' => $type, 'amount' => $amount, 'description' => $description, 'date' => $date, 'created_at' => time(), 'created_by' => trim(strip_tags((string) ($entry['created_by'] ?? ''))));
+  $database['finance_entries'][$session][] = $row;
+  return mikhmonWriteDatabase($database) ? $row['id'] : false;
 }
 
 function mikhmonDeleteCustomer($session, $id) {
@@ -1157,7 +1206,7 @@ function mikhmonDeleteCustomer($session, $id) {
 function mikhmonWriteDatabase($data) {
   $path = mikhmonBackupPath();
   $tmp = $path . '.tmp.' . getmypid();
-  $data['version'] = 6;
+  $data['version'] = 7;
   $json = json_encode($data, JSON_UNESCAPED_SLASHES);
   if ($json === false || @file_put_contents($tmp, $json, LOCK_EX) === false) {
     return false;

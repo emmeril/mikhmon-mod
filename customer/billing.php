@@ -87,9 +87,10 @@ function billingInvoiceMessage($customer, $invoice, $dueDate, $currency, $brand)
     $services[] = '- ' . strtoupper($row['service'] ?? '') . ' / ' . ($row['username'] ?? '') . ' / ' . ($row['profile'] ?? '') . ' / ' . billingMessageAmount($row['amount'] ?? 0, $currency);
   }
   $amount = isset($invoice['amount']) ? (float) $invoice['amount'] : 0;
-  $adminFee = max(0, (float) ($invoice['admin_fee'] ?? 0));
-  $feeDetail = $adminFee > 0 ? "\nBiaya Admin: " . billingMessageAmount($adminFee, $currency) : '';
-  $message = "Yth. Bapak/Ibu " . $customerName . ",\n\nDETAIL TAGIHAN " . $brand . "\nNo. Invoice: " . ($invoice['number'] ?? 'baru') . "\nNama Pelanggan: " . $customerName . "\nLayanan:\n" . implode("\n", $services) . $feeDetail . "\n\nTotal Tagihan: " . billingMessageAmount($amount, $currency) . "\nJatuh Tempo: " . ($invoice['due_date'] ?? $dueDate ?: '-') . "\n\nMohon melakukan pembayaran sebelum jatuh tempo. Terima kasih.";
+  $collectionFee = mikhmonInvoiceCollectionFee($invoice);
+  $feeDetails = array('Subtotal Layanan: ' . billingMessageAmount(mikhmonInvoiceSubtotal($invoice), $currency));
+  if ($collectionFee > 0) $feeDetails[] = 'Komisi Penagihan: ' . billingMessageAmount($collectionFee, $currency);
+  $message = "Yth. Bapak/Ibu " . $customerName . ",\n\nDETAIL TAGIHAN " . $brand . "\nNo. Invoice: " . ($invoice['number'] ?? 'baru') . "\nNama Pelanggan: " . $customerName . "\nLayanan:\n" . implode("\n", $services) . "\n\nRincian Tagihan:\n" . implode("\n", $feeDetails) . "\nTotal Tagihan: " . billingMessageAmount($amount, $currency) . "\nJatuh Tempo: " . ($invoice['due_date'] ?? $dueDate ?: '-') . "\n\nMohon melakukan pembayaran sebelum jatuh tempo. Terima kasih.";
   $paymentUrl = trim((string) ($invoice['payment_url'] ?? ''));
   if ($paymentUrl !== '') $message .= "\n\nLink Pembayaran: " . $paymentUrl;
   return $message;
@@ -101,13 +102,12 @@ function billingDueTimestamp($value) {
   $months = array('jan'=>1,'feb'=>2,'mar'=>3,'apr'=>4,'may'=>5,'jun'=>6,'jul'=>7,'aug'=>8,'sep'=>9,'oct'=>10,'nov'=>11,'dec'=>12);
   if (preg_match('/^([a-z]{3})\/(\d{1,2})(?:\/(\d{4}))?(?:\s+(\d{1,2}:\d{2}:\d{2}))?$/', $value, $matches) && isset($months[$matches[1]])) {
     $year = !empty($matches[3]) ? (int) $matches[3] : (int) date('Y');
-    $time = !empty($matches[4]) ? $matches[4] : '00:00:00';
+    $time = !empty($matches[4]) ? $matches[4] : '23:59:59';
     $timestamp = strtotime(sprintf('%04d-%02d-%02d %s', $year, $months[$matches[1]], (int) $matches[2], $time));
     if (empty($matches[3]) && $timestamp < time() - 86400) $timestamp = strtotime('+1 year', $timestamp);
     return $timestamp ?: 0;
   }
-  $timestamp = strtotime($value);
-  return $timestamp ?: 0;
+  return mikhmonBillingDueTimestamp($value);
 }
 
 function billingValiditySeconds($value) {
@@ -260,7 +260,7 @@ function billingInvoiceServices($invoice, $customer) {
 function billingUnpaidInvoiceIndex($invoices, $customerId) {
   $found = -1; $createdAt = -1;
   foreach ((array) $invoices as $index => $invoice) {
-    if (($invoice['status'] ?? '') !== 'unpaid' || (string) ($invoice['customer_id'] ?? '') !== (string) $customerId) continue;
+    if ((!mikhmonInvoiceIsCollectible($invoice) && ($invoice['status'] ?? '') !== 'draft') || (string) ($invoice['customer_id'] ?? '') !== (string) $customerId) continue;
     $invoiceCreatedAt = (int) ($invoice['created_at'] ?? 0);
     if ($found < 0 || $invoiceCreatedAt >= $createdAt) { $found = $index; $createdAt = $invoiceCreatedAt; }
   }
@@ -270,7 +270,7 @@ function billingUnpaidInvoiceIndex($invoices, $customerId) {
 function billingLatestUnpaidInvoice($invoices, $customerId) {
   $latest = array();
   foreach ((array) $invoices as $invoice) {
-    if (($invoice['status'] ?? '') !== 'unpaid' || (string) ($invoice['customer_id'] ?? '') !== (string) $customerId) continue;
+    if ((!mikhmonInvoiceIsCollectible($invoice) && ($invoice['status'] ?? '') !== 'draft') || (string) ($invoice['customer_id'] ?? '') !== (string) $customerId) continue;
     if (!$latest || (int) ($invoice['created_at'] ?? 0) >= (int) ($latest['created_at'] ?? 0)) $latest = $invoice;
   }
   return $latest;
@@ -288,10 +288,11 @@ function billingSyncUnpaidInvoice($session, &$invoices, $customer, $customerUser
   $existingInvoiceDue = billingDueTimestamp($invoices[$invoiceIndex]['due_date'] ?? '');
   if ($existingInvoiceDue > 0) {
     // Preserve the invoice month while normalizing its due day to the 5th.
-    $dueTimestamp = mktime(0, 0, 0, (int) date('n', $existingInvoiceDue), 5, (int) date('Y', $existingInvoiceDue));
+    $dueTimestamp = mktime(23, 59, 59, (int) date('n', $existingInvoiceDue), 5, (int) date('Y', $existingInvoiceDue));
   } else $dueTimestamp = billingCustomerDueTimestamp($customer, $serviceDetails);
   $dueDate = $dueTimestamp > 0 ? date('Y-m-d H:i:s', $dueTimestamp) : '';
   $invoice = $invoices[$invoiceIndex];
+  if (($invoice['status'] ?? '') !== 'draft') return false;
   $oldServices = billingInvoiceServices($invoice, $customer);
   $oldSignature = json_encode(array_map(function ($service) {
     return array('id' => $service['id'] ?? '', 'service' => $service['service'] ?? '', 'username' => $service['username'] ?? '', 'profile' => $service['profile'] ?? '', 'amount' => (float) ($service['amount'] ?? 0));
@@ -306,6 +307,7 @@ function billingSyncUnpaidInvoice($session, &$invoices, $customer, $customerUser
     $invoice['service_count'] = count($serviceDetails);
     $invoice['subtotal'] = $amount;
     $invoice['admin_fee'] = 0;
+    $invoice['collection_fee'] = 0;
     $invoice['amount'] = $amount;
     $invoice['due_date'] = $dueDate;
     if (mikhmonSaveInvoice($session, $invoice) === false) return false;
@@ -343,7 +345,7 @@ if ($midtransPaymentAvailable) {
   $midtransReconciled = 0;
   foreach ($allInvoices as $invoiceIndex => $invoiceRow) {
     if ($midtransReconciled >= 20) break;
-    if (($invoiceRow['status'] ?? '') !== 'unpaid' || !empty($invoiceRow['gateway_payment_received']) || ($invoiceRow['payment_gateway'] ?? '') !== 'midtrans' || empty($invoiceRow['payment_order_id'])) continue;
+    if (!mikhmonInvoiceIsCollectible($invoiceRow) || !empty($invoiceRow['gateway_payment_received']) || ($invoiceRow['payment_gateway'] ?? '') !== 'midtrans' || empty($invoiceRow['payment_order_id'])) continue;
     if (!empty($invoiceRow['payment_environment']) && $invoiceRow['payment_environment'] !== $paymentGatewayConfig['midtrans']['environment']) continue;
     // Query Midtrans directly whenever an order ID exists. A customer may
     // complete payment after the local invoice-link expiry window.
@@ -370,7 +372,7 @@ $invoices = billingMonthlyInvoicesOnly($allInvoices);
 // attempts remain visible and are retried only when the operator presses the
 // activation button, preventing repeated router writes on every page load.
 foreach ($allInvoices as $invoiceRow) {
-  if (($invoiceRow['status'] ?? '') !== 'unpaid' || empty($invoiceRow['gateway_payment_received']) || !empty($invoiceRow['activation_status'])) continue;
+  if (!mikhmonInvoiceIsCollectible($invoiceRow) || empty($invoiceRow['gateway_payment_received']) || !empty($invoiceRow['activation_status'])) continue;
   if (($invoiceRow['kind'] ?? 'monthly') === 'voucher') {
     $automaticActivation = mikhmonCustomerPortalFulfillVoucher($session, $invoiceRow['id'] ?? '', !empty($routerConnected) ? $API : null);
     if (!empty($automaticActivation['success'])) $customerMessage = 'Pembayaran voucher dikonfirmasi dan kode voucher berhasil dibuat.';
@@ -446,6 +448,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ((float) $serviceDetail['amount'] <= 0) $missingPrice[] = strtoupper($serviceDetail['service']) . ' ' . $serviceDetail['profile'];
         if (($serviceDetail['status'] ?? '') === 'invalid-profile') $invalidProfiles[] = strtoupper($serviceDetail['service']) . ' ' . $serviceDetail['profile'];
       }
+      if (!$existingInvoice && !empty($customer['active_date']) && !empty($customer['prorate_first_invoice'])) {
+        $amount = 0;
+        foreach ($invoiceServices as $serviceIndex => $serviceDetail) {
+          $invoiceServices[$serviceIndex]['monthly_amount'] = (float) $serviceDetail['amount'];
+          $invoiceServices[$serviceIndex]['amount'] = mikhmonBillingInitialProration($serviceDetail['amount'], $customer['active_date']);
+          $amount += (float) $invoiceServices[$serviceIndex]['amount'];
+        }
+      }
       $customerDueTimestamp = billingCustomerDueTimestamp($customer, $invoiceServices);
       $customerDueDate = date('Y-m-d H:i:s', $customerDueTimestamp);
       if ($invalidProfiles) $customerError = 'Profile layanan berikut harus Expired Mode = None untuk dikelola Billing: ' . implode(', ', $invalidProfiles) . '.';
@@ -456,9 +466,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           'id' => 'invoice-' . uniqid(), 'number' => 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5)),
           'customer_id' => $customer['id'], 'customer_name' => $customer['name'] ?? '',
           'services' => $invoiceServices, 'service_count' => count($invoiceServices),
-          'subtotal' => $amount, 'admin_fee' => 0,
+          'subtotal' => $amount, 'admin_fee' => 0, 'collection_fee' => 0,
           'amount' => $amount, 'due_date' => $customerDueDate,
-          'status' => 'unpaid', 'created_at' => time(),
+          'status' => 'issued', 'issued_at' => time(), 'created_at' => time(),
         );
         if (mikhmonSaveInvoice($session, $invoice) === false) $customerError = 'Invoice gagal disimpan.';
         else {
@@ -470,6 +480,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $invoices = billingMonthlyInvoicesOnly(mikhmonGetInvoices($session));
       }
+    }
+  } elseif ($action === 'issue_invoice' || $action === 'void_invoice') {
+    $invoiceId = (string) ($_POST['invoice_id'] ?? '');
+    $invoiceIndex = -1;
+    foreach ($invoices as $index => $invoiceRow) if ((string) ($invoiceRow['id'] ?? '') === $invoiceId) { $invoiceIndex = $index; break; }
+    if (!$customer || $invoiceIndex < 0 || (string) ($invoices[$invoiceIndex]['customer_id'] ?? '') !== (string) $customer['id']) $customerError = 'Invoice atau pelanggan tidak ditemukan.';
+    elseif ($action === 'issue_invoice' && ($invoices[$invoiceIndex]['status'] ?? '') !== 'draft') $customerError = 'Hanya draft yang dapat diterbitkan.';
+    elseif ($action === 'void_invoice' && !(mikhmonIsAdmin() || mikhmonIsFinance())) $customerError = 'Hanya Administrator atau Keuangan yang dapat membatalkan invoice.';
+    elseif ($action === 'void_invoice' && !in_array($invoices[$invoiceIndex]['status'] ?? '', array('draft', 'issued', 'unpaid'), true)) $customerError = 'Status invoice ini tidak dapat dibatalkan.';
+    else {
+      $invoices[$invoiceIndex]['status'] = $action === 'issue_invoice' ? 'issued' : 'void';
+      $invoices[$invoiceIndex][$action === 'issue_invoice' ? 'issued_at' : 'voided_at'] = time();
+      $invoices[$invoiceIndex][$action === 'issue_invoice' ? 'issued_by' : 'voided_by'] = mikhmonUserName();
+      if (mikhmonSaveInvoice($session, $invoices[$invoiceIndex]) === false) $customerError = 'Status invoice gagal disimpan.';
+      else $customerMessage = $action === 'issue_invoice' ? 'Invoice berhasil diterbitkan.' : 'Invoice berhasil dibatalkan tanpa menghapus riwayat.';
     }
   } elseif ($action === 'mark_paid') {
     $invoiceId = isset($_POST['invoice_id']) ? (string) $_POST['invoice_id'] : '';
@@ -517,16 +542,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif (!$customer || !$invoiceToSend || (string) ($invoiceToSend['customer_id'] ?? '') !== (string) ($customer['id'] ?? '')) $customerError = 'Invoice atau pelanggan tidak ditemukan.';
     elseif (!mikhmonBillingAutomationIsWorkHour()) $customerError = 'Pengiriman invoice melalui Fonnte hanya dapat dilakukan pada jam kerja (07.00-17.00).';
     else {
-      if (($invoiceToSend['status'] ?? '') === 'unpaid' && mikhmonIsBiller()) {
-        $invoiceToSend['subtotal'] = (float) ($invoiceToSend['subtotal'] ?? $invoiceToSend['amount'] ?? 0);
-        $invoiceToSend['admin_fee'] = mikhmonBillerCommissionAmount(mikhmonUserId());
-        $invoiceToSend['amount'] = $invoiceToSend['subtotal'] + $invoiceToSend['admin_fee'];
+      if (mikhmonIsBiller() && mikhmonInvoiceIsCollectible($invoiceToSend) && mikhmonInvoiceCollectionFee($invoiceToSend) <= 0) {
+        $partner = mikhmonFindPartner(mikhmonUserId(), 'user_id');
+        $invoiceToSend = mikhmonInvoiceApplyCollectionFee($invoiceToSend, mikhmonBillerCommissionAmount(), array(
+          'user_id' => mikhmonUserId(),
+          'partner_id' => $partner['id'] ?? '',
+          'name' => mikhmonUserName(),
+        ));
+        if (mikhmonSaveInvoice($session, $invoiceToSend) === false) {
+          $customerError = 'Komisi penagihan gagal disimpan ke invoice.';
+        } else {
+          $invoices = billingMonthlyInvoicesOnly(mikhmonGetInvoices($session));
+        }
       }
       $brand = isset($brandname) && trim((string) $brandname) !== '' ? trim((string) $brandname) : 'MIKHMON';
-      $message = billingInvoiceMessage($customer, $invoiceToSend, $invoiceToSend['due_date'] ?? '', $currency, $brand);
-      $result = mikhmonFonnteSend($customer['phone'] ?? '', $message, $fonnteConfig);
-      if (!empty($result['status'])) $customerMessage = 'Pesan invoice ' . ($invoiceToSend['number'] ?? '') . ' berhasil dimasukkan ke antrean Fonnte.';
-      else $customerError = (string) ($result['reason'] ?? 'Pesan invoice gagal dikirim melalui Fonnte.');
+      if ($customerError === '') {
+        $message = billingInvoiceMessage($customer, $invoiceToSend, $invoiceToSend['due_date'] ?? '', $currency, $brand);
+        $result = mikhmonFonnteSend($customer['phone'] ?? '', $message, $fonnteConfig);
+        if (!empty($result['status'])) $customerMessage = 'Pesan invoice ' . ($invoiceToSend['number'] ?? '') . ' berhasil dimasukkan ke antrean Fonnte.';
+        else $customerError = (string) ($result['reason'] ?? 'Pesan invoice gagal dikirim melalui Fonnte.');
+      }
     }
   } elseif ($action === 'create_payment') {
     $invoiceId = isset($_POST['invoice_id']) ? (string) $_POST['invoice_id'] : '';
@@ -534,8 +569,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($invoices as $index => $invoiceRow) if (isset($invoiceRow['id']) && (string) $invoiceRow['id'] === $invoiceId) { $invoiceIndex = $index; break; }
     if (!mikhmonPaymentGatewayValidCsrf($_POST['payment_gateway_csrf'] ?? '')) $customerError = 'Sesi pembayaran tidak valid. Muat ulang halaman lalu coba lagi.';
     elseif (!$customer || $invoiceIndex < 0 || (string) ($invoices[$invoiceIndex]['customer_id'] ?? '') !== (string) ($customer['id'] ?? '')) $customerError = 'Invoice atau pelanggan tidak ditemukan.';
-    elseif (($invoices[$invoiceIndex]['status'] ?? '') !== 'unpaid') $customerError = 'Hanya invoice yang belum dibayar yang dapat dibuatkan link pembayaran.';
+    elseif (!mikhmonInvoiceIsCollectible($invoices[$invoiceIndex])) $customerError = 'Hanya invoice terbit yang belum dibayar yang dapat dibuatkan link pembayaran.';
     else {
+      if (mikhmonIsBiller() && mikhmonInvoiceCollectionFee($invoices[$invoiceIndex]) <= 0) {
+        $partner = mikhmonFindPartner(mikhmonUserId(), 'user_id');
+        $invoices[$invoiceIndex] = mikhmonInvoiceApplyCollectionFee($invoices[$invoiceIndex], mikhmonBillerCommissionAmount(), array(
+          'user_id' => mikhmonUserId(),
+          'partner_id' => $partner['id'] ?? '',
+          'name' => mikhmonUserName(),
+        ));
+      }
       $paymentOrderId = ($invoices[$invoiceIndex]['number'] ?? $invoiceId) . '-' . strtoupper(substr(uniqid(), -6));
       $paymentResult = mikhmonPaymentGatewayCreatePayment('midtrans', array(
         'order_id' => $paymentOrderId,
@@ -568,7 +611,6 @@ $unpaidInvoiceAmount = 0;
 $currentInvoiceCount = 0;
 $paidMonthAmount = 0;
 $paidMonthCommission = 0;
-$paidMonthAdminFee = 0;
 
 // Keep the paid invoice as the primary status until the reminder window opens.
 // The following invoice becomes actionable together with its WhatsApp reminder.
@@ -578,11 +620,12 @@ foreach ($invoices as $invoice) if (isset($invoice['customer_id'])) {
   $key = (string) $invoice['customer_id'];
   if (!isset($invoiceCandidates[$key])) $invoiceCandidates[$key] = array('paid' => array(), 'unpaid' => array());
   $status = (string) ($invoice['status'] ?? '');
-  if ($status !== 'paid' && $status !== 'unpaid') continue;
-  $sortAt = $status === 'paid' ? (int) ($invoice['paid_at'] ?? $invoice['created_at'] ?? 0) : (int) ($invoice['created_at'] ?? 0);
-  $current = $invoiceCandidates[$key][$status];
-  $currentSortAt = $status === 'paid' ? (int) ($current['paid_at'] ?? $current['created_at'] ?? 0) : (int) ($current['created_at'] ?? 0);
-  if (!$current || $sortAt >= $currentSortAt) $invoiceCandidates[$key][$status] = $invoice;
+  $bucket = $status === 'paid' ? 'paid' : ((mikhmonInvoiceIsCollectible($invoice) || $status === 'draft') ? 'unpaid' : '');
+  if ($bucket === '') continue;
+  $sortAt = $bucket === 'paid' ? (int) ($invoice['paid_at'] ?? $invoice['created_at'] ?? 0) : (int) ($invoice['created_at'] ?? 0);
+  $current = $invoiceCandidates[$key][$bucket];
+  $currentSortAt = $bucket === 'paid' ? (int) ($current['paid_at'] ?? $current['created_at'] ?? 0) : (int) ($current['created_at'] ?? 0);
+  if (!$current || $sortAt >= $currentSortAt) $invoiceCandidates[$key][$bucket] = $invoice;
 }
 foreach ($invoiceCandidates as $key => $candidates) {
   $paid = $candidates['paid']; $unpaid = $candidates['unpaid'];
@@ -609,7 +652,6 @@ if ($billingView === 'paid') {
     if ($paidAt <= 0 || date('Y-m', $paidAt) !== $currentMonth) continue;
     $paidMonthAmount += (float) ($currentPaidInvoice['amount'] ?? 0);
     $paidMonthCommission += (float) ($currentPaidInvoice['biller_commission'] ?? 0);
-    $paidMonthAdminFee += (float) ($currentPaidInvoice['admin_fee'] ?? 0);
   }
 } else {
   foreach ($customers as $unpaidCustomer) $billingRows[] = array(
@@ -622,18 +664,21 @@ if ($billingView === 'paid') {
   foreach ($billingRows as $billingRow) {
     $currentInvoice = $billingRow['invoice'];
     $currentStatus = (string) ($currentInvoice['status'] ?? '');
-    if ($currentStatus !== 'paid' && $currentStatus !== 'unpaid') continue;
+    if ($currentStatus !== 'paid' && !mikhmonInvoiceIsCollectible($currentInvoice) && $currentStatus !== 'draft') continue;
     $currentInvoiceCount++;
-    if ($currentStatus !== 'unpaid') continue;
+    if (!mikhmonInvoiceIsCollectible($currentInvoice)) continue;
     $unpaidInvoiceCount++;
-    $unpaidInvoiceAmount += (float) ($currentInvoice['amount'] ?? 0) + (mikhmonIsBiller() ? mikhmonBillerCommissionAmount(mikhmonUserId()) : 0);
+    if (mikhmonIsBiller() && mikhmonInvoiceCollectionFee($currentInvoice) <= 0) {
+      $currentInvoice = mikhmonInvoiceApplyCollectionFee($currentInvoice, mikhmonBillerCommissionAmount());
+    }
+    $unpaidInvoiceAmount += (float) ($currentInvoice['amount'] ?? 0);
     if (!empty($currentInvoice['automation']['isolated_at'])) $isolatedInvoiceCount++;
   }
 }
 ?>
 <style>
   .billing-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 16px}
-  .billing-summary.paid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .billing-summary.paid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .billing-summary-card{border:1px solid rgba(127,127,127,.45);border-radius:4px;padding:14px 16px;min-width:0}
   .billing-summary-label{display:block;font-weight:600;line-height:1.35;margin-bottom:8px}
   .billing-summary-value{display:block;font-size:clamp(20px,2.2vw,28px);font-weight:700;line-height:1.2;overflow-wrap:anywhere}
@@ -656,21 +701,20 @@ if ($billingView === 'paid') {
   @media(max-width:620px){.billing-summary,.billing-summary.paid{grid-template-columns:1fr}.billing-summary-card{padding:12px}.billing-search-wrap{width:100%!important}.billing-search-wrap .input-group,.billing-search-wrap .input-group-6{width:100%!important}}
 </style>
 <div class="row"><div class="col-12"><div class="card">
-  <div class="card-header"><h3><i class="fa <?= $billingView === 'paid' ? 'fa-check-square-o' : 'fa-file-text-o'; ?>"></i> <span class="billing-page-label"><?= $billingView === 'paid' ? 'Invoice Paid' : 'Invoice Unpaid'; ?></span> <span style="font-size:14px"> &nbsp;|&nbsp; <span id="billingVisibleCount">0</span> <?= $billingView === 'paid' ? 'invoice' : 'pelanggan'; ?></span></h3></div>
+  <div class="card-header"><h3><i class="fa <?= $billingView === 'paid' ? 'fa-check-square-o' : 'fa-file-text-o'; ?>"></i> <span class="billing-page-label"><?= $billingView === 'paid' ? 'Invoice Lunas' : 'Tagihan Berjalan'; ?></span> <span style="font-size:14px"> &nbsp;|&nbsp; <span id="billingVisibleCount">0</span> <?= $billingView === 'paid' ? 'invoice' : 'pelanggan'; ?></span></h3></div>
   <div class="card-body">
     <?php if ($customerMessage !== ''): ?><div class="box bg-success"><?= htmlspecialchars($customerMessage, ENT_QUOTES); ?></div><?php endif; ?>
     <?php if ($customerError !== ''): ?><div class="box bg-danger"><?= htmlspecialchars($customerError, ENT_QUOTES); ?></div><?php endif; ?>
     <?php if (empty($routerConnected)): ?><div class="box bg-warning">Router MikroTik tidak terhubung. Invoice baru dan aktivasi pembayaran dinonaktifkan.</div><?php endif; ?>
     <?php if ($billingView === 'paid'): ?>
       <div class="billing-summary paid" aria-label="Ringkasan invoice paid bulan ini">
-        <div class="billing-summary-card"><span class="billing-summary-label">Total Komisi Mitra</span><span class="billing-summary-value"><?= htmlspecialchars($currency . ' ' . number_format($paidMonthCommission, 0, ',', '.'), ENT_QUOTES); ?></span></div>
-        <div class="billing-summary-card"><span class="billing-summary-label">Biaya Admin</span><span class="billing-summary-value"><?= htmlspecialchars($currency . ' ' . number_format($paidMonthAdminFee, 0, ',', '.'), ENT_QUOTES); ?></span></div>
+        <div class="billing-summary-card"><span class="billing-summary-label">Komisi Penagihan</span><span class="billing-summary-value"><?= htmlspecialchars($currency . ' ' . number_format($paidMonthCommission, 0, ',', '.'), ENT_QUOTES); ?></span></div>
         <div class="billing-summary-card"><span class="billing-summary-label">TOTAL <?= htmlspecialchars($currentMonthLabel, ENT_QUOTES); ?></span><span class="billing-summary-value"><?= htmlspecialchars($currency . ' ' . number_format($paidMonthAmount, 0, ',', '.'), ENT_QUOTES); ?></span></div>
       </div>
     <?php else: ?>
       <div class="billing-summary" aria-label="Ringkasan invoice unpaid">
         <div class="billing-summary-card"><span class="billing-summary-label">Jumlah Invoice</span><span class="billing-summary-value"><?= $currentInvoiceCount; ?></span></div>
-        <div class="billing-summary-card"><span class="billing-summary-label">Unpaid</span><span class="billing-summary-value"><?= $unpaidInvoiceCount; ?></span></div>
+        <div class="billing-summary-card"><span class="billing-summary-label">Belum Dibayar</span><span class="billing-summary-value"><?= $unpaidInvoiceCount; ?></span></div>
         <div class="billing-summary-card"><span class="billing-summary-label">Isolir</span><span class="billing-summary-value"><?= $isolatedInvoiceCount; ?></span></div>
         <div class="billing-summary-card"><span class="billing-summary-label">Total Blm Dibayar</span><span class="billing-summary-value"><?= htmlspecialchars($currency . ' ' . number_format($unpaidInvoiceAmount, 0, ',', '.'), ENT_QUOTES); ?></span></div>
       </div>
@@ -680,9 +724,11 @@ if ($billingView === 'paid') {
         <input id="billingSearch" type="search" class="group-item radius-3" placeholder="<?= $_search; ?>" aria-label="Cari invoice">
         <select id="billingDataFilter" class="group-item radius-3" aria-label="Filter Data">
           <option value="all">All Data</option>
-          <option value="unpaid">Invoice Unpaid</option>
-          <option value="isolated">Isolated</option>
-          <option value="none">No Invoice</option>
+          <option value="draft">Draft</option>
+          <option value="issued">Terbit</option>
+          <option value="overdue">Jatuh Tempo</option>
+          <option value="isolated">Isolir</option>
+          <option value="none">Belum Ada Invoice</option>
         </select>
         <button id="billingExportExcel" class="btn bg-success billing-export" type="button"><i class="fa fa-file-excel-o"></i> Export Excel</button>
       </div>
@@ -708,26 +754,32 @@ if ($billingView === 'paid') {
       $firstService = $serviceDetails[0] ?? array('username'=>'','profile'=>'','status_text'=>'-','status'=>'missing');
       $invoice = $billingRow['invoice'];
       $invoiceStatus = $invoice['status'] ?? 'none';
+      $invoicePayable = mikhmonInvoiceIsCollectible($invoice);
+      if ($invoiceStatus !== 'none' && $invoiceStatus !== 'paid' && $invoiceStatus !== 'void') $invoiceStatus = mikhmonInvoiceEffectiveStatus($invoice, time(), $customer['grace_days'] ?? 0);
       $customerDueDate = $invoiceStatus === 'paid' && !empty($invoice['next_due_date'])
         ? (string) $invoice['next_due_date']
         : (!empty($invoice['due_date']) ? (string) $invoice['due_date'] : billingCustomerDueDate($customer, $serviceDetails));
-      $invoiceStatusText = $invoiceStatus === 'paid' ? 'Paid' : ($invoiceStatus === 'unpaid' ? 'Unpaid' : 'No Invoice');
-      $invoiceStatusClass = $invoiceStatus === 'paid' ? 'text-success' : ($invoiceStatus === 'unpaid' ? 'text-danger' : 'text-secondary');
+      $invoiceStatusText = $invoiceStatus === 'none' ? 'Belum Ada' : mikhmonInvoiceStatusLabel($invoiceStatus);
+      $invoiceStatusClass = $invoiceStatus === 'paid' ? 'text-success' : (in_array($invoiceStatus, array('overdue','isolated'), true) ? 'text-danger' : 'text-secondary');
       $estimatedAmount = 0; foreach ($serviceDetails as $detail) $estimatedAmount += (float) $detail['amount'];
       $displayInvoice = $invoice;
-      if ($invoiceStatus === 'unpaid' && mikhmonIsBiller()) {
-        $displayInvoice['subtotal'] = (float) ($invoice['subtotal'] ?? $invoice['amount'] ?? $estimatedAmount);
-        $displayInvoice['admin_fee'] = mikhmonBillerCommissionAmount(mikhmonUserId());
-        $displayInvoice['amount'] = $displayInvoice['subtotal'] + $displayInvoice['admin_fee'];
+      if ($invoicePayable && mikhmonIsBiller() && mikhmonInvoiceCollectionFee($displayInvoice) <= 0) {
+        $partner = mikhmonFindPartner(mikhmonUserId(), 'user_id');
+        $displayInvoice = mikhmonInvoiceApplyCollectionFee($displayInvoice, mikhmonBillerCommissionAmount(), array(
+          'user_id' => mikhmonUserId(),
+          'partner_id' => $partner['id'] ?? '',
+          'name' => mikhmonUserName(),
+        ));
       }
       $amount = isset($displayInvoice['amount']) ? (float) $displayInvoice['amount'] : $estimatedAmount;
       $serviceSearch = implode(' ', array_map(function($row){return $row['service'].' '.$row['username'].' '.$row['profile'];}, $serviceDetails));
       $phone = billingPhone($customer['phone'] ?? ''); $customerName = trim((string) ($customer['name'] ?? ''));
       $messageBrand = isset($brandname) && trim((string) $brandname) !== '' ? trim((string) $brandname) : 'MIKHMON';
       $invoiceText = billingInvoiceMessage($customer, $displayInvoice, $customerDueDate, $currency, $messageBrand);
-      $waUrl = $phone !== '' && $invoiceStatus !== 'none' ? 'https://wa.me/' . $phone . '?text=' . rawurlencode($invoiceText) : '';
-      $canSendFonnte = !empty($fonnteConfig['enabled']) && $fonnteConfig['token'] !== '' && $phone !== '' && $invoiceStatus !== 'none';
-      $gatewayPaymentReceived = !empty($invoice['gateway_payment_received']) && $invoiceStatus === 'unpaid';
+      $canDeliverInvoice = $invoiceStatus === 'paid' || $invoicePayable;
+      $waUrl = $phone !== '' && $canDeliverInvoice ? 'https://wa.me/' . $phone . '?text=' . rawurlencode($invoiceText) : '';
+      $canSendFonnte = !empty($fonnteConfig['enabled']) && $fonnteConfig['token'] !== '' && $phone !== '' && $canDeliverInvoice;
+      $gatewayPaymentReceived = !empty($invoice['gateway_payment_received']) && $invoicePayable;
       $activationFailed = $gatewayPaymentReceived && ($invoice['activation_status'] ?? '') === 'failed';
       if ($gatewayPaymentReceived) {
         $invoiceStatusText = 'Diterima ' . strtoupper((string) ($invoice['payment_gateway'] ?? 'gateway'));
@@ -739,7 +791,7 @@ if ($billingView === 'paid') {
         && $storedPaymentEnvironment !== ''
         && $storedPaymentEnvironment !== $paymentGatewayConfig['midtrans']['environment'];
       $paymentExpired = $paymentEnvironmentChanged || (!empty($invoice['payment_created_at']) && (int) $invoice['payment_created_at'] + (int) $paymentGatewayConfig['invoice_duration'] <= time());
-      $canCreatePayment = $midtransPaymentAvailable && $invoiceStatus === 'unpaid' && !$gatewayPaymentReceived;
+      $canCreatePayment = $midtransPaymentAvailable && $invoicePayable && !$gatewayPaymentReceived;
       $paymentUrl = !$paymentExpired && !empty($invoice['payment_url']) ? (string) $invoice['payment_url'] : '';
       $invoicePdfUrl = $invoiceStatus !== 'none' && !empty($invoice['id']) ? './customer/invoice-pdf.php?session=' . rawurlencode($session) . '&invoice_id=' . rawurlencode($invoice['id']) : '';
     ?>
@@ -760,11 +812,13 @@ if ($billingView === 'paid') {
         <td>
           <?php if ($invoicePdfUrl !== ''): ?><a class="btn bg-primary" href="<?= htmlspecialchars($invoicePdfUrl, ENT_QUOTES); ?>" title="Download invoice PDF"><i class="fa fa-file-pdf-o"></i> PDF</a><?php endif; ?>
           <?php if ($invoiceStatus !== 'paid'): ?>
-            <?php if ($invoiceStatus === 'none'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Buat Invoice</button></form><?php endif; ?>
-            <?php if ($paymentUrl !== '' && !$gatewayPaymentReceived): ?><?php elseif ($canCreatePayment): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="create_payment"><input type="hidden" name="payment_gateway_csrf" value="<?= htmlspecialchars(mikhmonPaymentGatewayCsrfToken(), ENT_QUOTES); ?>"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit" title="Buat link pembayaran Midtrans"><i class="fa fa-credit-card"></i> Buat Link Midtrans</button></form><?php endif; ?>
+            <?php if ($invoiceStatus === 'none'): ?><form method="post" style="display:inline"><?= mikhmonCsrfField(); ?><input type="hidden" name="billing_action" value="create_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-file-text"></i> Buat Invoice</button></form><?php endif; ?>
+            <?php if ($paymentUrl !== '' && !$gatewayPaymentReceived): ?><?php elseif ($canCreatePayment): ?><form method="post" style="display:inline"><?= mikhmonCsrfField(); ?><input type="hidden" name="billing_action" value="create_payment"><input type="hidden" name="payment_gateway_csrf" value="<?= htmlspecialchars(mikhmonPaymentGatewayCsrfToken(), ENT_QUOTES); ?>"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit" title="Buat link pembayaran Midtrans"><i class="fa fa-credit-card"></i> Buat Link Midtrans</button></form><?php endif; ?>
             <?php if ($waUrl !== ''): ?><a class="btn bg-green" target="_blank" href="<?= htmlspecialchars($waUrl, ENT_QUOTES); ?>"><i class="fa fa-whatsapp"></i> Kirim</a><?php endif; ?>
-            <?php if ($canSendFonnte): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="send_fonnte"><input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-green" type="submit" title="Kirim melalui Fonnte"><i class="fa fa-send"></i> Fonnte</button></form><?php endif; ?>
-            <?php if ($invoiceStatus === 'unpaid'): ?><form method="post" style="display:inline"><input type="hidden" name="billing_action" value="mark_paid"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-success" type="submit" onclick="return confirm('Tandai invoice lunas dan aktifkan semua layanan pelanggan?');"><i class="fa fa-check"></i> <?= $gatewayPaymentReceived ? ($activationFailed ? 'Coba Lagi Aktivasi' : 'Aktifkan Layanan') : 'Tandai Lunas'; ?></button></form><?php endif; ?>
+            <?php if ($canSendFonnte): ?><form method="post" style="display:inline"><?= mikhmonCsrfField(); ?><input type="hidden" name="billing_action" value="send_fonnte"><input type="hidden" name="fonnte_csrf" value="<?= htmlspecialchars(mikhmonFonnteCsrfToken(), ENT_QUOTES); ?>"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-green" type="submit" title="Kirim melalui Fonnte"><i class="fa fa-send"></i> Fonnte</button></form><?php endif; ?>
+            <?php if ($invoiceStatus === 'draft'): ?><form method="post" style="display:inline"><?= mikhmonCsrfField(); ?><input type="hidden" name="billing_action" value="issue_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-primary" type="submit"><i class="fa fa-send-o"></i> Terbitkan</button></form><?php endif; ?>
+            <?php if ($invoicePayable): ?><form method="post" style="display:inline"><?= mikhmonCsrfField(); ?><input type="hidden" name="billing_action" value="mark_paid"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-success" type="submit" onclick="return confirm('Tandai invoice lunas dan aktifkan semua layanan pelanggan?');"><i class="fa fa-check"></i> <?= $gatewayPaymentReceived ? ($activationFailed ? 'Coba Lagi Aktivasi' : 'Aktifkan Layanan') : 'Tandai Lunas'; ?></button></form><?php endif; ?>
+            <?php if ((mikhmonIsAdmin() || mikhmonIsFinance()) && in_array($invoiceStatus, array('draft','issued'), true)): ?><form method="post" style="display:inline" onsubmit="return confirm('Batalkan invoice ini tanpa menghapus riwayat?');"><?= mikhmonCsrfField(); ?><input type="hidden" name="billing_action" value="void_invoice"><input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer['id'], ENT_QUOTES); ?>"><input type="hidden" name="invoice_id" value="<?= htmlspecialchars($invoice['id'], ENT_QUOTES); ?>"><button class="btn bg-danger" type="submit"><i class="fa fa-ban"></i> Batalkan</button></form><?php endif; ?>
           <?php endif; ?>
         </td>
       </tr>

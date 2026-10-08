@@ -62,6 +62,12 @@ $duplicate = mikhmonSaveManagedUser(array(
 ));
 managedUserTestAssert(empty($duplicate['status']), 'duplicate usernames are rejected case-insensitively');
 
+$finance = mikhmonSaveManagedUser(array('type' => 'finance', 'name' => 'Keuangan Satu', 'username' => 'finance1', 'password' => 'secret', 'active' => true));
+managedUserTestAssert(!empty($finance['status']) && mikhmonFindUser($finance['user_id'])['role'] === 'finance', 'finance role is stored without a partner profile');
+managedUserTestAssert(mikhmonFindUser($finance['user_id'])['session'] === 'mikhmon', 'finance role receives global router scope');
+$operator = mikhmonSaveManagedUser(array('type' => 'operator', 'name' => 'Operator Satu', 'session' => 'router-a', 'username' => 'operator1', 'password' => 'secret', 'active' => true));
+managedUserTestAssert(!empty($operator['status']) && mikhmonFindUser($operator['user_id'])['role'] === 'operator', 'operator role is stored with one router scope');
+
 managedUserTestAssert(mikhmonSetManagedUserActive($partner['id'], $account['id'], false), 'managed user can be deactivated');
 managedUserTestAssert(empty(mikhmonFindPartner($partner['id'])['active']) && empty(mikhmonFindUser($account['id'])['active']), 'profile and login status change together');
 

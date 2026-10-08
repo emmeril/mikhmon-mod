@@ -99,8 +99,10 @@ function mikhmonInvoicePdf($invoice, $customer, $currency, $brand) {
   $dueDate = (string) ($invoice['due_date'] ?? '-');
   $status = $paymentReceived ? 'LUNAS' : 'BELUM DIBAYAR';
   $total = mikhmonInvoicePdfMoney($invoice['amount'] ?? 0, $currency);
-  $subtotal = (float) ($invoice['subtotal'] ?? ((float) ($invoice['amount'] ?? 0) - (float) ($invoice['admin_fee'] ?? 0)));
-  $adminFee = max(0, (float) ($invoice['admin_fee'] ?? 0));
+  $collectionFee = array_key_exists('collection_fee', (array) $invoice)
+    ? max(0, (float) $invoice['collection_fee'])
+    : max(0, (float) ($invoice['admin_fee'] ?? 0));
+  $subtotal = max(0, (float) ($invoice['subtotal'] ?? ((float) ($invoice['amount'] ?? 0) - $collectionFee)));
   $paidAt = (int) ($invoice['paid_at'] ?? $invoice['gateway_paid_at'] ?? 0);
   $commands = array();
 
@@ -161,13 +163,20 @@ function mikhmonInvoicePdf($invoice, $customer, $currency, $brand) {
     $commands[] = $tableLeft . ' ' . $lineY . ' m 555 ' . $lineY . ' l S';
   }
   $summaryY = $tableBottom - 34;
-  $summaryHeight = $adminFee > 0 ? 82 : 60;
+  $hasBreakdown = $collectionFee > 0;
+  $summaryHeight = $hasBreakdown ? 82 : 60;
   mikhmonInvoicePdfDrawRect($commands, 350, $summaryY - $summaryHeight, 205, $summaryHeight, '0.95 0.97 0.99');
-  if ($adminFee > 0) {
-    mikhmonInvoicePdfDrawText($commands, 365, $summaryY - 18, 9, 'Subtotal: ' . mikhmonInvoicePdfMoney($subtotal, $currency), '0.08 0.22 0.38');
-    mikhmonInvoicePdfDrawText($commands, 365, $summaryY - 36, 9, 'Biaya Admin: ' . mikhmonInvoicePdfMoney($adminFee, $currency), '0.08 0.22 0.38');
-    mikhmonInvoicePdfDrawText($commands, 365, $summaryY - 54, 10, 'TOTAL TAGIHAN: ' . $total, '0.08 0.22 0.38');
-    mikhmonInvoicePdfDrawText($commands, 365, $summaryY - 72, 10, 'Status: ' . $status, $paymentReceived ? '0.05 0.45 0.25' : '0.75 0.35 0.05');
+  if ($hasBreakdown) {
+    $summaryOffset = 18;
+    mikhmonInvoicePdfDrawText($commands, 365, $summaryY - $summaryOffset, 9, 'Subtotal Layanan: ' . mikhmonInvoicePdfMoney($subtotal, $currency), '0.08 0.22 0.38');
+    if ($collectionFee > 0) {
+      $summaryOffset += 18;
+      mikhmonInvoicePdfDrawText($commands, 365, $summaryY - $summaryOffset, 9, 'Komisi Penagihan: ' . mikhmonInvoicePdfMoney($collectionFee, $currency), '0.08 0.22 0.38');
+    }
+    $summaryOffset += 18;
+    mikhmonInvoicePdfDrawText($commands, 365, $summaryY - $summaryOffset, 10, 'TOTAL TAGIHAN: ' . $total, '0.08 0.22 0.38');
+    $summaryOffset += 18;
+    mikhmonInvoicePdfDrawText($commands, 365, $summaryY - $summaryOffset, 10, 'Status: ' . $status, $paymentReceived ? '0.05 0.45 0.25' : '0.75 0.35 0.05');
   } else {
     mikhmonInvoicePdfDrawText($commands, 365, $summaryY - 22, 10, 'TOTAL TAGIHAN: ' . $total, '0.08 0.22 0.38');
     mikhmonInvoicePdfDrawText($commands, 365, $summaryY - 42, 10, 'Status: ' . $status, $paymentReceived ? '0.05 0.45 0.25' : '0.75 0.35 0.05');

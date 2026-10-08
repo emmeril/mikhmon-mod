@@ -37,9 +37,17 @@ invoicePdfTestAssert(preg_match('/xref\n0 6\n(?:\d{10} \d{5} [fn] \n){6}/', $pdf
 
 $feeInvoice = $invoice;
 $feeInvoice['subtotal'] = 3000;
-$feeInvoice['admin_fee'] = 500;
-$feeInvoice['amount'] = 3500;
+$feeInvoice['admin_fee'] = 0;
+$feeInvoice['collection_fee'] = 250;
+$feeInvoice['amount'] = 3250;
 $feePdf = mikhmonInvoicePdf($feeInvoice, array('name' => 'Apri', 'phone' => '08123456789', 'address' => $longAddress), 'Rp', 'Emmeril Hotspot');
-invoicePdfTestAssert(strpos($feePdf, 'Subtotal: Rp 3.000') !== false && strpos($feePdf, 'Biaya Admin: Rp 500') !== false && strpos($feePdf, 'TOTAL TAGIHAN: Rp 3.500') !== false, 'invoice PDF separates service subtotal, admin fee, and customer total');
+invoicePdfTestAssert(strpos($feePdf, 'Subtotal Layanan: Rp 3.000') !== false && strpos($feePdf, 'Biaya Admin') === false && strpos($feePdf, 'Komisi Penagihan: Rp 250') !== false && strpos($feePdf, 'TOTAL TAGIHAN: Rp 3.250') !== false, 'invoice PDF shows service subtotal, collection commission, and customer total without admin fee');
+
+$legacyFeeInvoice = $invoice;
+$legacyFeeInvoice['subtotal'] = 3000;
+$legacyFeeInvoice['admin_fee'] = 500;
+$legacyFeeInvoice['amount'] = 3500;
+$legacyFeePdf = mikhmonInvoicePdf($legacyFeeInvoice, array('name' => 'Apri', 'phone' => '08123456789', 'address' => $longAddress), 'Rp', 'Emmeril Hotspot');
+invoicePdfTestAssert(strpos($legacyFeePdf, 'Biaya Admin') === false && strpos($legacyFeePdf, 'Komisi Penagihan: Rp 500') !== false && strpos($legacyFeePdf, 'TOTAL TAGIHAN: Rp 3.500') !== false, 'legacy fee is labeled as collection commission instead of admin fee');
 
 echo 'invoice-pdf-tests: OK' . PHP_EOL;

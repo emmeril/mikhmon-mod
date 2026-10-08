@@ -46,8 +46,9 @@ if (!isset($_SESSION["mikhmon"])) {
   if (mikhmonIsAdmin()) {
     $landingTarget = mikhmonAdminLandingUrl($data);
   } else {
-    $assignedSession = rawurlencode(mikhmonAssignedSession());
-    $landingTarget = mikhmonIsBiller() ? './?billing=unpaid&session=' . $assignedSession : './?session=' . $assignedSession;
+    $landingSession = mikhmonIsFinance() ? mikhmonDefaultRouterSession($data) : mikhmonAssignedSession();
+    $assignedSession = rawurlencode($landingSession);
+    $landingTarget = (mikhmonIsBiller() || mikhmonIsFinance()) ? './?billing=' . (mikhmonIsFinance() ? 'reports' : 'unpaid') . '&session=' . $assignedSession : './?session=' . $assignedSession;
   }
   echo "<script>window.location=" . json_encode($landingTarget) . "</script>";
 } else {
@@ -86,7 +87,7 @@ if (!isset($_SESSION["mikhmon"])) {
     header('Location:./admin.php?id=login');
     exit;
   }
-  if (!mikhmonIsAdmin() && mikhmonAssignedSession() !== '' && (string) $session !== mikhmonAssignedSession()) {
+  if (!mikhmonIsAdmin() && !mikhmonIsFinance() && mikhmonAssignedSession() !== '' && (string) $session !== mikhmonAssignedSession()) {
     $assignedSession = rawurlencode(mikhmonAssignedSession());
     $assignedTarget = mikhmonIsBiller() ? './?billing=unpaid&session=' . $assignedSession : './?session=' . $assignedSession;
     header('Location: ' . $assignedTarget);
@@ -163,6 +164,7 @@ if (!isset($_SESSION["mikhmon"])) {
 
   $requestedRoute = 'other';
   if ($hotspot == 'logout') $requestedRoute = 'logout';
+  elseif ($billing === 'reports') $requestedRoute = 'billing-reports';
   elseif (in_array($billing, array('1', 'unpaid', 'paid'), true)) $requestedRoute = 'billing';
   elseif ($commission == '1') $requestedRoute = 'commission';
   elseif ($mitra == 'list') $requestedRoute = 'admin-mitra';
@@ -204,7 +206,7 @@ if (!isset($_SESSION["mikhmon"])) {
     exit;
   }
 
-  $localRoutes = array('logout', 'system-log', 'admin-mitra', 'admin-settings', 'admin-routers', 'admin-fonnte', 'admin-payment-gateway', 'admin-router-add', 'admin-session-settings');
+  $localRoutes = array('logout', 'system-log', 'billing-reports', 'admin-mitra', 'admin-settings', 'admin-routers', 'admin-fonnte', 'admin-payment-gateway', 'admin-router-add', 'admin-session-settings');
   $routerConnected = false;
   $API = null;
   $identity = isset($hotspotname) ? $hotspotname : $session;
@@ -324,6 +326,9 @@ if (!isset($_SESSION["mikhmon"])) {
   }
   elseif ($commission == "1") {
     include_once('./customer/commission.php');
+  }
+  elseif ($billing === "reports") {
+    include_once('./customer/billingreports.php');
   }
   elseif (in_array($billing, array("1", "unpaid", "paid"), true)) {
     include_once('./customer/billing.php');

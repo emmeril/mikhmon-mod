@@ -63,7 +63,7 @@ billingAutomationTestAssert(mikhmonBillingAutomationRetryReady($failedInvoice, '
 
 $novemberDue = strtotime('2026-11-05 00:00:00');
 $latePayment = strtotime('2027-02-01 12:00:00');
-billingAutomationTestAssert(date('Y-m-d H:i:s', mikhmonBillingAutomationNextDueTimestamp($novemberDue, $latePayment)) === '2026-12-05 00:00:00', 'late payment advances exactly one monthly billing cycle');
+billingAutomationTestAssert(date('Y-m-d H:i:s', mikhmonBillingAutomationNextDueTimestamp($novemberDue, $latePayment)) === '2026-12-05 23:59:59', 'late payment advances exactly one monthly billing cycle and keeps the full due day');
 $futureDue = strtotime('2026-10-05 00:00:00');
 billingAutomationTestAssert(!mikhmonBillingAutomationPaymentWindowOpen($futureDue, 7, strtotime('2026-09-20 12:00:00')), 'future invoice stays outside the payment window');
 billingAutomationTestAssert(mikhmonBillingAutomationPaymentWindowOpen($futureDue, 7, strtotime('2026-09-28 00:00:00')), 'payment window opens on the reminder date');
@@ -79,7 +79,7 @@ $bootstrapCustomer = mikhmonFindCustomer('router-a', $bootstrapCustomerId);
 $bootstrapInvoices = array();
 $bootstrapDue = time() + (3 * 86400);
 $bootstrapInvoice = mikhmonBillingAutomationEnsureInitialInvoice(new BillingBootstrapFakeApi(), 'router-a', $bootstrapInvoices, $bootstrapCustomer, $bootstrapDue);
-billingAutomationTestAssert($bootstrapInvoice && $bootstrapInvoice['status'] === 'unpaid', 'bootstrap invoice is generated from router profile');
+billingAutomationTestAssert($bootstrapInvoice && $bootstrapInvoice['status'] === 'issued', 'bootstrap invoice is generated from router profile as an issued invoice');
 billingAutomationTestAssert((float) $bootstrapInvoice['amount'] === 150.0 && count($bootstrapInvoice['services']) === 1, 'bootstrap invoice carries profile price and service');
 $duplicateBootstrap = mikhmonBillingAutomationEnsureInitialInvoice(new BillingBootstrapFakeApi(), 'router-a', $bootstrapInvoices, $bootstrapCustomer, $bootstrapDue);
 billingAutomationTestAssert(!$duplicateBootstrap, 'bootstrap invoice generation is idempotent');
@@ -207,6 +207,13 @@ billingAutomationTestAssert($paidOnlyResult['reminders'] === 0, 'paid invoices n
 
 $rendered = mikhmonBillingAutomationMessage('Halo {{nama_pelanggan}} {{total_tagihan}} {{detail_layanan}}', mikhmonFindCustomer('router-a', $customerId), $savedInvoice, 'Rp', 'Mikhmon', $savedInvoice['due_date']);
 billingAutomationTestAssert(strpos($rendered, 'Pelanggan A') !== false && strpos($rendered, 'Rp 10.000') !== false, 'template variables are rendered');
+$commissionInvoice = $savedInvoice;
+$commissionInvoice['subtotal'] = 10000;
+$commissionInvoice['admin_fee'] = 0;
+$commissionInvoice['collection_fee'] = 2500;
+$commissionInvoice['amount'] = 12500;
+$commissionMessage = mikhmonBillingAutomationMessage('Rincian Tagihan:\n{{rincian_biaya}}\nTotal: {{total_tagihan}}', mikhmonFindCustomer('router-a', $customerId), $commissionInvoice, 'Rp', 'Mikhmon', $savedInvoice['due_date']);
+billingAutomationTestAssert(strpos($commissionMessage, 'Subtotal Layanan: Rp 10.000') !== false && strpos($commissionMessage, 'Biaya Admin') === false && strpos($commissionMessage, 'Komisi Penagihan: Rp 2.500') !== false && strpos($commissionMessage, 'Total: Rp 12.500') !== false, 'Fonnte message shows subtotal and collection commission without admin fee');
 $savedInvoice['payment_url'] = 'https://app.midtrans.com/snap/v2/vtweb/test-token';
 $renderedWithLink = mikhmonBillingAutomationMessage('Tagihan {{nomor_invoice}}', mikhmonFindCustomer('router-a', $customerId), $savedInvoice, 'Rp', 'Mikhmon', $savedInvoice['due_date']);
 billingAutomationTestAssert(strpos($renderedWithLink, $savedInvoice['payment_url']) !== false, 'payment link is included in WhatsApp message');

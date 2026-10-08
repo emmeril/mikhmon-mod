@@ -106,16 +106,19 @@ if (!isset($_SESSION["mikhmon"])) {
     $mpage = "Komisi Saya";
   } elseif ($mitra == "list") {
     $smitralist = "active";
-    $mpage = "Admin & Mitra";
-  } elseif (in_array($billing, array("1", "unpaid", "paid"), true)) {
+    $mpage = "Pengguna & Peran";
+  } elseif (in_array($billing, array("1", "unpaid", "paid", "reports"), true)) {
     $mbilling = "active";
     $billingmenu = "menu-open";
-    if ($billing === "paid") {
+    if ($billing === "reports") {
+      $sbillingreports = "active";
+      $mpage = "Laporan Billing";
+    } elseif ($billing === "paid") {
       $spaidinvoice = "active";
-      $mpage = "Invoice Paid";
+      $mpage = "Invoice Lunas";
     } else {
       $sunpaidinvoice = "active";
-      $mpage = "Invoice Unpaid";
+      $mpage = "Tagihan Berjalan";
     }
   } elseif (in_array($customer, array("list", "identity-list", "identity-add", "identity-edit", "service-add", "add", "edit"), true)) {
     $mcustomers = "active";
@@ -226,13 +229,13 @@ if (!isset($_SESSION["mikhmon"])) {
     $mpage = $_router_list;
   } elseif ($admin == "users") {
     $sroleusers = "active";
-    $mpage = "Admin & Mitra";
+    $mpage = "Pengguna & Peran";
   } elseif ($id == "sessions" || $id == "remove" || $router == "new") {
     $ssesslist = "active";
     $mpage = $_admin_settings;
   } elseif ($id == "users") {
     $susersadmin = "active";
-    $mpage = "Admin & Mitra";
+    $mpage = "Pengguna & Peran";
   } elseif ($id == "settings" && $session == "new") {
     $snsettings = "active";
     $mpage = $_add_router;
@@ -444,10 +447,30 @@ include('./info.php');
 <?php if (mikhmonIsBiller()): ?>
   <div class="dropdown-btn <?= $mbilling; ?>" role="button" tabindex="0" aria-label="Buka submenu Billing" aria-expanded="<?= $billingmenu === 'menu-open' ? 'true' : 'false'; ?>"><i class="fa fa-money"></i> Billing <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $billingmenu; ?>">
-    <a href="./?billing=unpaid&session=<?= $session; ?>" class="billing-submenu <?= $sunpaidinvoice; ?>"><i class="fa fa-file-text-o"></i><span class="billing-submenu-label">Invoice Unpaid</span></a>
-    <a href="./?billing=paid&session=<?= $session; ?>" class="billing-submenu <?= $spaidinvoice; ?>"><i class="fa fa-check-square-o"></i><span class="billing-submenu-label">Invoice Paid</span></a>
+    <a href="./?billing=unpaid&session=<?= $session; ?>" class="billing-submenu <?= $sunpaidinvoice; ?>"><i class="fa fa-file-text-o"></i><span class="billing-submenu-label">Tagihan Berjalan</span></a>
+    <a href="./?billing=paid&session=<?= $session; ?>" class="billing-submenu <?= $spaidinvoice; ?>"><i class="fa fa-check-square-o"></i><span class="billing-submenu-label">Invoice Lunas</span></a>
   </div>
   <a href="./?commission=1&session=<?= $session; ?>" class="menu <?= $scommission; ?>"><i class="fa fa-line-chart"></i> Komisi Saya</a>
+  <a href="./?billing=reports&session=<?= $session; ?>" class="menu <?= $sbillingreports; ?>"><i class="fa fa-table"></i> Settlement</a>
+<?php elseif (mikhmonIsFinance()): ?>
+  <div class="dropdown-btn <?= $mbilling; ?>" role="button" tabindex="0" aria-label="Buka submenu Billing" aria-expanded="<?= $billingmenu === 'menu-open' ? 'true' : 'false'; ?>"><i class="fa fa-money"></i> Billing <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-container <?= $billingmenu; ?>">
+    <a href="./?billing=unpaid&session=<?= $session; ?>" class="billing-submenu <?= $sunpaidinvoice; ?>"><i class="fa fa-file-text-o"></i><span class="billing-submenu-label">Tagihan Berjalan</span></a>
+    <a href="./?billing=paid&session=<?= $session; ?>" class="billing-submenu <?= $spaidinvoice; ?>"><i class="fa fa-check-square-o"></i><span class="billing-submenu-label">Pembayaran</span></a>
+    <a href="./?billing=reports&session=<?= $session; ?>" class="billing-submenu <?= $sbillingreports; ?>"><i class="fa fa-table"></i><span class="billing-submenu-label">Laporan Billing</span></a>
+  </div>
+<?php elseif (mikhmonIsOperator()): ?>
+  <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
+  <div class="dropdown-btn <?= $mcustomers; ?>"><i class="fa fa-address-card"></i> Pelanggan <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-container <?= $customermenu; ?>">
+    <a href="./?customer=identity-list&session=<?= $session; ?>" class="<?= $sidentitylist; ?>"><i class="fa fa-id-card"></i> Daftar Identitas</a>
+    <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>"><i class="fa fa-list"></i> Daftar Pelanggan</a>
+  </div>
+  <div class="dropdown-btn <?= $mbilling; ?>" role="button" tabindex="0" aria-label="Buka submenu Billing" aria-expanded="<?= $billingmenu === 'menu-open' ? 'true' : 'false'; ?>"><i class="fa fa-money"></i> Billing <i class="fa fa-caret-down"></i></div>
+  <div class="dropdown-container <?= $billingmenu; ?>">
+    <a href="./?billing=unpaid&session=<?= $session; ?>" class="billing-submenu <?= $sunpaidinvoice; ?>"><i class="fa fa-file-text-o"></i><span class="billing-submenu-label">Tagihan Berjalan</span></a>
+    <a href="./?billing=reports&session=<?= $session; ?>" class="billing-submenu <?= $sbillingreports; ?>"><i class="fa fa-warning"></i><span class="billing-submenu-label">Prioritas Piutang</span></a>
+  </div>
 <?php elseif (mikhmonIsMitra()): ?>
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
   <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-ticket"></i> Voucher <i class="fa fa-caret-down"></i></div>
@@ -472,8 +495,9 @@ include('./info.php');
   </div>
   <div class="dropdown-btn <?= $mbilling; ?>" role="button" tabindex="0" aria-label="Buka submenu Billing" aria-expanded="<?= $billingmenu === 'menu-open' ? 'true' : 'false'; ?>"><i class="fa fa-money"></i> Billing <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $billingmenu; ?>">
-    <a href="./?billing=unpaid&session=<?= $session; ?>" class="billing-submenu <?= $sunpaidinvoice; ?>"><i class="fa fa-file-text-o"></i><span class="billing-submenu-label">Invoice Unpaid</span></a>
-    <a href="./?billing=paid&session=<?= $session; ?>" class="billing-submenu <?= $spaidinvoice; ?>"><i class="fa fa-check-square-o"></i><span class="billing-submenu-label">Invoice Paid</span></a>
+    <a href="./?billing=unpaid&session=<?= $session; ?>" class="billing-submenu <?= $sunpaidinvoice; ?>"><i class="fa fa-file-text-o"></i><span class="billing-submenu-label">Tagihan Berjalan</span></a>
+    <a href="./?billing=paid&session=<?= $session; ?>" class="billing-submenu <?= $spaidinvoice; ?>"><i class="fa fa-check-square-o"></i><span class="billing-submenu-label">Invoice Lunas</span></a>
+    <a href="./?billing=reports&session=<?= $session; ?>" class="billing-submenu <?= $sbillingreports; ?>"><i class="fa fa-table"></i><span class="billing-submenu-label">Laporan Billing</span></a>
   </div>
   <div class="dropdown-btn <?= $sselling; ?>"><i class="fa fa-money"></i> <?= $_report ?> <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $reportmenu; ?>">
@@ -483,7 +507,7 @@ include('./info.php');
   </div>
 <?php else: ?>
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
-  <a href="./?admin=users&amp;session=<?= rawurlencode($session); ?>" class="menu <?= $sroleusers . $smitralist; ?>"><i class="fa fa-users"></i> Admin &amp; Mitra</a>
+  <a href="./?admin=users&amp;session=<?= rawurlencode($session); ?>" class="menu <?= $sroleusers . $smitralist; ?>"><i class="fa fa-users"></i> Pengguna &amp; Peran</a>
   <!--users-->
   <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-ticket"></i> Voucher
     <i class="fa fa-caret-down"></i>
@@ -529,8 +553,9 @@ include('./info.php');
   </div>
   <div class="dropdown-btn <?= $mbilling; ?>" role="button" tabindex="0" aria-label="Buka submenu Billing" aria-expanded="<?= $billingmenu === 'menu-open' ? 'true' : 'false'; ?>"><i class="fa fa-money"></i> Billing <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $billingmenu; ?>">
-    <a href="./?billing=unpaid&session=<?= $session; ?>" class="billing-submenu <?= $sunpaidinvoice; ?>"><i class="fa fa-file-text-o"></i><span class="billing-submenu-label">Invoice Unpaid</span></a>
-    <a href="./?billing=paid&session=<?= $session; ?>" class="billing-submenu <?= $spaidinvoice; ?>"><i class="fa fa-check-square-o"></i><span class="billing-submenu-label">Invoice Paid</span></a>
+    <a href="./?billing=unpaid&session=<?= $session; ?>" class="billing-submenu <?= $sunpaidinvoice; ?>"><i class="fa fa-file-text-o"></i><span class="billing-submenu-label">Tagihan Berjalan</span></a>
+    <a href="./?billing=paid&session=<?= $session; ?>" class="billing-submenu <?= $spaidinvoice; ?>"><i class="fa fa-check-square-o"></i><span class="billing-submenu-label">Invoice Lunas</span></a>
+    <a href="./?billing=reports&session=<?= $session; ?>" class="billing-submenu <?= $sbillingreports; ?>"><i class="fa fa-table"></i><span class="billing-submenu-label">Laporan Billing</span></a>
   </div>
    <!--log-->
   <div class="dropdown-btn <?= $log; ?>"><i class=" fa fa-align-justify"></i> <?= $_log ?>

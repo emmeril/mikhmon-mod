@@ -22,7 +22,9 @@ roleTestAssert(strpos($routerConfigLine, "\$data['router-a'] = array (") !== fal
 $mitraId = mikhmonSaveUser('', 'Mitra Satu', 'mitra1', 'mitra', 'router-a', 'secret', true);
 $billerId = mikhmonSaveUser('', 'Biller Satu', 'biller1', 'biller', 'router-a', 'secret', true);
 $adminId = mikhmonSaveUser('', 'Admin Baru', 'adminbaru', 'admin', '', 'secret', true);
-roleTestAssert($mitraId !== false && $billerId !== false && $adminId !== false, 'roles can be saved');
+$financeId = mikhmonSaveUser('', 'Keuangan Baru', 'financebaru', 'finance', '', 'secret', true);
+$operatorId = mikhmonSaveUser('', 'Operator Baru', 'operatorbaru', 'operator', 'router-a', 'secret', true);
+roleTestAssert($mitraId !== false && $billerId !== false && $adminId !== false && $financeId !== false && $operatorId !== false, 'roles can be saved');
 $billerPartner = mikhmonFindPartner($billerId, 'user_id');
 roleTestAssert($billerPartner && $billerPartner['category'] === 'biller' && $billerPartner['commission'] === 2500.0, 'biller account receives a linked partner profile');
 $billerPartner['commission'] = 3500;
@@ -97,6 +99,16 @@ mikhmonSetLoginSession(mikhmonFindUser($billerId));
 roleTestAssert(mikhmonCanOpenMainRoute('billing'), 'biller can open billing');
 roleTestAssert(mikhmonCanOpenMainRoute('commission'), 'biller can open commission details');
 roleTestAssert(!mikhmonCanOpenMainRoute('customer-list'), 'biller cannot open customer management');
+
+mikhmonSetLoginSession(mikhmonFindUser($financeId));
+roleTestAssert(mikhmonRefreshStaffSession(), 'finance session remains valid');
+roleTestAssert(mikhmonCanOpenMainRoute('billing-reports') && mikhmonCanOpenMainRoute('billing'), 'finance can manage billing reports and payments');
+roleTestAssert(!mikhmonCanOpenMainRoute('customer-list') && !mikhmonCanOpenMainRoute('admin-users'), 'finance cannot edit customers or roles');
+
+mikhmonSetLoginSession(mikhmonFindUser($operatorId));
+roleTestAssert(mikhmonRefreshStaffSession(), 'operator session remains valid');
+roleTestAssert(mikhmonCanOpenMainRoute('customer-list') && mikhmonCanOpenMainRoute('billing-reports'), 'operator can manage customers and overdue work');
+roleTestAssert(!mikhmonCanOpenMainRoute('admin-users') && !mikhmonCanOpenMainRoute('admin-settings'), 'operator cannot change administration settings');
 
 mikhmonSetLoginSession(mikhmonFindUser($adminId));
 roleTestAssert(mikhmonRefreshStaffSession(), 'active additional admin session remains valid');

@@ -30,9 +30,9 @@ function mikhmonFonnteDefaults() {
     'queue_min_delay_minutes' => 5,
     'queue_max_delay_minutes' => 20,
     'templates' => array(
-      'reminder' => "Yth. Bapak/Ibu {{nama_pelanggan}},\n\nTagihan {{nama_brand}} akan jatuh tempo pada {{jatuh_tempo}}.\nNo. Invoice: {{nomor_invoice}}\nTotal Tagihan: {{total_tagihan}}\n\nDetail layanan:\n{{detail_layanan}}\n\nMohon melakukan pembayaran sebelum jatuh tempo. Terima kasih.",
-      'isolation' => "Yth. Bapak/Ibu {{nama_pelanggan}},\n\nLayanan {{nama_brand}} saat ini diisolir karena invoice {{nomor_invoice}} belum dibayar.\nJatuh tempo: {{jatuh_tempo}}\nTotal Tagihan: {{total_tagihan}}\n\nSilakan melakukan pembayaran agar layanan dapat diaktifkan kembali.",
-      'payment' => "Pembayaran invoice {{nomor_invoice}} telah diterima.\n\nNama: {{nama_pelanggan}}\nTotal Dibayar: {{total_tagihan}}\nTanggal Bayar: {{tanggal_bayar}}\n\nLayanan Anda telah aktif kembali.\nJatuh tempo berikutnya: {{jatuh_tempo_berikutnya}}.",
+      'reminder' => "Yth. Bapak/Ibu {{nama_pelanggan}},\n\nTagihan {{nama_brand}} akan jatuh tempo pada {{jatuh_tempo}}.\nNo. Invoice: {{nomor_invoice}}\n\nDetail layanan:\n{{detail_layanan}}\n\nRincian Tagihan:\n{{rincian_biaya}}\nTotal Tagihan: {{total_tagihan}}\n\nMohon melakukan pembayaran sebelum jatuh tempo. Terima kasih.",
+      'isolation' => "Yth. Bapak/Ibu {{nama_pelanggan}},\n\nLayanan {{nama_brand}} saat ini diisolir karena invoice {{nomor_invoice}} belum dibayar.\nJatuh tempo: {{jatuh_tempo}}\n\nRincian Tagihan:\n{{rincian_biaya}}\nTotal Tagihan: {{total_tagihan}}\n\nSilakan melakukan pembayaran agar layanan dapat diaktifkan kembali.",
+      'payment' => "Pembayaran invoice {{nomor_invoice}} telah diterima.\n\nNama: {{nama_pelanggan}}\nRincian Pembayaran:\n{{rincian_biaya}}\nTotal Dibayar: {{total_tagihan}}\nTanggal Bayar: {{tanggal_bayar}}\n\nLayanan Anda telah aktif kembali.\nJatuh tempo berikutnya: {{jatuh_tempo_berikutnya}}.",
     ),
   );
 }

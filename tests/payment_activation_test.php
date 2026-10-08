@@ -35,7 +35,9 @@ $customerId = mikhmonSaveCustomer('router-a', '', 'Pelanggan A', '', '', 'hotspo
 $invoiceId = mikhmonSaveInvoice('router-a', array(
   'id' => 'invoice-paid-gateway', 'number' => 'INV-ACTIVATE', 'customer_id' => $customerId,
   'customer_name' => 'Pelanggan A', 'services' => array(array('id'=>'service-a','service'=>'hotspot','username'=>'cust-a','profile'=>'basic','amount'=>100)),
-  'service_count' => 1, 'amount' => 100, 'due_date' => date('Y-m-d H:i:s', time() - 3600), 'status' => 'unpaid',
+  'service_count' => 1, 'subtotal' => 100, 'admin_fee' => 0, 'collection_fee' => 5, 'amount' => 105,
+  'collection_biller_user_id' => 'gateway-biller', 'collection_biller_partner_id' => 'gateway-partner', 'collection_biller_name' => 'Biller Gateway',
+  'due_date' => date('Y-m-d H:i:s', time() - 3600), 'status' => 'unpaid',
   'gateway_payment_received' => true, 'payment_gateway' => 'midtrans', 'gateway_paid_at' => time(), 'created_at' => time() - 10,
 ));
 $api = new PaymentActivationFakeApi();
@@ -43,6 +45,7 @@ $result = mikhmonPaymentActivationProcess('router-a', $invoiceId, $api, array('a
 paymentActivationTestAssert(!empty($result['success']), 'gateway payment can activate services');
 $saved = mikhmonGetInvoices('router-a');
 paymentActivationTestAssert($saved[0]['status'] === 'paid' && !empty($saved[0]['next_invoice_id']), 'paid invoice and next invoice are saved');
+paymentActivationTestAssert($saved[0]['paid_by_user_id'] === 'gateway-biller' && $saved[0]['biller_partner_id'] === 'gateway-partner' && $saved[0]['biller_commission'] === 5.0 && $saved[0]['amount'] === 105.0, 'gateway payment keeps the collector and customer-funded commission');
 $setSeen = false;
 foreach ($api->commands as $command) if ($command[0] === '/ip/hotspot/user/set' && ($command[1]['disabled'] ?? '') === 'no') $setSeen = true;
 paymentActivationTestAssert($setSeen, 'hotspot user is enabled');
@@ -68,9 +71,9 @@ paymentActivationTestAssert(!empty($manualResult['success']), 'manual biller pay
 paymentActivationTestAssert(!empty($manualResult['payment_notification_sent']) && $manualNotificationCount === 1, 'marking an invoice paid sends its confirmation immediately');
 $manualInvoices = mikhmonGetInvoices('router-c');
 paymentActivationTestAssert(!empty($manualInvoices[0]['automation']['payment_sent_at']) && empty($manualInvoices[0]['automation']['payment_notification_pending']), 'immediate payment notification status is stored on the paid invoice');
-paymentActivationTestAssert($manualInvoices[0]['subtotal'] === 100000.0 && $manualInvoices[0]['admin_fee'] === 2500.0 && $manualInvoices[0]['amount'] === 102500.0, 'biller commission is added once as the customer admin fee');
+paymentActivationTestAssert((float) $manualInvoices[0]['subtotal'] === 100000.0 && (float) $manualInvoices[0]['admin_fee'] === 0.0 && (float) $manualInvoices[0]['collection_fee'] === 2500.0 && (float) $manualInvoices[0]['amount'] === 102500.0, 'collection commission is added to the customer invoice total');
 paymentActivationTestAssert($manualInvoices[0]['biller_partner_id'] === 'mitra-biller' && $manualInvoices[0]['biller_commission'] === 2500.0, 'paid invoice keeps the biller and commission snapshot');
-paymentActivationTestAssert($manualInvoices[1]['admin_fee'] === 0 && $manualInvoices[1]['amount'] === 100000.0, 'next invoice carries the service subtotal without the previous admin fee');
+paymentActivationTestAssert($manualInvoices[1]['status'] === 'draft' && $manualInvoices[1]['admin_fee'] === 0 && $manualInvoices[1]['collection_fee'] === 0 && $manualInvoices[1]['amount'] === 100000.0, 'next invoice is a draft and does not carry the previous collection commission');
 mikhmonFonnteWriteConfig(array('enabled' => false));
 
 $customerFail = mikhmonSaveCustomer('router-b', '', 'Pelanggan B', '', '', 'hotspot', 'cust-b1', 'basic');

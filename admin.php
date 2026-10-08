@@ -98,6 +98,9 @@ if ($id == "login" || substr($url, -1) == "p") {
         if ($staff['role'] === 'admin') {
           $target = mikhmonAdminLandingUrl($data);
           $loginSession = mikhmonDefaultRouterSession($data);
+        } elseif ($staff['role'] === 'finance') {
+          $loginSession = mikhmonDefaultRouterSession($data);
+          $target = './?billing=reports&session=' . rawurlencode($loginSession);
         } else {
           $staffSession = rawurlencode($staff['session']);
           $target = $staff['role'] === 'biller' ? './?billing=unpaid&session=' . $staffSession : './?session=' . $staffSession;

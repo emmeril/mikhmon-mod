@@ -11,9 +11,9 @@ if (!function_exists('mikhmonCrudModalStart')) {
         .crud-modal-content>.row{margin:0}
         .crud-modal-content>.row>[class*=col-]{width:100%;max-width:100%;box-sizing:border-box}
         .crud-modal-content .card{margin-top:0;margin-bottom:0}
-        .crud-modal-content .card-header{min-height:52px;box-sizing:border-box;display:flex;align-items:center}
+        .crud-modal-content .card-header{position:relative;min-height:52px;box-sizing:border-box;display:flex;align-items:center}
         .crud-modal-content .card-header h3{width:100%;padding-right:48px;box-sizing:border-box}
-        .crud-modal-close{position:absolute;z-index:3;top:4px;right:5px;width:44px;height:44px;margin:0;padding:0;border:0;border-radius:3px;font-size:25px;line-height:44px;text-align:center;cursor:pointer}
+        .crud-modal-close{position:absolute;z-index:3;top:4px;right:4px;display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin:0;padding:0;border:0;border-radius:3px;font-size:25px;line-height:1;text-align:center;cursor:pointer}
         .crud-form-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid rgba(127,127,127,.25)}
         .crud-form-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;margin:0;box-sizing:border-box;white-space:normal}
         .crud-modal-layer :focus-visible{outline:2px solid #f5a623;outline-offset:2px}
@@ -35,7 +35,7 @@ if (!function_exists('mikhmonCrudModalStart')) {
         }
       </style>';
     }
-    echo '<div class="crud-modal-layer" data-crud-modal data-close-url="' . htmlspecialchars((string) $closeUrl, ENT_QUOTES) . '" role="dialog" aria-modal="true" aria-label="' . htmlspecialchars((string) $label, ENT_QUOTES) . '"><div class="crud-modal-dialog" role="document"><button class="btn bg-danger crud-modal-close" type="button" aria-label="Close modal">&times;</button><div class="crud-modal-content">';
+    echo '<div class="crud-modal-layer" data-crud-modal data-close-url="' . htmlspecialchars((string) $closeUrl, ENT_QUOTES) . '" role="dialog" aria-modal="true" aria-label="' . htmlspecialchars((string) $label, ENT_QUOTES) . '"><div class="crud-modal-dialog" role="document"><button class="btn bg-danger crud-modal-close" type="button" aria-label="Tutup modal">&times;</button><div class="crud-modal-content">';
   }
 }
 
@@ -46,6 +46,8 @@ if (!function_exists('mikhmonCrudModalEnd')) {
         var modal=document.querySelector("[data-crud-modal]");
         if(!modal)return;
         var closeButton=modal.querySelector(".crud-modal-close");
+        var cardHeader=modal.querySelector(".crud-modal-content .card-header");
+        if(cardHeader)cardHeader.appendChild(closeButton);
         var closeUrl=modal.getAttribute("data-close-url");
         var closeModal=function(){window.location.assign(closeUrl);};
         document.body.classList.add("crud-modal-open");
