@@ -118,14 +118,14 @@ function mikhmonReadDatabase() {
     return $GLOBALS['_mikhmon_database_cache'];
   }
   if (!is_file($path)) {
-    $empty = array('version' => 7, 'customers' => array(), 'invoices' => array(), 'report_records' => array(), 'users' => array(), 'partners' => array(), 'customer_auth' => array(), 'finance_entries' => array());
+    $empty = array('version' => 8, 'customers' => array(), 'invoices' => array(), 'report_records' => array(), 'users' => array(), 'partners' => array(), 'customer_auth' => array(), 'finance_entries' => array(), 'revenue_deposits' => array());
     $GLOBALS['_mikhmon_database_cache'] = $empty;
     $GLOBALS['_mikhmon_database_cache_path'] = $path;
     return $empty;
   }
   $data = json_decode((string) @file_get_contents($path), true);
   if (!is_array($data)) {
-    $empty = array('version' => 7, 'customers' => array(), 'invoices' => array(), 'report_records' => array(), 'users' => array(), 'partners' => array(), 'customer_auth' => array(), 'finance_entries' => array());
+    $empty = array('version' => 8, 'customers' => array(), 'invoices' => array(), 'report_records' => array(), 'users' => array(), 'partners' => array(), 'customer_auth' => array(), 'finance_entries' => array(), 'revenue_deposits' => array());
     $GLOBALS['_mikhmon_database_cache'] = $empty;
     $GLOBALS['_mikhmon_database_cache_path'] = $path;
     return $empty;
@@ -163,6 +163,7 @@ function mikhmonReadDatabase() {
     $data['customer_auth'] = array();
   }
   if (!isset($data['finance_entries']) || !is_array($data['finance_entries'])) $data['finance_entries'] = array();
+  if (!isset($data['revenue_deposits']) || !is_array($data['revenue_deposits'])) $data['revenue_deposits'] = array();
   $changed = false;
   $partnerUserIds = array();
   foreach ($data['partners'] as $partnerIndex => $partner) {
@@ -205,7 +206,7 @@ function mikhmonReadDatabase() {
     }
   }
   if ($changed) {
-    $data['version'] = 7;
+    $data['version'] = 8;
     mikhmonWriteDatabase($data);
   }
   $GLOBALS['_mikhmon_database_cache'] = $data;
@@ -1184,6 +1185,43 @@ function mikhmonSaveFinanceEntry($session, $entry) {
   return mikhmonWriteDatabase($database) ? $row['id'] : false;
 }
 
+function mikhmonGetRevenueDeposits($session, $collectorUserId = '') {
+  $database = mikhmonReadDatabase();
+  $rows = array_values((array) ($database['revenue_deposits'][$session] ?? array()));
+  $collectorUserId = trim((string) $collectorUserId);
+  if ($collectorUserId === '') return $rows;
+  return array_values(array_filter($rows, function ($row) use ($collectorUserId) {
+    return is_array($row) && (string) ($row['collector_user_id'] ?? '') === $collectorUserId;
+  }));
+}
+
+function mikhmonSaveRevenueDeposit($session, $entry) {
+  $database = mikhmonReadDatabase();
+  if (!isset($database['revenue_deposits'][$session]) || !is_array($database['revenue_deposits'][$session])) $database['revenue_deposits'][$session] = array();
+  $collectorUserId = trim(strip_tags((string) ($entry['collector_user_id'] ?? '')));
+  $collector = $collectorUserId !== '' ? mikhmonFindUser($collectorUserId) : false;
+  $amount = max(0, (float) ($entry['amount'] ?? 0));
+  $date = trim((string) ($entry['date'] ?? date('Y-m-d')));
+  $method = strtolower(trim((string) ($entry['method'] ?? 'transfer')));
+  if (!$collector || !in_array($collector['role'] ?? '', array('mitra', 'biller'), true) || (string) ($collector['session'] ?? '') !== (string) $session) return false;
+  if ($amount <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return false;
+  if (!in_array($method, array('cash', 'transfer'), true)) $method = 'transfer';
+  $row = array(
+    'id' => 'deposit-' . bin2hex(random_bytes(8)),
+    'collector_user_id' => $collectorUserId,
+    'collector_name' => trim(strip_tags((string) ($collector['name'] ?? $collector['username'] ?? ''))),
+    'amount' => $amount,
+    'date' => $date,
+    'method' => $method,
+    'reference' => trim(strip_tags((string) ($entry['reference'] ?? ''))),
+    'note' => trim(strip_tags((string) ($entry['note'] ?? ''))),
+    'created_at' => time(),
+    'created_by' => trim(strip_tags((string) ($entry['created_by'] ?? ''))),
+  );
+  $database['revenue_deposits'][$session][] = $row;
+  return mikhmonWriteDatabase($database) ? $row['id'] : false;
+}
+
 function mikhmonDeleteCustomer($session, $id) {
   $database = mikhmonReadDatabase();
   if (!isset($database['customers'][$session]) || !is_array($database['customers'][$session])) {
@@ -1206,7 +1244,7 @@ function mikhmonDeleteCustomer($session, $id) {
 function mikhmonWriteDatabase($data) {
   $path = mikhmonBackupPath();
   $tmp = $path . '.tmp.' . getmypid();
-  $data['version'] = 7;
+  $data['version'] = 8;
   $json = json_encode($data, JSON_UNESCAPED_SLASHES);
   if ($json === false || @file_put_contents($tmp, $json, LOCK_EX) === false) {
     return false;

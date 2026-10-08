@@ -79,6 +79,10 @@ routerDatabaseBackupTestAssert(mikhmonSaveInvoice('router-lama', array(
   'status' => 'paid',
   'paid_at' => 1789850000,
 )) !== false, 'source invoice is created');
+routerDatabaseBackupTestAssert(mikhmonSaveRevenueDeposit('router-lama', array(
+  'collector_user_id' => $mitraId, 'amount' => 75000, 'date' => '2026-09-20',
+  'method' => 'transfer', 'reference' => 'TRX-BACKUP', 'created_by' => 'Admin',
+)) !== false, 'source partner deposit is created');
 
 $api = new RouterDatabaseBackupFakeApi();
 $stored = mikhmonStoreRouterDatabaseBackup($api, 'router-lama', 'password-pemulihan');
@@ -119,6 +123,8 @@ $restoredPartner = mikhmonFindPartner($restoredMitra['id'], 'user_id');
 routerDatabaseBackupTestAssert($restoredPartner && $restoredPartner['category'] === 'sales' && $restoredPartner['commission'] === 12500.0 && $restoredPartner['phone'] === '081299999999', 'partner category and commission are restored with the remapped account');
 routerDatabaseBackupTestAssert($customers[0]['mitra_id'] === $restoredMitra['id'], 'customer assignment to mitra is preserved');
 routerDatabaseBackupTestAssert($customers[0]['id'] === $existingCustomerId && mikhmonGetInvoices('router-baru')[0]['customer_id'] === $existingCustomerId, 'invoice customer references follow an existing target identity');
+$restoredDeposits = mikhmonGetRevenueDeposits('router-baru');
+routerDatabaseBackupTestAssert(count($restoredDeposits) === 1 && $restoredDeposits[0]['collector_user_id'] === $restoredMitra['id'] && (float) $restoredDeposits[0]['amount'] === 75000.0, 'deposit history is restored with the remapped collector');
 $restoredAgain = mikhmonRestoreRouterDatabaseBackup($api, 'router-baru', 'password-pemulihan');
 routerDatabaseBackupTestAssert(!empty($restoredAgain['status']) && count(mikhmonGetCustomers('router-baru')) === 1 && count(mikhmonGetInvoices('router-baru')) === 2, 'restoring the same backup does not create duplicates');
 

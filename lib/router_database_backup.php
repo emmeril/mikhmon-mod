@@ -60,6 +60,7 @@ function mikhmonRouterDatabaseBackupPayload($session) {
     'customers' => array_values((array) ($database['customers'][$session] ?? array())),
     'invoices' => array_values((array) ($database['invoices'][$session] ?? array())),
     'report_records' => array_values((array) ($database['report_records'][$session] ?? array())),
+    'revenue_deposits' => array_values((array) ($database['revenue_deposits'][$session] ?? array())),
     'users' => array_values($users),
     'partners' => array_values(array_filter((array) ($database['partners'] ?? array()), function ($partner) use ($session) {
       return is_array($partner) && (string) ($partner['session'] ?? '') === (string) $session;
@@ -378,6 +379,15 @@ function mikhmonRestoreRouterDatabaseBackup($API, $targetSession, $password) {
   if (!isset($database['report_records'][$targetSession]) || !is_array($database['report_records'][$targetSession])) $database['report_records'][$targetSession] = array();
   $reportMerge = mikhmonMergeRowsByField($database['report_records'][$targetSession], $payload['report_records'] ?? array(), 'name');
   $database['report_records'][$targetSession] = $reportMerge['rows'];
+  if (!isset($database['revenue_deposits'][$targetSession]) || !is_array($database['revenue_deposits'][$targetSession])) $database['revenue_deposits'][$targetSession] = array();
+  $backupDeposits = array_values((array) ($payload['revenue_deposits'] ?? array()));
+  foreach ($backupDeposits as $depositIndex => $deposit) {
+    if (!is_array($deposit)) continue;
+    $oldCollectorId = (string) ($deposit['collector_user_id'] ?? '');
+    if ($oldCollectorId !== '' && isset($userIdMap[$oldCollectorId])) $backupDeposits[$depositIndex]['collector_user_id'] = $userIdMap[$oldCollectorId];
+  }
+  $depositMerge = mikhmonMergeRowsByField($database['revenue_deposits'][$targetSession], $backupDeposits, 'id');
+  $database['revenue_deposits'][$targetSession] = $depositMerge['rows'];
 
   if (!mikhmonWriteDatabase($database)) return array('status' => false, 'error' => 'Database lokal gagal ditulis.');
   return array('status' => true, 'customers' => count((array) ($payload['customers'] ?? array())), 'customers_added' => $customersAdded, 'invoices' => count((array) ($payload['invoices'] ?? array())), 'invoices_added' => $invoiceMerge['added'], 'users_added' => $usersAdded, 'source_session' => (string) ($payload['session'] ?? ''));
