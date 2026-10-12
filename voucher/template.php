@@ -81,6 +81,9 @@
       <td colspan="2" style="font-weight:bold; font-size:12px">Login: http://<?= $dnsname; ?></td>
 <!-- /  -->
     </tr>
+    <tr>
+      <td colspan="2" style="font-size:10px; text-align:center; border-top:1px solid black;">Dibuat oleh: <?= htmlspecialchars($voucherCreator, ENT_QUOTES); ?></td>
+    </tr>
 <!-- /  -->
   </tbody>
     </table>

@@ -35,6 +35,45 @@ function mikhmonPartnerWorkflowVoucherOwner($session, $requestedUserId, $role, $
   );
 }
 
+function mikhmonPartnerWorkflowVoucherCreatorTag($role, $userId = '') {
+  $role = strtolower(trim((string) $role));
+  $userId = trim((string) $userId);
+  if ($role === 'system') return '[creator:system]';
+  if ($userId !== '') {
+    $user = mikhmonFindUser($userId);
+    if ($user && ($user['role'] ?? '') === $role) return '[creator:' . $userId . ']';
+  }
+  return $role === 'mitra' ? '' : '[creator:admin]';
+}
+
+function mikhmonPartnerWorkflowVoucherCreator($session, $comment) {
+  $comment = (string) $comment;
+  $creatorId = '';
+  if (preg_match('/\[creator:([^\]]+)\]/i', $comment, $matches)) $creatorId = trim((string) $matches[1]);
+  if ($creatorId === 'system') return 'Sistem';
+  if ($creatorId === 'admin') return 'Administrator';
+  if ($creatorId !== '') {
+    $user = mikhmonFindUser($creatorId);
+    if ($user && (($user['session'] ?? '') === '' || (string) $user['session'] === (string) $session)) {
+      $name = trim((string) ($user['name'] ?? $user['username'] ?? ''));
+      if (($user['role'] ?? '') === 'mitra') {
+        $partner = mikhmonFindPartner($creatorId, 'user_id');
+        if ($partner && trim((string) ($partner['name'] ?? '')) !== '') $name = trim((string) $partner['name']);
+        return 'Mitra' . ($name !== '' ? ' - ' . $name : '');
+      }
+      if (($user['role'] ?? '') === 'admin') return 'Administrator' . ($name !== '' ? ' - ' . $name : '');
+    }
+  }
+  if (preg_match('/\[mitra:([^\]]+)\]/i', $comment, $matches)) {
+    $account = mikhmonPartnerWorkflowFindAccount($session, trim((string) $matches[1]), false);
+    if ($account) {
+      $name = trim((string) ($account['partner']['name'] ?? $account['user']['name'] ?? ''));
+      return 'Mitra' . ($name !== '' ? ' - ' . $name : '');
+    }
+  }
+  return 'Administrator';
+}
+
 function mikhmonPartnerWorkflowApplyInvoiceSnapshot($session, $invoice, $customer) {
   $invoice = (array) $invoice;
   $customer = (array) $customer;

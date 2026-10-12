@@ -67,7 +67,8 @@ if (!isset($_SESSION["mikhmon"])) {
     }
     
       $ownerTag = (string) ($voucherOwner['tag'] ?? '');
-      $comment = $usermode . ($ownerTag !== '' ? $ownerTag . ' ' : '') . $comment;
+      $creatorTag = mikhmonPartnerWorkflowVoucherCreatorTag(mikhmonRole(), mikhmonUserId());
+      $comment = $usermode . ($ownerTag !== '' ? $ownerTag . ' ' : '') . ($creatorTag !== '' ? $creatorTag . ' ' : '') . $comment;
     
     if ($profileError === '') {
       $API->comm("/ip/hotspot/user/add", array(

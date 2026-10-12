@@ -28,6 +28,7 @@ function sendToQuickPrinterChrome(){
                         }?>
                         "<line0>\n" +
                         "<center>Login : http://<?= $dnsname ?>\n" +
+                        <?= json_encode("<center>Dibuat oleh: " . $voucherCreator . "\n"); ?> +
                         //"<line0>\n" +
                         <?php if($qrbt == "enable"){
                           echo '"<center><image>" + "'.$qrcode.'" +"\n"';

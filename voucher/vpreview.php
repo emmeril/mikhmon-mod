@@ -31,6 +31,7 @@ if (!isset($_SESSION["mikhmon"])) {
 // load config
   include('../include/config.php');
   include('../include/readcfg.php');
+  include_once('../lib/partner_workflow.php');
 
   include('../lib/formatbytesbites.php');
 
@@ -53,7 +54,8 @@ if (!isset($_SESSION["mikhmon"])) {
   $password = "1234";
   $timelimit = "6h";
   $getdatalimit = "1073741824";
-  $comment = "test";
+  $comment = "vc-preview [creator:admin]";
+  $voucherCreator = mikhmonPartnerWorkflowVoucherCreator($session, $comment);
   $validity = "1d";
   $profile = "6Jam";
 

@@ -29,6 +29,9 @@ Profile :
 Comment :
 <?= $comment; ?>
 
+Pembuat Voucher :
+<?= $voucherCreator; ?>
+
 DNS Name Hotspot :
 <?= $dnsname; ?>
 

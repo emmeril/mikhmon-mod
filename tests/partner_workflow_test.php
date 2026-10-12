@@ -29,6 +29,14 @@ $selfOwner = mikhmonPartnerWorkflowVoucherOwner('router-a', $ownerB, 'mitra', $o
 partnerWorkflowTestAssert(!empty($selfOwner['valid']) && $selfOwner['user_id'] === $ownerA, 'partner-generated vouchers are always assigned to the logged-in partner');
 $invalidOwner = mikhmonPartnerWorkflowVoucherOwner('router-a', 'missing', 'admin', '');
 partnerWorkflowTestAssert(empty($invalidOwner['valid']), 'unknown voucher owner is rejected');
+$adminCreatorTag = mikhmonPartnerWorkflowVoucherCreatorTag('admin');
+$mitraCreatorTag = mikhmonPartnerWorkflowVoucherCreatorTag('mitra', $ownerA);
+partnerWorkflowTestAssert($adminCreatorTag === '[creator:admin]', 'built-in administrator receives an explicit creator tag');
+partnerWorkflowTestAssert($mitraCreatorTag === '[creator:' . $ownerA . ']', 'partner creator tag stores the partner account id');
+partnerWorkflowTestAssert(mikhmonPartnerWorkflowVoucherCreator('router-a', 'vc-batch ' . $adminCreatorTag) === 'Administrator', 'administrator signature resolves from its creator tag');
+partnerWorkflowTestAssert(mikhmonPartnerWorkflowVoucherCreator('router-a', 'vc-batch ' . $mitraCreatorTag) === 'Mitra - Mitra A', 'partner signature resolves to the partner name');
+partnerWorkflowTestAssert(mikhmonPartnerWorkflowVoucherCreator('router-a', 'vc-portal [creator:system]') === 'Sistem', 'portal-generated voucher identifies the system as creator');
+partnerWorkflowTestAssert(mikhmonPartnerWorkflowVoucherCreator('router-a', 'vc-legacy [mitra:' . $ownerB . ']') === 'Mitra - Mitra B', 'legacy partner voucher falls back to its owner tag');
 
 $customerId = mikhmonSaveCustomer('router-a', '', 'Pelanggan A', '', '', 'hotspot', 'cust-a', 'billing', $ownerA);
 $customer = mikhmonFindCustomer('router-a', $customerId);
@@ -48,6 +56,22 @@ partnerWorkflowTestAssert(count($rows) === 1 && (float) $rows[0]['commission'] =
 
 $voucherInvoice = mikhmonPartnerWorkflowApplyInvoiceSnapshot('router-a', array('kind' => 'voucher'), $customer);
 partnerWorkflowTestAssert((float) $voucherInvoice['mitra_commission'] === 0.0, 'voucher invoices use HPP margin and do not receive recurring invoice commission');
+
+$hotspotname = 'Hotspot Test';
+$num = 1;
+$usermode = 'vc';
+$username = $password = 'ABC123';
+$validity = '1d';
+$timelimit = $datalimit = $price = '';
+$dnsname = 'login.test';
+$qr = 'no';
+$qrcode = '';
+$logo = '';
+$voucherCreator = 'Mitra - Mitra A';
+ob_start();
+include dirname(__DIR__) . '/voucher/template.php';
+$voucherHtml = ob_get_clean();
+partnerWorkflowTestAssert(strpos($voucherHtml, 'Dibuat oleh: Mitra - Mitra A') !== false, 'printed voucher template includes its creator signature');
 
 @unlink($databasePath);
 echo 'partner-workflow-tests: OK' . PHP_EOL;

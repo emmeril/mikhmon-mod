@@ -34,6 +34,7 @@ if (!isset($_SESSION["mikhmon"])) {
   include('../include/config.php');
   include('../include/readcfg.php');
   include_once('../include/access.php');
+  include_once('../lib/partner_workflow.php');
 
   include('../lib/formatbytesbites.php');
 
@@ -189,6 +190,7 @@ table.voucher {
   $timelimit = $regtable['limit-uptime'];
   $getdatalimit = $regtable['limit-bytes-total'];
   $comment = $regtable['comment'];
+  $voucherCreator = mikhmonPartnerWorkflowVoucherCreator($session, $comment);
   if ($getdatalimit == 0) {
     $datalimit = "";
   } else {

@@ -112,6 +112,8 @@ date_default_timezone_set($_SESSION['timezone']);
 		if ($ownerTag !== '') {
 			$adcomment = $ownerTag . ($adcomment !== '' ? ' ' . $adcomment : '');
 		}
+		$creatorTag = mikhmonPartnerWorkflowVoucherCreatorTag(mikhmonRole(), mikhmonUserId());
+		if ($creatorTag !== '') $adcomment = trim($adcomment . ' ' . $creatorTag);
 		$getprofile = $API->comm("/ip/hotspot/user/profile/print", array("?name" => "$profile"));
 		$ponlogin = $getprofile[0]['on-login'];
 		$getvalid = explode(",", $ponlogin)[3];

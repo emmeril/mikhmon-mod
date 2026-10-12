@@ -66,6 +66,8 @@ $getquickprint = $API->comm("/system/script/print", array("?name" => "$quickprin
   $comment = $quickprintsource[10];
   $voucherOwner = mikhmonPartnerWorkflowVoucherOwner($session, '', mikhmonRole(), mikhmonUserId());
   if (!empty($voucherOwner['valid']) && !empty($voucherOwner['tag'])) $comment = $voucherOwner['tag'] . ($comment !== '' ? ' ' . $comment : '');
+  $creatorTag = mikhmonPartnerWorkflowVoucherCreatorTag(mikhmonRole(), mikhmonUserId());
+  if ($creatorTag !== '') $comment = trim($comment . ' ' . $creatorTag);
   $getvalid = $quickprintsource[11];
   $getprice = explode("_",$quickprintsource[12])[0];
   $getsprice = explode("_",$quickprintsource[12])[1];
@@ -212,6 +214,7 @@ $getquickprint = $API->comm("/system/script/print", array("?name" => "$quickprin
 					$utimelimit = $userdetails['limit-uptime'];
           $udatalimit = $userdetails['limit-bytes-total'];
           $ucomment = $userdetails['comment'];
+          $voucherCreator = mikhmonPartnerWorkflowVoucherCreator($session, $ucomment);
         
           if (substr(formatBytes2($udatalimit, 2), -2) == "MB") {
             $udatalimit = $udatalimit / 1048576;

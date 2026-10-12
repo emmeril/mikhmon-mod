@@ -43,6 +43,9 @@
         </table>
       </td>
     </tr>
+    <tr>
+      <td style="font-size:9px; text-align:center; border-top:1px solid black;">Dibuat oleh: <?= htmlspecialchars($voucherCreator, ENT_QUOTES); ?></td>
+    </tr>
   </tbody>
     </table>
       </td>
