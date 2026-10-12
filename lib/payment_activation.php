@@ -9,6 +9,7 @@ require_once dirname(__DIR__) . '/lib/routeros_api.class.php';
 require_once dirname(__DIR__) . '/lib/fonnte.php';
 require_once dirname(__DIR__) . '/lib/billing_automation.php';
 require_once dirname(__DIR__) . '/lib/billing_profile.php';
+require_once dirname(__DIR__) . '/lib/partner_workflow.php';
 
 function mikhmonPaymentActivationApiError($response) {
   // RouterOS returns the newly created item id as a scalar for successful
@@ -220,6 +221,7 @@ function mikhmonPaymentActivationProcess($session, $invoiceId, $api = null, $opt
     $provider = strtoupper((string) ($invoice['payment_gateway'] ?? 'gateway'));
     $invoice['status'] = 'paid';
     $invoice['paid_at'] = !empty($invoice['gateway_paid_at']) ? (int) $invoice['gateway_paid_at'] : $now;
+    $invoice = mikhmonPartnerWorkflowApplyInvoiceSnapshot($session, $invoice, $customer);
     $storedCollectionFee = mikhmonInvoiceCollectionFee($invoice);
     $optionCommission = max(0, (float) ($options['biller_commission'] ?? 0));
     $collectionFee = $optionCommission > 0 ? $optionCommission : $storedCollectionFee;

@@ -17,6 +17,7 @@
  */
 session_start();
 include_once(__DIR__ . '/../lib/billing_profile.php');
+include_once(__DIR__ . '/../lib/partner_workflow.php');
 // hide all error
 error_reporting(0);
 
@@ -33,6 +34,7 @@ date_default_timezone_set($_SESSION['timezone']);
 	$getprofile = array_values(array_filter((array) $allProfiles, function ($profileRow) {
 		return isset($profileRow['name']) && mikhmonBillingProfileExpiredMode('hotspot', $profileRow) !== 'none';
 	}));
+	$voucherMitras = function_exists('mikhmonIsAdmin') && mikhmonIsAdmin() ? mikhmonGetUsers('mitra', $session) : array();
 	$profileError = '';
 	if ($genprof != "") {
 		$selectedProfile = $API->comm("/ip/hotspot/user/profile/print", array(
@@ -82,6 +84,8 @@ date_default_timezone_set($_SESSION['timezone']);
 		$selectedProfile = array();
 		foreach ((array) $allProfiles as $profileRow) if (isset($profileRow['name']) && (string) $profileRow['name'] === (string) $profile) { $selectedProfile = $profileRow; break; }
 		if (!$selectedProfile || mikhmonBillingProfileExpiredMode('hotspot', $selectedProfile) === 'none') $profileError = 'Profile dengan Expired Mode = None khusus untuk Billing dan tidak dapat dipakai di menu Generate User.';
+		$voucherOwner = mikhmonPartnerWorkflowVoucherOwner($session, $_POST['mitra_user_id'] ?? '', mikhmonRole(), mikhmonUserId());
+		if (empty($voucherOwner['valid'])) $profileError = (string) ($voucherOwner['message'] ?? 'Mitra voucher tidak valid.');
 		if ($profileError !== '') {
 			$_SESSION['ubp'] = '';
 		} else {
@@ -104,7 +108,7 @@ date_default_timezone_set($_SESSION['timezone']);
 		} else {
 			$adcomment = $adcomment;
 		}
-		$ownerTag = function_exists('mikhmonOwnerTag') ? mikhmonOwnerTag() : '';
+		$ownerTag = (string) ($voucherOwner['tag'] ?? '');
 		if ($ownerTag !== '') {
 			$adcomment = $ownerTag . ($adcomment !== '' ? ' ' . $adcomment : '');
 		}
@@ -407,6 +411,14 @@ date_default_timezone_set($_SESSION['timezone']);
 	<tr>
     <td class="align-middle"><?= $_comment ?></td><td><input class="form-control " type="text" title="No special characters" id="comment" autocomplete="off" name="adcomment" value=""></td>
   </tr>
+	<?php if (function_exists('mikhmonIsAdmin') && mikhmonIsAdmin()): ?>
+	<tr>
+	  <td class="align-middle">Mitra Pemilik</td>
+	  <td><select class="form-control" name="mitra_user_id"><option value="">Penjualan langsung Admin</option><?php foreach ($voucherMitras as $mitraUser): if (empty($mitraUser['active'])) continue; ?><option value="<?= htmlspecialchars($mitraUser['id'], ENT_QUOTES); ?>"<?= (string) ($_POST['mitra_user_id'] ?? '') === (string) $mitraUser['id'] ? ' selected' : ''; ?>><?= htmlspecialchars($mitraUser['name'] ?? $mitraUser['username'], ENT_QUOTES); ?></option><?php endforeach; ?></select><small>Voucher dan hasil penjualannya akan masuk ke rekap mitra ini.</small></td>
+	</tr>
+	<?php elseif (function_exists('mikhmonIsMitra') && mikhmonIsMitra()): ?>
+	<tr><td class="align-middle">Mitra Pemilik</td><td><strong><?= htmlspecialchars(mikhmonUserName(), ENT_QUOTES); ?></strong><br><small>Voucher otomatis dicatat sebagai milik akun Anda.</small></td></tr>
+	<?php endif; ?>
    <tr >
     <td  colspan="4" class="align-middle w-12"  id="GetValidPrice">
     	<?php if ($genprof != "") {

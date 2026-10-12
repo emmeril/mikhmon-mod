@@ -39,6 +39,8 @@ include('../include/quickbt.php');
 // load config
 include('../include/config.php');
 include('../include/readcfg.php');
+include_once('../include/access.php');
+include_once('../lib/partner_workflow.php');
 
 // routeros api
 include_once('../lib/routeros_api.class.php');
@@ -62,6 +64,8 @@ $getquickprint = $API->comm("/system/script/print", array("?name" => "$quickprin
   $timelimit = $quickprintsource[8];
   $datalimit = $quickprintsource[9];
   $comment = $quickprintsource[10];
+  $voucherOwner = mikhmonPartnerWorkflowVoucherOwner($session, '', mikhmonRole(), mikhmonUserId());
+  if (!empty($voucherOwner['valid']) && !empty($voucherOwner['tag'])) $comment = $voucherOwner['tag'] . ($comment !== '' ? ' ' . $comment : '');
   $getvalid = $quickprintsource[11];
   $getprice = explode("_",$quickprintsource[12])[0];
   $getsprice = explode("_",$quickprintsource[12])[1];

@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/billing_profile.php';
 require_once __DIR__ . '/billing_policy.php';
+require_once __DIR__ . '/partner_workflow.php';
 require_once dirname(__DIR__) . '/report/reportrecord.php';
 
 function mikhmonRevenueOwnerIdFromText($value) {
@@ -20,7 +21,20 @@ function mikhmonRevenueVoucherProfiles($profiles) {
 function mikhmonRevenueTransactions($session, $hotspotProfiles = array()) {
   $transactions = array();
   $customers = array();
+  $sellingPrices = mikhmonReportProfileSellingPrices($hotspotProfiles, array());
+  $profileCosts = mikhmonReportProfileCosts($hotspotProfiles, array());
+  $reportRecords = mikhmonFilterReportRecords(mikhmonGetReportRecords($session));
+  $voucherRecordCosts = array();
   foreach ((array) mikhmonGetCustomers($session) as $customer) $customers[(string) ($customer['id'] ?? '')] = $customer;
+  foreach ($reportRecords as $record) {
+    $parts = mikhmonReportParts($record);
+    $username = strtolower(trim((string) ($parts[2] ?? '')));
+    $service = (isset($parts[9]) && strtolower(trim((string) $parts[9])) === 'pppoe')
+      || (isset($parts[5]) && strtolower(trim((string) $parts[5])) === 'pppoe') ? 'pppoe' : 'hotspot';
+    $comment = (string) ($parts[8] ?? '');
+    if ($username === '' || $service !== 'hotspot' || !preg_match('/(?:^|\s)(?:vc-|voucher\b)/i', $comment)) continue;
+    $voucherRecordCosts[$username] = max(0, mikhmonReportCostPrice($record, $profileCosts, $sellingPrices));
+  }
 
   $portalVoucherUsers = array();
   foreach ((array) mikhmonGetInvoices($session) as $invoice) {
@@ -29,7 +43,7 @@ function mikhmonRevenueTransactions($session, $hotspotProfiles = array()) {
     if ($paidAt <= 0) continue;
     $kind = ($invoice['kind'] ?? 'monthly') === 'voucher' ? 'voucher' : 'customer';
     $customer = $customers[(string) ($invoice['customer_id'] ?? '')] ?? array();
-    $ownerUserId = (string) ($customer['mitra_id'] ?? '');
+    $ownerUserId = mikhmonPartnerWorkflowInvoiceOwnerId($invoice, $customer);
     $collectorUserId = (string) (($invoice['paid_by_user_id'] ?? '') ?: ($invoice['collection_biller_user_id'] ?? ''));
     $collector = $collectorUserId !== '' ? mikhmonFindUser($collectorUserId) : false;
     if (!$collector || !in_array($collector['role'] ?? '', array('mitra', 'biller'), true)) $collectorUserId = '';
@@ -37,8 +51,25 @@ function mikhmonRevenueTransactions($session, $hotspotProfiles = array()) {
     $direct = $gateway !== '' || !empty($invoice['gateway_payment_received']) || $collectorUserId === '';
     $subtotal = mikhmonInvoiceSubtotal($invoice);
     $gross = max($subtotal, (float) ($invoice['amount'] ?? $subtotal));
-    $commission = max(0, (float) ($invoice['biller_commission'] ?? mikhmonInvoiceCollectionFee($invoice)));
+    $adminFee = max(0, (float) ($invoice['admin_fee'] ?? 0));
+    $collectionFee = mikhmonInvoiceCollectionFee($invoice);
+    if (!array_key_exists('collection_fee', (array) $invoice) && $adminFee > 0) $adminFee = 0.0;
+    $commission = max(0, (float) ($invoice['biller_commission'] ?? $collectionFee));
+    $partnerCommission = max(0, (float) ($invoice['mitra_commission'] ?? 0));
+    if ($kind === 'customer' && !array_key_exists('mitra_commission', (array) $invoice) && $ownerUserId !== '') {
+      $legacyPartner = mikhmonFindPartner($ownerUserId, 'user_id');
+      if ($legacyPartner && (string) ($legacyPartner['session'] ?? '') === (string) $session) {
+        $partnerCommission = max(0, (float) ($legacyPartner['commission'] ?? 0));
+      }
+    }
     $voucherUsername = trim((string) ($invoice['voucher_username'] ?? ''));
+    $profile = $kind === 'voucher' ? trim((string) ($invoice['voucher_profile'] ?? '')) : '';
+    $cost = 0.0;
+    if ($kind === 'voucher') {
+      if (isset($invoice['voucher_cost'])) $cost = max(0, (float) $invoice['voucher_cost']);
+      elseif ($voucherUsername !== '' && isset($voucherRecordCosts[strtolower($voucherUsername)])) $cost = $voucherRecordCosts[strtolower($voucherUsername)];
+      elseif (isset($profileCosts['hotspot|' . $profile])) $cost = max(0, (float) $profileCosts['hotspot|' . $profile]);
+    }
     if ($kind === 'voucher' && $voucherUsername !== '') $portalVoucherUsers[strtolower($voucherUsername)] = true;
     $transactions[] = array(
       'id' => 'invoice:' . (string) ($invoice['id'] ?? sha1(json_encode($invoice))),
@@ -48,22 +79,29 @@ function mikhmonRevenueTransactions($session, $hotspotProfiles = array()) {
       'description' => $kind === 'voucher'
         ? 'Voucher ' . (string) ($invoice['voucher_profile'] ?? '')
         : (string) ($invoice['customer_name'] ?? $customer['name'] ?? 'Pelanggan'),
+      'profile' => $profile,
       'owner_user_id' => $ownerUserId,
       'collector_user_id' => $collectorUserId,
       'payment_method' => $direct ? ($gateway !== '' ? $gateway : 'admin') : 'manual',
       'direct_received' => $direct,
       'revenue' => $subtotal,
       'gross' => $gross,
+      'cost' => $cost,
+      'voucher_commission' => $kind === 'voucher' ? max(0, $subtotal - $cost) : 0.0,
       'commission' => $commission,
+      'partner_commission' => $partnerCommission,
+      'discount' => max(0, (float) ($invoice['discount'] ?? 0)),
+      'tax' => max(0, (float) ($invoice['tax'] ?? $invoice['ppn'] ?? 0)),
+      'admin_fee' => $adminFee,
+      'collection_fee' => $collectionFee,
+      'unique_code' => max(0, (float) ($invoice['unique_code'] ?? 0)),
       'commission_settled' => !empty($invoice['commission_settled_at']),
       'invoice_id' => (string) ($invoice['id'] ?? ''),
     );
   }
 
   $voucherProfiles = mikhmonRevenueVoucherProfiles($hotspotProfiles);
-  $sellingPrices = mikhmonReportProfileSellingPrices($hotspotProfiles, array());
-  $profileCosts = mikhmonReportProfileCosts($hotspotProfiles, array());
-  foreach (mikhmonFilterReportRecords(mikhmonGetReportRecords($session)) as $record) {
+  foreach ($reportRecords as $record) {
     $parts = mikhmonReportParts($record);
     $service = (isset($parts[9]) && strtolower(trim((string) $parts[9])) === 'pppoe')
       || (isset($parts[5]) && strtolower(trim((string) $parts[5])) === 'pppoe') ? 'pppoe' : 'hotspot';
@@ -84,6 +122,7 @@ function mikhmonRevenueTransactions($session, $hotspotProfiles = array()) {
       'source' => 'voucher',
       'reference' => $username !== '' ? $username : 'Voucher',
       'description' => 'Voucher ' . ($profile !== '' ? $profile : 'Hotspot'),
+      'profile' => $profile !== '' ? $profile : 'Hotspot',
       'owner_user_id' => $ownerUserId,
       'collector_user_id' => $ownerUserId,
       'payment_method' => $ownerUserId !== '' ? 'manual' : 'admin',
@@ -101,6 +140,99 @@ function mikhmonRevenueTransactions($session, $hotspotProfiles = array()) {
     return (int) ($right['date'] ?? 0) <=> (int) ($left['date'] ?? 0);
   });
   return $transactions;
+}
+
+function mikhmonRevenueVoucherReportRows($transactions, $ownerNames = array()) {
+  $rows = array();
+  foreach ((array) $transactions as $transaction) {
+    if (($transaction['source'] ?? '') !== 'voucher') continue;
+    $timestamp = (int) ($transaction['date'] ?? 0);
+    if ($timestamp <= 0) continue;
+    $ownerId = (string) ($transaction['owner_user_id'] ?? '');
+    $profile = trim((string) ($transaction['profile'] ?? ''));
+    if ($profile === '') $profile = trim(preg_replace('/^Voucher\s*/i', '', (string) ($transaction['description'] ?? '')));
+    if ($profile === '') $profile = 'Hotspot';
+    $date = date('Y-m-d', $timestamp);
+    $key = $date . '|' . $ownerId . '|' . strtolower($profile);
+    if (!isset($rows[$key])) $rows[$key] = array(
+      'date' => $date,
+      'timestamp' => strtotime($date . ' 00:00:00'),
+      'owner_user_id' => $ownerId,
+      'owner_name' => $ownerId !== '' ? ($ownerNames[$ownerId] ?? 'Mitra tidak ditemukan') : 'Belum ditetapkan',
+      'profile' => $profile,
+      'quantity' => 0,
+      'cost' => 0.0,
+      'commission' => 0.0,
+      'revenue' => 0.0,
+    );
+    $revenue = max(0, (float) ($transaction['revenue'] ?? 0));
+    $cost = max(0, (float) ($transaction['cost'] ?? 0));
+    $rows[$key]['quantity']++;
+    $rows[$key]['cost'] += $cost;
+    $rows[$key]['commission'] += max(0, (float) ($transaction['voucher_commission'] ?? ($revenue - $cost)));
+    $rows[$key]['revenue'] += $revenue;
+  }
+  $rows = array_values($rows);
+  usort($rows, function ($left, $right) {
+    $dateOrder = (int) ($left['timestamp'] ?? 0) <=> (int) ($right['timestamp'] ?? 0);
+    if ($dateOrder !== 0) return $dateOrder;
+    $ownerOrder = strcasecmp((string) ($left['owner_name'] ?? ''), (string) ($right['owner_name'] ?? ''));
+    return $ownerOrder !== 0 ? $ownerOrder : strcasecmp((string) ($left['profile'] ?? ''), (string) ($right['profile'] ?? ''));
+  });
+  return $rows;
+}
+
+function mikhmonRevenuePaidInvoiceReportRows($transactions, $ownerNames = array()) {
+  $months = array(1=>'JANUARI','FEBRUARI','MARET','APRIL','MEI','JUNI','JULI','AGUSTUS','SEPTEMBER','OKTOBER','NOVEMBER','DESEMBER');
+  $rows = array();
+  foreach ((array) $transactions as $transaction) {
+    if (($transaction['source'] ?? '') !== 'customer') continue;
+    $timestamp = (int) ($transaction['date'] ?? 0);
+    if ($timestamp <= 0) continue;
+    $ownerId = (string) ($transaction['owner_user_id'] ?? '');
+    $monthKey = date('Y-m', $timestamp);
+    $key = $monthKey . '|' . $ownerId;
+    if (!isset($rows[$key])) $rows[$key] = array(
+      'month_key' => $monthKey,
+      'timestamp' => strtotime($monthKey . '-01 00:00:00'),
+      'month' => $months[(int) date('n', $timestamp)],
+      'year' => (int) date('Y', $timestamp),
+      'owner_user_id' => $ownerId,
+      'owner_name' => $ownerId !== '' ? ($ownerNames[$ownerId] ?? 'Mitra tidak ditemukan') : 'Belum ditetapkan',
+      'quantity' => 0,
+      'subtotal' => 0.0,
+      'discount' => 0.0,
+      'tax' => 0.0,
+      'admin' => 0.0,
+      'unique_code' => 0.0,
+      'total' => 0.0,
+      'commission' => 0.0,
+    );
+    $rows[$key]['quantity']++;
+    $rows[$key]['subtotal'] += max(0, (float) ($transaction['revenue'] ?? 0));
+    $rows[$key]['discount'] += max(0, (float) ($transaction['discount'] ?? 0));
+    $rows[$key]['tax'] += max(0, (float) ($transaction['tax'] ?? 0));
+    $rows[$key]['admin'] += max(0, (float) ($transaction['admin_fee'] ?? 0)) + max(0, (float) ($transaction['collection_fee'] ?? 0));
+    $rows[$key]['unique_code'] += max(0, (float) ($transaction['unique_code'] ?? 0));
+    $rows[$key]['total'] += max(0, (float) ($transaction['gross'] ?? $transaction['revenue'] ?? 0));
+    $rows[$key]['commission'] += max(0, (float) ($transaction['partner_commission'] ?? 0));
+  }
+  $rows = array_values($rows);
+  usort($rows, function ($left, $right) {
+    $dateOrder = (int) ($left['timestamp'] ?? 0) <=> (int) ($right['timestamp'] ?? 0);
+    return $dateOrder !== 0 ? $dateOrder : strcasecmp((string) ($left['owner_name'] ?? ''), (string) ($right['owner_name'] ?? ''));
+  });
+  return $rows;
+}
+
+function mikhmonRevenueReportSectionTotals($rows, $fields) {
+  $totals = array('quantity' => 0);
+  foreach ((array) $fields as $field) $totals[$field] = 0.0;
+  foreach ((array) $rows as $row) {
+    $totals['quantity'] += max(0, (int) ($row['quantity'] ?? 0));
+    foreach ((array) $fields as $field) $totals[$field] += max(0, (float) ($row[$field] ?? 0));
+  }
+  return $totals;
 }
 
 function mikhmonRevenueFilterTransactions($transactions, $filters) {

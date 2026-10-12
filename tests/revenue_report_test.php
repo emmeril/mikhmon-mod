@@ -43,6 +43,9 @@ $mitraRows = mikhmonRevenueFilterTransactions($transactions, array('owner_user_i
 $totals = mikhmonRevenueTotals($mitraRows);
 revenueReportTestAssert($totals['customer'] === 100000.0 && $totals['voucher'] === 45000.0 && $totals['revenue'] === 145000.0, 'partner revenue combines paid customers and vouchers');
 revenueReportTestAssert($totals['direct'] === 20000.0 && $totals['manual'] === 127500.0, 'direct gateway money is separated from cash held by collectors');
+$voucherReportRows = mikhmonRevenueVoucherReportRows($mitraRows, array($mitraOne=>'Mitra Satu'));
+revenueReportTestAssert(count($voucherReportRows) === 1 && $voucherReportRows[0]['quantity'] === 2, 'portal and manually sold vouchers share one daily profile recap');
+revenueReportTestAssert($voucherReportRows[0]['cost'] === 20000.0 && $voucherReportRows[0]['commission'] === 25000.0 && $voucherReportRows[0]['revenue'] === 45000.0, 'voucher report keeps HPP, commission, and selling total separate');
 
 revenueReportTestAssert(mikhmonSaveRevenueDeposit($session, array('collector_user_id'=>$biller,'amount'=>50000,'date'=>'2026-10-08','method'=>'transfer','created_by'=>'Admin')) !== false, 'admin can record a valid collector deposit');
 $collector = mikhmonRevenueCollectorSummary($transactions, mikhmonGetRevenueDeposits($session), $biller);
@@ -52,6 +55,15 @@ revenueReportTestAssert($collector['commission'] === 2500.0 && $collector['commi
 $summaries = mikhmonRevenuePartnerSummaries($transactions, array($mitraOne=>'Mitra Satu',$mitraTwo=>'Mitra Dua'));
 revenueReportTestAssert($summaries[0]['name'] === 'Mitra Dua' && $summaries[0]['total'] === 300000.0, 'admin partner summary orders combined revenue by total');
 revenueReportTestAssert(mikhmonSaveRevenueDeposit($session, array('collector_user_id'=>'missing','amount'=>1000,'date'=>'2026-10-08')) === false, 'deposit rejects an unknown collector');
+
+mikhmonSaveInvoice($session, array(
+  'id'=>'monthly-legacy','number'=>'INV-LEGACY','kind'=>'monthly','customer_id'=>$customerTwo,'customer_name'=>'Pelanggan Dua',
+  'status'=>'paid','paid_at'=>$paidAt,'amount'=>52500,'admin_fee'=>2500,'paid_by_user_id'=>$biller,
+));
+$legacyRows = mikhmonRevenuePaidInvoiceReportRows(mikhmonRevenueTransactions($session, $profiles), array($mitraOne=>'Mitra Satu',$mitraTwo=>'Mitra Dua'));
+$legacyAdmin = 0.0;
+foreach ($legacyRows as $row) if ($row['owner_user_id'] === $mitraTwo) $legacyAdmin = $row['admin'];
+revenueReportTestAssert($legacyAdmin === 2500.0, 'legacy admin fee is treated once as collection administration');
 
 @unlink($databasePath);
 echo 'revenue-report-tests: OK' . PHP_EOL;

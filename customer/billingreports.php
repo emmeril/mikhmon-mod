@@ -7,6 +7,7 @@ include_once('./lib/billing_report.php');
 include_once('./lib/revenue_report.php');
 
 $reportError = $reportMessage = '';
+$reportRangeInvalid = false;
 $canManageFinance = mikhmonIsAdmin() || mikhmonIsFinance();
 $canViewRevenue = $canManageFinance || mikhmonIsMitra();
 $canViewSettlement = $canManageFinance || mikhmonIsBiller();
@@ -28,13 +29,17 @@ if ($dateFromValue !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFromValue
 if ($dateToValue !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateToValue)) { $reportError = 'Tanggal akhir filter tidak valid.'; $dateToValue = ''; }
 $dateFrom = $dateFromValue !== '' ? strtotime($dateFromValue . ' 00:00:00') : 0;
 $dateTo = $dateToValue !== '' ? strtotime($dateToValue . ' 23:59:59') : 0;
-if ($dateFrom && $dateTo && $dateFrom > $dateTo) { $reportError = 'Tanggal awal tidak boleh melewati tanggal akhir.'; $dateFrom = $dateTo = 0; }
+if ($dateFrom && $dateTo && $dateFrom > $dateTo) { $reportError = 'Tanggal awal tidak boleh melewati tanggal akhir.'; $reportRangeInvalid = true; }
 $selectedMitra = $canManageFinance ? trim((string) ($_GET['report_mitra'] ?? '')) : (mikhmonIsMitra() ? mikhmonUserId() : '');
 $selectedCollector = $canManageFinance ? trim((string) ($_GET['report_collector'] ?? $_GET['report_biller'] ?? '')) : (mikhmonIsBiller() ? mikhmonUserId() : '');
 if ($selectedMitra !== '' && $selectedMitra !== 'unassigned' && !isset($mitraNames[$selectedMitra])) $selectedMitra = '';
 if ($selectedCollector !== '' && !isset($collectorNames[$selectedCollector])) $selectedCollector = '';
 $selectedSource = in_array($_GET['report_source'] ?? '', array('customer', 'voucher'), true) ? (string) $_GET['report_source'] : '';
 $selectedMethod = in_array($_GET['report_method'] ?? '', array('manual', 'direct'), true) ? (string) $_GET['report_method'] : '';
+if ($selectedSource === 'voucher' && $dateFrom && $dateTo && strtotime($dateToValue . ' 00:00:00') - strtotime($dateFromValue . ' 00:00:00') > 30 * 86400) {
+  $reportError = 'Rekap voucher maksimal 31 hari dalam satu laporan.';
+  $reportRangeInvalid = true;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['revenue_report_action'])) {
   if (!mikhmonValidCsrf($_POST['_csrf'] ?? '')) $reportError = 'Sesi formulir tidak valid. Muat ulang halaman.';
@@ -73,6 +78,7 @@ $filters = array('date_from'=>$dateFrom,'date_to'=>$dateTo,'owner_user_id'=>$sel
 if (mikhmonIsMitra()) $filters['owner_user_id'] = mikhmonUserId();
 if (mikhmonIsBiller()) $filters['collector_user_id'] = mikhmonUserId();
 $transactions = ($canViewRevenue || mikhmonIsBiller()) ? mikhmonRevenueFilterTransactions($allTransactions, $filters) : array();
+if ($reportRangeInvalid) $transactions = array();
 $totals = mikhmonRevenueTotals($transactions);
 $partnerSummaries = mikhmonRevenuePartnerSummaries($transactions, $mitraNames);
 $allDeposits = mikhmonGetRevenueDeposits($session);
@@ -123,9 +129,13 @@ if ($canManageFinance || mikhmonIsMitra() || mikhmonIsBiller()) $panels[] = 'dep
 if ($canViewSettlement) $panels[] = 'commission';
 $initialPanel = in_array($_GET['report_tab'] ?? '', $panels, true) ? (string) $_GET['report_tab'] : (($canViewRevenue || mikhmonIsBiller()) ? 'transactions' : 'receivable');
 $money = function ($amount) use ($currency) { $label=trim((string)$currency) ?: 'Rp'; $rp=in_array(strtolower(rtrim($label,'.')),array('rp','idr'),true); return $label.' '.number_format((float)$amount,$rp?0:2,$rp?',':'.',$rp?'.':','); };
+$pdfParams = array('session'=>$session,'report_from'=>$dateFromValue,'report_to'=>$dateToValue,'report_mitra'=>$selectedMitra,'report_collector'=>$selectedCollector,'report_source'=>$selectedSource,'report_method'=>$selectedMethod);
+$pdfUrl = './customer/revenue-report-pdf.php?' . http_build_query(array_filter($pdfParams, function ($value) { return $value !== ''; }));
+$pdfButtonLabel = 'Unduh PDF';
 ?>
 <style>
 .revenue-report :focus-visible{outline:2px solid #fff;outline-offset:2px;box-shadow:0 0 0 4px #000}.revenue-filters,.revenue-form{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px;align-items:end;margin-bottom:16px}.revenue-filters label,.revenue-form label{display:block;font-weight:700}.revenue-filters input,.revenue-filters select,.revenue-filters button,.revenue-filters a,.revenue-form input,.revenue-form select,.revenue-form button{width:100%;min-height:44px;box-sizing:border-box}.revenue-filter-actions{display:flex;gap:8px}.revenue-filter-actions .btn{display:flex;align-items:center;justify-content:center;margin:0}.revenue-filter-note{grid-column:1/-1;margin:0}.revenue-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}.revenue-summary>div{border:1px solid rgba(127,127,127,.45);border-radius:4px;padding:14px}.revenue-summary small{display:block;margin-bottom:7px;font-weight:700}.revenue-summary strong{font-size:22px;overflow-wrap:anywhere}.revenue-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}.revenue-tabs button,.revenue-toolbar .btn{min-height:44px}.revenue-panel[hidden]{display:none}.revenue-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}.revenue-toolbar input{min-height:44px;min-width:220px;color:inherit;font-size:14px}.revenue-toolbar input::placeholder{color:currentColor;opacity:.8}.revenue-form .wide{grid-column:span 2}.revenue-empty{padding:24px;text-align:center}.revenue-table td,.revenue-table th{vertical-align:middle}.revenue-priority,.revenue-status-open{font-weight:700}.revenue-priority.is-high,.revenue-status-open{text-decoration:underline;text-underline-offset:3px}.revenue-table-hint{display:none}
+#revenueReportPdf{display:inline-flex;align-items:center;justify-content:center;gap:5px;line-height:1.2;text-align:center}
 @media(max-width:1100px){.revenue-filters,.revenue-form{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.revenue-filters,.revenue-form{grid-template-columns:1fr}.revenue-filter-actions{flex-direction:column}.revenue-form .wide{grid-column:auto}.revenue-tabs{display:grid;grid-template-columns:1fr 1fr}.revenue-tabs button{width:100%;margin:0}.revenue-tabs button:last-child:nth-child(odd){grid-column:1/-1}.revenue-toolbar{display:grid;grid-template-columns:1fr}.revenue-toolbar input{width:100%;min-width:0}.revenue-table-hint{display:block;margin:0 0 8px}}
 </style>
 <div class="revenue-report">
@@ -144,7 +154,7 @@ $money = function ($amount) use ($currency) { $label=trim((string)$currency) ?: 
 
 <div class="card"><div class="card-header"><h3><i class="fa fa-line-chart"></i> <?= mikhmonIsBiller()?'Aktivitas Penagihan':(mikhmonIsOperator()?'Prioritas Piutang':'Laporan Pendapatan'); ?></h3></div><div class="card-body">
 <div class="revenue-tabs" role="tablist" aria-label="Jenis laporan"><?php if($canViewRevenue||mikhmonIsBiller()): ?><button id="revenueTabTransactions" class="btn" type="button" role="tab" data-panel="transactions" aria-controls="revenuePanelTransactions"><?= mikhmonIsBiller()?'Pembayaran Ditagih':'Semua Transaksi'; ?></button><?php endif; ?><?php if($canManageFinance): ?><button id="revenueTabPartners" class="btn" type="button" role="tab" data-panel="partners" aria-controls="revenuePanelPartners">Pendapatan per Mitra</button><?php endif; ?><button id="revenueTabReceivable" class="btn" type="button" role="tab" data-panel="receivable" aria-controls="revenuePanelReceivable">Piutang</button><?php if($canManageFinance||mikhmonIsMitra()||mikhmonIsBiller()): ?><button id="revenueTabDeposits" class="btn" type="button" role="tab" data-panel="deposits" aria-controls="revenuePanelDeposits">Setoran</button><?php endif; ?><?php if($canViewSettlement): ?><button id="revenueTabCommission" class="btn" type="button" role="tab" data-panel="commission" aria-controls="revenuePanelCommission">Komisi</button><?php endif; ?></div>
-<div class="revenue-toolbar"><input id="revenueReportSearch" class="form-control" type="search" placeholder="Cari transaksi, pelanggan, voucher, mitra, atau petugas" aria-label="Cari laporan"><button id="revenueReportExport" class="btn bg-success" type="button"><i class="fa fa-file-excel-o"></i> Export CSV</button></div><p class="revenue-table-hint"><small>Geser tabel ke samping untuk melihat kolom lainnya.</small></p>
+<div class="revenue-toolbar"><input id="revenueReportSearch" class="form-control" type="search" placeholder="Cari transaksi, pelanggan, voucher, mitra, atau petugas" aria-label="Cari laporan"><button id="revenueReportExport" class="btn bg-success" type="button"><i class="fa fa-file-excel-o"></i> Export CSV</button><?php if($canViewRevenue): ?><a id="revenueReportPdf" class="btn bg-primary" href="<?= htmlspecialchars($pdfUrl,ENT_QUOTES); ?>"><i class="fa fa-file-pdf-o"></i> <?= htmlspecialchars($pdfButtonLabel,ENT_QUOTES); ?></a><?php endif; ?></div><p class="revenue-table-hint"><small>Geser tabel ke samping untuk melihat kolom lainnya.</small></p>
 
 <?php if($canViewRevenue||mikhmonIsBiller()): ?><section id="revenuePanelTransactions" class="revenue-panel" data-report-panel="transactions" role="tabpanel" hidden><div class="overflow box-bordered"><table class="table table-bordered table-hover revenue-table"><thead><tr><th>Tanggal</th><th>Sumber</th><th>Referensi</th><th>Keterangan</th><th>Mitra</th><th>Penerima</th><th>Aliran Dana</th><th class="text-right">Pendapatan</th><th class="text-right">Dibayar</th></tr></thead><tbody><?php foreach($transactions as $row): ?><tr class="revenue-row"><td><?= date('d/m/Y H:i',(int)$row['date']); ?></td><td><?= $row['source']==='voucher'?'Voucher':'Pelanggan'; ?></td><td><?= htmlspecialchars($row['reference'],ENT_QUOTES); ?></td><td><?= htmlspecialchars($row['description'],ENT_QUOTES); ?></td><td><?= htmlspecialchars($row['owner_user_id']!==''?($mitraNames[$row['owner_user_id']]??'Mitra tidak ditemukan'):'Belum ditetapkan',ENT_QUOTES); ?></td><td><?= htmlspecialchars($row['collector_user_id']!==''?($collectorNames[$row['collector_user_id']]??'Petugas tidak ditemukan'):'Admin',ENT_QUOTES); ?></td><td><?= !empty($row['direct_received'])?'Langsung ke Admin':'Tunai melalui Petugas'; ?></td><td class="text-right"><?= htmlspecialchars($money($row['revenue']),ENT_QUOTES); ?></td><td class="text-right"><?= htmlspecialchars($money($row['gross']),ENT_QUOTES); ?></td></tr><?php endforeach; ?><?php if(!$transactions): ?><tr><td colspan="9" class="revenue-empty">Belum ada transaksi lunas sesuai filter.</td></tr><?php endif; ?></tbody></table></div></section><?php endif; ?>
 

@@ -7,6 +7,7 @@ require_once dirname(__DIR__) . '/lib/payment_gateway.php';
 require_once dirname(__DIR__) . '/lib/payment_activation.php';
 require_once dirname(__DIR__) . '/lib/billing_profile.php';
 require_once dirname(__DIR__) . '/lib/billing_policy.php';
+require_once dirname(__DIR__) . '/lib/partner_workflow.php';
 require_once dirname(__DIR__) . '/ppp/profilemeta.php';
 
 function mikhmonCustomerPortalOtp($phone, $ttl = 300) {
@@ -218,7 +219,7 @@ function mikhmonCustomerPortalCreateVoucherInvoice($session, $customer, $profile
   $invoice = array(
     'id' => 'invoice-' . bin2hex(random_bytes(8)), 'number' => $number,
     'customer_id' => $customer['id'], 'customer_name' => $customer['name'] ?? 'Pelanggan',
-    'kind' => 'voucher', 'voucher_profile' => $details['name'], 'voucher_validity' => $details['validity'], 'voucher_username' => '', 'voucher_password' => '',
+    'kind' => 'voucher', 'voucher_profile' => $details['name'], 'voucher_validity' => $details['validity'], 'voucher_cost' => $details['price'], 'voucher_username' => '', 'voucher_password' => '',
     'services' => array(), 'service_count' => 0, 'amount' => $details['selling_price'],
     'due_date' => date('Y-m-d H:i:s', time() + 86400), 'status' => 'unpaid', 'created_at' => time(),
   );
@@ -290,9 +291,11 @@ function mikhmonCustomerPortalFulfillVoucher($session, $invoiceId, $api = null) 
   if (!$profile || mikhmonBillingProfileExpiredMode('hotspot', $profile) === 'none') return array('success' => false, 'message' => 'Profile voucher tidak tersedia.');
   if (empty($invoice['voucher_validity'])) $invoice['voucher_validity'] = mikhmonCustomerPortalProfileDetails($profile)['validity'] ?? '';
   $code = strtoupper(substr(bin2hex(random_bytes(5)), 0, 10));
-  $response = $api->comm('/ip/hotspot/user/add', array('server' => 'all', 'name' => $code, 'password' => $code, 'profile' => $invoice['voucher_profile'], 'comment' => 'vc-portal-' . ($customer['name'] ?? 'Pelanggan')));
+  $voucherOwnerTag = trim((string) ($customer['mitra_id'] ?? '')) !== '' ? ' [mitra:' . trim((string) $customer['mitra_id']) . ']' : '';
+  $response = $api->comm('/ip/hotspot/user/add', array('server' => 'all', 'name' => $code, 'password' => $code, 'profile' => $invoice['voucher_profile'], 'comment' => 'vc-portal' . $voucherOwnerTag . '-' . ($customer['name'] ?? 'Pelanggan')));
   if (mikhmonPaymentActivationApiError($response) !== '') return array('success' => false, 'message' => 'Voucher gagal dibuat di router.');
   $invoice['status'] = 'paid'; $invoice['paid_at'] = (int) ($invoice['gateway_paid_at'] ?? time()); $invoice['voucher_username'] = $code; $invoice['voucher_password'] = $code; $invoice['activation_status'] = 'success'; $invoice['gateway_payment_received'] = true;
+  $invoice = mikhmonPartnerWorkflowApplyInvoiceSnapshot($session, $invoice, $customer);
   if (mikhmonSaveInvoice($session, $invoice) === false) return array('success' => false, 'message' => 'Voucher dibuat, tetapi invoice gagal disimpan.');
   $notification = mikhmonCustomerPortalSendVoucherPaymentNotification($session, $invoice, $customer);
   return array('success' => true, 'invoice' => $invoice, 'voucher_username' => $code, 'voucher_password' => $code, 'notification_sent' => !empty($notification['sent']), 'notification_error' => $notification['message'] ?? '');

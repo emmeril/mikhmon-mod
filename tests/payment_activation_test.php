@@ -54,7 +54,12 @@ paymentActivationTestAssert(!empty($duplicateResult['success']) && !empty($dupli
 paymentActivationTestAssert(count(mikhmonGetInvoices('router-a')) === 2, 'duplicate callback does not create another billing cycle');
 
 mikhmonFonnteWriteConfig(array('enabled' => true, 'payment_enabled' => true, 'token' => 'test-token'));
-$customerManual = mikhmonSaveCustomer('router-c', '', 'Pelanggan Tunai', '08123456789', '', 'hotspot', 'cust-c', 'basic');
+$mitraResult = mikhmonSaveManagedUser(array(
+  'type' => 'reseller', 'name' => 'Mitra Invoice', 'session' => 'router-c', 'commission' => 4000,
+  'login_enabled' => true, 'username' => 'mitra-invoice', 'password' => 'rahasia123', 'active' => true,
+));
+paymentActivationTestAssert(!empty($mitraResult['status']), 'assigned invoice partner can be prepared');
+$customerManual = mikhmonSaveCustomer('router-c', '', 'Pelanggan Tunai', '08123456789', '', 'hotspot', 'cust-c', 'basic', $mitraResult['user_id']);
 $invoiceManual = mikhmonSaveInvoice('router-c', array(
   'id' => 'invoice-paid-manual', 'number' => 'INV-MANUAL', 'customer_id' => $customerManual,
   'customer_name' => 'Pelanggan Tunai', 'services' => array(array('id'=>'service-c','service'=>'hotspot','username'=>'cust-c','profile'=>'basic','amount'=>100000)),
@@ -73,6 +78,7 @@ $manualInvoices = mikhmonGetInvoices('router-c');
 paymentActivationTestAssert(!empty($manualInvoices[0]['automation']['payment_sent_at']) && empty($manualInvoices[0]['automation']['payment_notification_pending']), 'immediate payment notification status is stored on the paid invoice');
 paymentActivationTestAssert((float) $manualInvoices[0]['subtotal'] === 100000.0 && (float) $manualInvoices[0]['admin_fee'] === 0.0 && (float) $manualInvoices[0]['collection_fee'] === 2500.0 && (float) $manualInvoices[0]['amount'] === 102500.0, 'collection commission is added to the customer invoice total');
 paymentActivationTestAssert($manualInvoices[0]['biller_partner_id'] === 'mitra-biller' && $manualInvoices[0]['biller_commission'] === 2500.0, 'paid invoice keeps the biller and commission snapshot');
+paymentActivationTestAssert($manualInvoices[0]['mitra_user_id'] === $mitraResult['user_id'] && $manualInvoices[0]['mitra_commission'] === 4000.0, 'paid invoice also snapshots its assigned partner and partner commission');
 paymentActivationTestAssert($manualInvoices[1]['status'] === 'draft' && $manualInvoices[1]['admin_fee'] === 0 && $manualInvoices[1]['collection_fee'] === 0 && $manualInvoices[1]['amount'] === 100000.0, 'next invoice is a draft and does not carry the previous collection commission');
 mikhmonFonnteWriteConfig(array('enabled' => false));
 

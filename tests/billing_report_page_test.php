@@ -54,7 +54,23 @@ billingReportPageTestAssert(strpos($html, 'Total Pendapatan') !== false && strpo
 billingReportPageTestAssert(strpos($html, 'Pendapatan per Mitra') !== false && strpos($html, 'Dari Pelanggan') !== false && strpos($html, 'Dari Voucher') !== false, 'admin can compare revenue sources per partner');
 billingReportPageTestAssert(strpos($html, 'Mitra Satu') !== false && strpos($html, 'Penagih Satu') !== false, 'report identifies mitra and collector separately');
 billingReportPageTestAssert(strpos($html, 'revenueReportExport') !== false && strpos($html, 'Export CSV') !== false, 'filtered report can be exported');
+billingReportPageTestAssert(strpos($html, 'revenueReportPdf') !== false && strpos($html, 'revenue-report-pdf.php') !== false, 'filtered revenue report can be downloaded as PDF');
+billingReportPageTestAssert(strpos($html, 'Unduh PDF') !== false, 'combined report uses the compact PDF download label');
+billingReportPageTestAssert(strpos($html, '#revenueReportPdf{display:inline-flex;align-items:center;justify-content:center') !== false, 'PDF button centers its icon and label');
 billingReportPageTestAssert(strpos($html, 'Biaya admin') === false && strpos($html, 'Biaya Admin') === false, 'unused admin fee is hidden from the billing report');
+
+$_GET['report_source'] = 'voucher';
+ob_start();
+include dirname(__DIR__) . '/customer/billingreports.php';
+$voucherReportHtml = ob_get_clean();
+billingReportPageTestAssert(strpos($voucherReportHtml, 'Unduh PDF') !== false, 'voucher report uses the compact PDF label');
+
+$_GET['report_source'] = 'customer';
+ob_start();
+include dirname(__DIR__) . '/customer/billingreports.php';
+$invoiceReportHtml = ob_get_clean();
+billingReportPageTestAssert(strpos($invoiceReportHtml, 'Unduh PDF') !== false, 'customer report uses the compact PDF label');
+unset($_GET['report_source']);
 
 $_SESSION['mikhmon_csrf'] = 'report-test-csrf';
 $_SERVER['REQUEST_METHOD'] = 'POST';
