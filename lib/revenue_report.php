@@ -18,6 +18,64 @@ function mikhmonRevenueVoucherProfiles($profiles) {
   return $names;
 }
 
+function mikhmonRevenueTransactionAliases($transaction) {
+  $aliases = array();
+  $source = ($transaction['source'] ?? '') === 'voucher' ? 'voucher' : 'customer';
+  $id = trim((string) ($transaction['id'] ?? ''));
+  $invoiceId = trim((string) ($transaction['invoice_id'] ?? ''));
+  $reference = strtolower(trim((string) ($transaction['reference'] ?? '')));
+  $voucherUsername = strtolower(trim((string) ($transaction['voucher_username'] ?? '')));
+  $isInvoiceTransaction = $invoiceId !== '' || strpos($id, 'invoice:') === 0;
+
+  if ($id !== '') $aliases[] = 'id|' . $id;
+  if ($invoiceId !== '') {
+    $aliases[] = 'invoice-id|' . $invoiceId;
+  }
+  if ($isInvoiceTransaction && $reference !== '' && $reference !== '-') $aliases[] = 'invoice-reference|' . $source . '|' . $reference;
+  if ($source === 'voucher' && $voucherUsername !== '') $aliases[] = 'voucher-username|' . $voucherUsername;
+  if ($source === 'voucher' && $invoiceId === '' && $reference !== '') {
+    $aliases[] = 'voucher-record|' . sha1(implode('|', array(
+      $reference,
+      (string) ((int) ($transaction['date'] ?? 0)),
+      strtolower(trim((string) ($transaction['profile'] ?? ''))),
+      (string) ((float) ($transaction['revenue'] ?? 0)),
+      (string) ((float) ($transaction['cost'] ?? 0)),
+    )));
+  }
+  if (!$aliases) {
+    $aliases[] = 'fallback|' . sha1(json_encode(array(
+      $source,
+      (int) ($transaction['date'] ?? 0),
+      $reference,
+      (float) ($transaction['revenue'] ?? 0),
+      (float) ($transaction['gross'] ?? 0),
+      (string) ($transaction['owner_user_id'] ?? ''),
+      (string) ($transaction['collector_user_id'] ?? ''),
+    )));
+  }
+  return array_values(array_unique($aliases));
+}
+
+function mikhmonRevenueUniqueTransactions($transactions) {
+  $unique = array();
+  $seen = array();
+  foreach ((array) $transactions as $transaction) {
+    if (!is_array($transaction)) continue;
+    $aliases = mikhmonRevenueTransactionAliases($transaction);
+    $duplicate = false;
+    foreach ($aliases as $alias) {
+      if (isset($seen[$alias])) {
+        $duplicate = true;
+        break;
+      }
+    }
+    if ($duplicate) continue;
+    foreach ($aliases as $alias) $seen[$alias] = true;
+    $unique[] = $transaction;
+  }
+  return $unique;
+}
+
 function mikhmonRevenueTransactions($session, $hotspotProfiles = array()) {
   $transactions = array();
   $customers = array();
@@ -97,6 +155,7 @@ function mikhmonRevenueTransactions($session, $hotspotProfiles = array()) {
       'unique_code' => max(0, (float) ($invoice['unique_code'] ?? 0)),
       'commission_settled' => !empty($invoice['commission_settled_at']),
       'invoice_id' => (string) ($invoice['id'] ?? ''),
+      'voucher_username' => $voucherUsername,
     );
   }
 
@@ -136,6 +195,7 @@ function mikhmonRevenueTransactions($session, $hotspotProfiles = array()) {
     );
   }
 
+  $transactions = mikhmonRevenueUniqueTransactions($transactions);
   usort($transactions, function ($left, $right) {
     return (int) ($right['date'] ?? 0) <=> (int) ($left['date'] ?? 0);
   });
@@ -289,6 +349,7 @@ function mikhmonRevenuePartnerSummaries($transactions, $ownerNames = array()) {
 
 function mikhmonRevenueDepositTotal($deposits, $collectorUserId = '') {
   $total = 0.0;
+  if (function_exists('mikhmonUniqueRevenueDeposits')) $deposits = mikhmonUniqueRevenueDeposits($deposits);
   foreach ((array) $deposits as $deposit) {
     if ($collectorUserId !== '' && (string) ($deposit['collector_user_id'] ?? '') !== (string) $collectorUserId) continue;
     $total += max(0, (float) ($deposit['amount'] ?? 0));
@@ -298,7 +359,7 @@ function mikhmonRevenueDepositTotal($deposits, $collectorUserId = '') {
 
 function mikhmonRevenueCollectorSummary($transactions, $deposits, $collectorUserId) {
   $summary = array('manual' => 0.0, 'direct' => 0.0, 'commission' => 0.0, 'commission_open' => 0.0, 'deposited' => 0.0, 'outstanding' => 0.0);
-  foreach ((array) $transactions as $row) {
+  foreach (mikhmonRevenueUniqueTransactions($transactions) as $row) {
     if ((string) ($row['collector_user_id'] ?? '') !== (string) $collectorUserId) continue;
     $gross = max(0, (float) ($row['gross'] ?? 0));
     $summary[!empty($row['direct_received']) ? 'direct' : 'manual'] += $gross;

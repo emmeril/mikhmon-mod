@@ -77,12 +77,16 @@ $_SERVER['REQUEST_METHOD'] = 'POST';
 $_POST = array(
   '_csrf' => 'report-test-csrf', 'revenue_report_action' => 'add_deposit', 'collector_user_id' => $biller,
   'deposit_amount' => 50000, 'deposit_date' => '2026-10-08', 'deposit_method' => 'transfer',
-  'deposit_reference' => 'TRX-REPORT-TEST', 'deposit_note' => 'Setoran sebagian',
+  'deposit_reference' => 'TRX-REPORT-TEST', 'deposit_note' => 'Setoran sebagian', 'deposit_request_id' => 'deposit-request-test',
 );
 ob_start();
 include dirname(__DIR__) . '/customer/billingreports.php';
 $depositHtml = ob_get_clean();
 billingReportPageTestAssert(strpos($depositHtml, 'Setoran berhasil dicatat.') !== false && count(mikhmonGetRevenueDeposits($session, $biller)) === 1, 'admin deposit form records a collector payment');
+ob_start();
+include dirname(__DIR__) . '/customer/billingreports.php';
+$duplicateDepositHtml = ob_get_clean();
+billingReportPageTestAssert(strpos($duplicateDepositHtml, 'Setoran berhasil dicatat.') !== false && count(mikhmonGetRevenueDeposits($session, $biller)) === 1, 'repeated deposit form submission does not create a duplicate');
 
 $_SESSION['mikhmon_role'] = 'operator';
 $_SESSION['mikhmon_user_id'] = 'operator-test';
@@ -104,6 +108,19 @@ $billerHtml = ob_get_clean();
 billingReportPageTestAssert(strpos($billerHtml, 'Aktivitas Penagihan') !== false && strpos($billerHtml, 'Setoran') !== false && strpos($billerHtml, 'Komisi') !== false, 'biller sees collections, deposits, and commissions');
 billingReportPageTestAssert(strpos($billerHtml, 'Rp 305.000') !== false && strpos($billerHtml, 'Rp 5.000') !== false, 'biller summary shows gross cash and unpaid commission');
 billingReportPageTestAssert(strpos($billerHtml, 'Catat Setoran') === false && strpos($billerHtml, 'Pendapatan per Mitra') === false, 'biller cannot record deposits or inspect partner revenue');
+
+$_SESSION['mikhmon_role'] = 'admin';
+$_SESSION['mikhmon_user_id'] = '';
+$_SERVER['REQUEST_METHOD'] = 'POST';
+$_POST = array('_csrf' => 'report-test-csrf', 'revenue_report_action' => 'settle_commission', 'invoice_id' => 'invoice-one');
+ob_start();
+include dirname(__DIR__) . '/customer/billingreports.php';
+$settledCommissionHtml = ob_get_clean();
+billingReportPageTestAssert(strpos($settledCommissionHtml, 'Komisi berhasil ditandai sudah dibayar.') !== false, 'admin can settle an invoice commission once');
+ob_start();
+include dirname(__DIR__) . '/customer/billingreports.php';
+$duplicateCommissionHtml = ob_get_clean();
+billingReportPageTestAssert(strpos($duplicateCommissionHtml, 'Komisi invoice ini sudah dibayar.') !== false && count(mikhmonGetInvoices($session)) === 2, 'repeated commission settlement does not create or repay a duplicate');
 
 $menuSource = file_get_contents(dirname(__DIR__) . '/include/menu.php');
 billingReportPageTestAssert(strpos($menuSource, 'Laporan Billing') === false && strpos($menuSource, 'report=selling') === false, 'legacy report menus are removed');

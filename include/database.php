@@ -1187,12 +1187,44 @@ function mikhmonSaveFinanceEntry($session, $entry) {
 
 function mikhmonGetRevenueDeposits($session, $collectorUserId = '') {
   $database = mikhmonReadDatabase();
-  $rows = array_values((array) ($database['revenue_deposits'][$session] ?? array()));
+  $rows = mikhmonUniqueRevenueDeposits($database['revenue_deposits'][$session] ?? array());
   $collectorUserId = trim((string) $collectorUserId);
   if ($collectorUserId === '') return $rows;
   return array_values(array_filter($rows, function ($row) use ($collectorUserId) {
     return is_array($row) && (string) ($row['collector_user_id'] ?? '') === $collectorUserId;
   }));
+}
+
+function mikhmonRevenueDepositAliases($deposit) {
+  $aliases = array();
+  $id = trim((string) ($deposit['id'] ?? ''));
+  $requestId = trim((string) ($deposit['request_id'] ?? ''));
+  $collectorUserId = trim((string) ($deposit['collector_user_id'] ?? ''));
+  $reference = strtolower(trim((string) ($deposit['reference'] ?? '')));
+  if ($id !== '') $aliases[] = 'id|' . $id;
+  if ($requestId !== '') $aliases[] = 'request|' . $requestId;
+  if ($collectorUserId !== '' && $reference !== '') $aliases[] = 'reference|' . $collectorUserId . '|' . $reference;
+  return array_values(array_unique($aliases));
+}
+
+function mikhmonUniqueRevenueDeposits($deposits) {
+  $unique = array();
+  $seen = array();
+  foreach ((array) $deposits as $deposit) {
+    if (!is_array($deposit)) continue;
+    $aliases = mikhmonRevenueDepositAliases($deposit);
+    $duplicate = false;
+    foreach ($aliases as $alias) {
+      if (isset($seen[$alias])) {
+        $duplicate = true;
+        break;
+      }
+    }
+    if ($duplicate) continue;
+    foreach ($aliases as $alias) $seen[$alias] = true;
+    $unique[] = $deposit;
+  }
+  return $unique;
 }
 
 function mikhmonSaveRevenueDeposit($session, $entry) {
@@ -1203,9 +1235,23 @@ function mikhmonSaveRevenueDeposit($session, $entry) {
   $amount = max(0, (float) ($entry['amount'] ?? 0));
   $date = trim((string) ($entry['date'] ?? date('Y-m-d')));
   $method = strtolower(trim((string) ($entry['method'] ?? 'transfer')));
+  $requestId = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($entry['request_id'] ?? ''));
+  $reference = trim(strip_tags((string) ($entry['reference'] ?? '')));
   if (!$collector || !in_array($collector['role'] ?? '', array('mitra', 'biller'), true) || (string) ($collector['session'] ?? '') !== (string) $session) return false;
   if ($amount <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return false;
   if (!in_array($method, array('cash', 'transfer'), true)) $method = 'transfer';
+  foreach ($database['revenue_deposits'][$session] as $existing) {
+    if (!is_array($existing)) continue;
+    $sameRequest = $requestId !== '' && hash_equals((string) ($existing['request_id'] ?? ''), $requestId);
+    $sameReference = $reference !== ''
+      && (string) ($existing['collector_user_id'] ?? '') === $collectorUserId
+      && strcasecmp(trim((string) ($existing['reference'] ?? '')), $reference) === 0;
+    if (!$sameRequest && !$sameReference) continue;
+    $sameDeposit = (float) ($existing['amount'] ?? 0) === $amount
+      && (string) ($existing['date'] ?? '') === $date
+      && (string) ($existing['method'] ?? '') === $method;
+    return $sameDeposit ? (string) ($existing['id'] ?? '') : false;
+  }
   $row = array(
     'id' => 'deposit-' . bin2hex(random_bytes(8)),
     'collector_user_id' => $collectorUserId,
@@ -1213,11 +1259,12 @@ function mikhmonSaveRevenueDeposit($session, $entry) {
     'amount' => $amount,
     'date' => $date,
     'method' => $method,
-    'reference' => trim(strip_tags((string) ($entry['reference'] ?? ''))),
+    'reference' => $reference,
     'note' => trim(strip_tags((string) ($entry['note'] ?? ''))),
     'created_at' => time(),
     'created_by' => trim(strip_tags((string) ($entry['created_by'] ?? ''))),
   );
+  if ($requestId !== '') $row['request_id'] = $requestId;
   $database['revenue_deposits'][$session][] = $row;
   return mikhmonWriteDatabase($database) ? $row['id'] : false;
 }

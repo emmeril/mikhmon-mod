@@ -35,9 +35,17 @@ mikhmonSaveReportRecords($session, array(
   array('name'=>'oct/08/2026-|-11:00:00-|-MANUAL-1-|-25000-|-10.0.0.1-|-AA-|-1d-|-voucher-|-vc-batch [mitra:'.$mitraOne.']-|-hotspot-|-10000'),
   array('name'=>'oct/08/2026-|-11:05:00-|-PORTAL-1-|-20000-|-10.0.0.2-|-BB-|-1d-|-voucher-|-vc-portal [mitra:'.$mitraOne.']-|-hotspot-|-10000'),
 ));
+$database = mikhmonReadDatabase();
+$duplicateInvoice = $database['invoices'][$session][0];
+$database['invoices'][$session][] = $duplicateInvoice;
+$duplicateInvoice['id'] = 'monthly-one-copy';
+$database['invoices'][$session][] = $duplicateInvoice;
+$database['report_records'][$session][] = $database['report_records'][$session][0];
+revenueReportTestAssert(mikhmonWriteDatabase($database), 'legacy duplicate fixtures are stored');
 $profiles = array(array('name'=>'voucher','on-login'=>':put (",remc,10000,1d,25000,,Disable,")'));
 $transactions = mikhmonRevenueTransactions($session, $profiles);
-revenueReportTestAssert(count($transactions) === 4, 'portal voucher report row is not counted twice');
+revenueReportTestAssert(count($transactions) === 4, 'duplicate invoices, report records, and portal voucher rows are counted once');
+revenueReportTestAssert(count(array_unique(array_column($transactions, 'id'))) === count($transactions), 'revenue transaction ids remain unique');
 
 $mitraRows = mikhmonRevenueFilterTransactions($transactions, array('owner_user_id'=>$mitraOne));
 $totals = mikhmonRevenueTotals($mitraRows);
@@ -47,7 +55,14 @@ $voucherReportRows = mikhmonRevenueVoucherReportRows($mitraRows, array($mitraOne
 revenueReportTestAssert(count($voucherReportRows) === 1 && $voucherReportRows[0]['quantity'] === 2, 'portal and manually sold vouchers share one daily profile recap');
 revenueReportTestAssert($voucherReportRows[0]['cost'] === 20000.0 && $voucherReportRows[0]['commission'] === 25000.0 && $voucherReportRows[0]['revenue'] === 45000.0, 'voucher report keeps HPP, commission, and selling total separate');
 
-revenueReportTestAssert(mikhmonSaveRevenueDeposit($session, array('collector_user_id'=>$biller,'amount'=>50000,'date'=>'2026-10-08','method'=>'transfer','created_by'=>'Admin')) !== false, 'admin can record a valid collector deposit');
+$depositEntry = array('collector_user_id'=>$biller,'amount'=>50000,'date'=>'2026-10-08','method'=>'transfer','reference'=>'TRX-001','request_id'=>'request-001','created_by'=>'Admin');
+$depositId = mikhmonSaveRevenueDeposit($session, $depositEntry);
+revenueReportTestAssert($depositId !== false, 'admin can record a valid collector deposit');
+revenueReportTestAssert(mikhmonSaveRevenueDeposit($session, $depositEntry) === $depositId, 'repeated deposit request returns the original record');
+$database = mikhmonReadDatabase();
+$database['revenue_deposits'][$session][] = $database['revenue_deposits'][$session][0];
+revenueReportTestAssert(mikhmonWriteDatabase($database), 'legacy duplicate deposit fixture is stored');
+revenueReportTestAssert(count(mikhmonGetRevenueDeposits($session, $biller)) === 1, 'duplicate deposits are shown and totaled once');
 $collector = mikhmonRevenueCollectorSummary($transactions, mikhmonGetRevenueDeposits($session), $biller);
 revenueReportTestAssert($collector['manual'] === 102500.0 && $collector['deposited'] === 50000.0 && $collector['outstanding'] === 52500.0, 'biller outstanding balance deducts recorded deposits from gross cash');
 revenueReportTestAssert($collector['commission'] === 2500.0 && $collector['commission_open'] === 2500.0, 'biller commission remains separate from deposits');
