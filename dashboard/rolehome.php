@@ -101,45 +101,73 @@ $mitraCustomerMonth = mikhmonRevenueMoney($mitraDashboardRevenue['customer_month
 ?>
 <style>
 .dashboard-revenue-card h1{font-size:24px;line-height:1.25;margin-bottom:6px}.dashboard-revenue-card a{height:100%}
+.dashboard-main-row .box>a{display:block;min-height:44px}.dashboard-main-row a:focus-visible{outline:2px solid #fff;outline-offset:2px;box-shadow:0 0 0 4px #2f353a}
+.dashboard-main-row .bg-blue,.dashboard-main-row .bg-green,.dashboard-main-row .bg-yellow,.dashboard-main-row .bg-red,.dashboard-main-row .bg-blue a,.dashboard-main-row .bg-green a,.dashboard-main-row .bg-yellow a,.dashboard-main-row .bg-red a{color:#18222d}
 @media screen and (max-width: 750px){.dashboard-revenue-card h1{font-size:20px}}
-@media screen and (min-width: 751px) {
-  .mitra-dashboard-main-row {
-    display: flex;
-    align-items: stretch;
+@media screen and (min-width: 751px) and (max-width: 1100px){.dashboard-main-row>.dashboard-main-column{float:none;width:100%}}
+@media screen and (min-width: 1101px) {
+  .dashboard-main-row {
+    position: relative;
   }
-  .mitra-dashboard-main-row > .mitra-dashboard-column {
+  .dashboard-main-row > .dashboard-main-column {
     display: flex;
     flex-direction: column;
   }
-  .mitra-dashboard-right .mitra-hotspot-log,
-  .mitra-dashboard-right .mitra-hotspot-log .card {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
+  .dashboard-main-right {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr);
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    float: none;
   }
-  .mitra-dashboard-right .mitra-hotspot-log .card-body {
+  .dashboard-main-right #r_1 > .col-4 {
+    float: none;
+    width: 100%;
+  }
+  .dashboard-main-right #r_1 .box {
+    min-height: 0;
+    padding: 6px 10px;
+  }
+  .dashboard-main-right #r_1 .box-group-icon {
+    width: 36px;
+    padding: 3px 6px;
+    font-size: 26px;
+  }
+  .dashboard-main-right #r_3 {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    height: auto;
+    min-height: 0;
+  }
+  .dashboard-main-right #r_3::after {
+    display: none;
+  }
+  .dashboard-main-right #r_3 > .card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .dashboard-main-right #r_3 > .card .card-body {
     display: flex;
     flex: 1;
     min-height: 0;
   }
-  .mitra-dashboard-right .mitra-hotspot-log .overflow {
+  .dashboard-main-right #r_3 > .card .overflow {
     flex: 1;
-    max-height: 320px !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0;
     width: 100%;
   }
 }
 </style>
 <div id="reloadHome">
-  <div id="r_1" class="row">
-    <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-calendar"></i></div><div class="box-group-area"><span><?= $_system_date_time ?><br><?= htmlspecialchars(ucfirst(isset($clock['date']) ? $clock['date'] : date('M/d/Y')) . ' ' . (isset($clock['time']) ? $clock['time'] : date('H:i:s')), ENT_QUOTES); ?><br><?= $_uptime ?> : <?= htmlspecialchars(isset($resource['uptime']) ? formatDTM($resource['uptime']) : '-', ENT_QUOTES); ?></span></div></div></div></div>
-    <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-info-circle"></i></div><div class="box-group-area"><span><?= $_board_name ?> : <?= htmlspecialchars(isset($resource['board-name']) ? $resource['board-name'] : '-', ENT_QUOTES); ?><br><?= $_model ?> : <?= htmlspecialchars(isset($routerboard['model']) ? $routerboard['model'] : '-', ENT_QUOTES); ?><br>Router OS : <?= htmlspecialchars(isset($resource['version']) ? $resource['version'] : '-', ENT_QUOTES); ?></span></div></div></div></div>
-    <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-server"></i></div><div class="box-group-area"><span><?= $_cpu_load ?> : <?= htmlspecialchars(isset($resource['cpu-load']) ? $resource['cpu-load'] : '0', ENT_QUOTES); ?>%<br><?= $_free_memory ?> : <?= htmlspecialchars(isset($resource['free-memory']) ? formatBytes($resource['free-memory'], 2) : '-', ENT_QUOTES); ?><br><?= $_free_hdd ?> : <?= htmlspecialchars(isset($resource['free-hdd-space']) ? formatBytes($resource['free-hdd-space'], 2) : '-', ENT_QUOTES); ?></span></div></div></div></div>
-  </div>
-
   <?php if (empty($routerConnected)): ?><div class="box bg-warning">Router MikroTik tidak terhubung. Data layanan dan report belum dapat diperbarui.</div><?php endif; ?>
 
-  <div class="row mitra-dashboard-main-row">
-    <div class="col-8 mitra-dashboard-column">
+  <div class="row dashboard-main-row">
+    <div class="col-8 dashboard-main-column">
       <div id="r_2" class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-wifi"></i> Hotspot</h3></div><div class="card-body"><div class="row">
         <div class="col-3 col-box-6"><div class="box bg-blue bmh-75"><a href="./?hotspot=active&session=<?= $session; ?>"><h1><?= count($mitraHotspotActive); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-laptop"></i> <?= $_hotspot_active ?></div></a></div></div>
         <div class="col-3 col-box-6"><div class="box bg-green bmh-75"><a href="./?hotspot=users&profile=all&session=<?= $session; ?>"><h1><?= count($mitraVoucherUsers); ?> <span style="font-size:15px">items</span></h1><div><i class="fa fa-ticket"></i> Vouchers</div></a></div></div>
@@ -153,21 +181,21 @@ $mitraCustomerMonth = mikhmonRevenueMoney($mitraDashboardRevenue['customer_month
         <div class="col-4 col-box-6"><div class="box bg-yellow bmh-75"><a href="./?customer=service-add&service=pppoe&session=<?= $session; ?>"><h1><i class="fa fa-user-plus"></i> <span style="font-size:15px"><?= $_add ?></span></h1><div><i class="fa fa-user-plus"></i> <?= $_ppp_secrets ?></div></a></div></div>
       </div></div></div></div>
 
-      <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-address-card"></i> Pelanggan</h3></div><div class="card-body"><div class="row">
+      <div class="card"><div class="card-header"><h3><i class="fa fa-address-card"></i> Pelanggan</h3></div><div class="card-body"><div class="row">
         <div class="col-4"><div class="box bg-blue bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= count($mitraCustomers); ?></h1><div><i class="fa fa-users"></i> Pelanggan</div></a></div></div>
         <div class="col-4"><div class="box bg-green bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= $hotspotCustomers; ?></h1><div><i class="fa fa-wifi"></i> Hotspot</div></a></div></div>
         <div class="col-4"><div class="box bg-yellow bmh-75"><a href="./?customer=list&session=<?= $session; ?>"><h1><?= $pppoeCustomers; ?></h1><div><i class="fa fa-exchange"></i> PPPoE</div></a></div></div>
-      </div></div></div></div>
+      </div></div></div>
 
-      <div id="r_income" class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-money"></i> Pendapatan</h3></div><div class="card-body"><div class="row">
+      <div id="r_income" class="card"><div class="card-header"><h3><i class="fa fa-money"></i> Pendapatan</h3></div><div class="card-body"><div class="row">
         <div class="col-4 col-box-6"><div class="box bg-blue bmh-75 dashboard-revenue-card"><a href="./?report=selling&amp;idhr=<?= strtolower(date('M/d/Y')); ?>&amp;service=hotspot&amp;session=<?= $session; ?>"><h1><?= htmlspecialchars($mitraVoucherToday, ENT_QUOTES); ?></h1><div><i class="fa fa-ticket"></i> Voucher Hari Ini</div></a></div></div>
         <div class="col-4 col-box-6"><div class="box bg-green bmh-75 dashboard-revenue-card"><a href="./?report=selling&amp;idbl=<?= strtolower(date('M')) . date('Y'); ?>&amp;service=hotspot&amp;session=<?= $session; ?>"><h1><?= htmlspecialchars($mitraVoucherMonth, ENT_QUOTES); ?></h1><div><i class="fa fa-calendar"></i> Voucher Bulan Ini</div></a></div></div>
         <div class="col-4 col-box-6"><div class="box bg-yellow bmh-75 dashboard-revenue-card"><a href="./?billing=paid&amp;session=<?= $session; ?>"><h1><?= htmlspecialchars($mitraCustomerMonth, ENT_QUOTES); ?></h1><div><i class="fa fa-users"></i> Pelanggan Bulan Ini</div></a></div></div>
-      </div></div></div></div>
-
-      <div class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-area-chart"></i> <?= $_traffic ?></h3></div><div class="card-body">
-        <div id="mitraTrafficMonitor"></div>
       </div></div></div>
+
+      <div class="card"><div class="card-header"><h3><i class="fa fa-area-chart"></i> <?= $_traffic ?></h3></div><div class="card-body">
+        <div id="mitraTrafficMonitor"></div>
+      </div></div>
       <script>
       (function () {
         var mitraTrafficChart;
@@ -251,8 +279,13 @@ $mitraCustomerMonth = mikhmonRevenueMoney($mitraDashboardRevenue['customer_month
       </script>
     </div>
 
-    <div class="col-4 mitra-dashboard-column mitra-dashboard-right">
-      <div class="row mitra-hotspot-log"><div class="card"><div class="card-header"><h3><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></h3></div><div class="card-body"><div style="padding: 5px; max-height: 320px;" class="mr-t-10 overflow">
+    <div class="col-4 dashboard-main-column dashboard-main-right">
+      <div id="r_1" class="row">
+        <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-calendar"></i></div><div class="box-group-area"><span><?= $_system_date_time ?><br><?= htmlspecialchars(ucfirst(isset($clock['date']) ? $clock['date'] : date('M/d/Y')) . ' ' . (isset($clock['time']) ? $clock['time'] : date('H:i:s')), ENT_QUOTES); ?><br><?= $_uptime ?> : <?= htmlspecialchars(isset($resource['uptime']) ? formatDTM($resource['uptime']) : '-', ENT_QUOTES); ?></span></div></div></div></div>
+        <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-info-circle"></i></div><div class="box-group-area"><span><?= $_board_name ?> : <?= htmlspecialchars(isset($resource['board-name']) ? $resource['board-name'] : '-', ENT_QUOTES); ?><br><?= $_model ?> : <?= htmlspecialchars(isset($routerboard['model']) ? $routerboard['model'] : '-', ENT_QUOTES); ?><br>Router OS : <?= htmlspecialchars(isset($resource['version']) ? $resource['version'] : '-', ENT_QUOTES); ?></span></div></div></div></div>
+        <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-server"></i></div><div class="box-group-area"><span><?= $_cpu_load ?> : <?= htmlspecialchars(isset($resource['cpu-load']) ? $resource['cpu-load'] : '0', ENT_QUOTES); ?>%<br><?= $_free_memory ?> : <?= htmlspecialchars(isset($resource['free-memory']) ? formatBytes($resource['free-memory'], 2) : '-', ENT_QUOTES); ?><br><?= $_free_hdd ?> : <?= htmlspecialchars(isset($resource['free-hdd-space']) ? formatBytes($resource['free-hdd-space'], 2) : '-', ENT_QUOTES); ?></span></div></div></div></div>
+      </div>
+      <div id="r_3" class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></h3></div><div class="card-body"><div style="padding: 5px; max-height: 320px;" class="mr-t-10 overflow">
         <table class="table table-sm table-bordered table-hover" style="font-size: 12px;">
           <thead><tr><th><?= $_time ?></th><th><?= $_users ?> (IP)</th><th><?= $_messages ?></th></tr></thead>
           <tbody>

@@ -25,6 +25,10 @@ foreach ($dashboardSources as $dashboardName => $source) {
   dashboardCardOrderAssert(strpos($source, 'Voucher Hari Ini') !== false, $dashboardName . ' shows today voucher revenue');
   dashboardCardOrderAssert(strpos($source, 'Voucher Bulan Ini') !== false, $dashboardName . ' shows monthly voucher revenue');
   dashboardCardOrderAssert(strpos($source, 'Pelanggan Bulan Ini') !== false, $dashboardName . ' shows monthly customer revenue');
+  dashboardCardOrderAssert(strpos($source, 'min-width: 751px) and (max-width: 1100px)') !== false, $dashboardName . ' stacks its main columns at tablet and small-laptop widths');
+  dashboardCardOrderAssert(strpos($source, '.dashboard-main-row .box>a{display:block;min-height:44px}') !== false, $dashboardName . ' keeps dashboard links large enough for touch');
+  dashboardCardOrderAssert(strpos($source, '.dashboard-main-row a:focus-visible') !== false, $dashboardName . ' shows keyboard focus on dashboard links');
+  dashboardCardOrderAssert(strpos($source, '.dashboard-main-row .bg-blue') !== false && strpos($source, 'color:#18222d') !== false, $dashboardName . ' uses readable text contrast on colored cards');
 }
 
 dashboardCardOrderAssert(strpos($dashboardSources['admin dashboard'], 'grid-template-rows: repeat(2, minmax(0, 1fr));') !== false, 'admin dashboard divides the desktop log column into two stable rows');
@@ -34,6 +38,12 @@ $adminSystemSummaryPosition = strpos($dashboardSources['admin dashboard'], 'id="
 $adminLogPosition = strpos($dashboardSources['admin dashboard'], 'id="r_3"');
 dashboardCardOrderAssert($adminSystemSummaryPosition > $adminSidebarPosition && $adminLogPosition > $adminSystemSummaryPosition, 'admin system summary is grouped above the logs in the right column');
 dashboardCardOrderAssert(strpos($dashboardSources['admin dashboard'], 'max-height: none !important;') !== false, 'admin dashboard logs fill their assigned row');
-dashboardCardOrderAssert(strpos($dashboardSources['partner dashboard'], 'max-height: 320px !important;') !== false, 'partner dashboard keeps its single log card compact');
+$partnerSidebarPosition = strpos($dashboardSources['partner dashboard'], 'class="col-4 dashboard-main-column dashboard-main-right"');
+$partnerSystemSummaryPosition = strpos($dashboardSources['partner dashboard'], 'id="r_1"');
+$partnerLogPosition = strpos($dashboardSources['partner dashboard'], 'id="r_3"');
+dashboardCardOrderAssert(strpos($dashboardSources['partner dashboard'], 'class="row dashboard-main-row"') !== false, 'partner dashboard uses the same main grid as admin');
+dashboardCardOrderAssert($partnerSystemSummaryPosition > $partnerSidebarPosition && $partnerLogPosition > $partnerSystemSummaryPosition, 'partner system summary is grouped above the log in the right column');
+dashboardCardOrderAssert(strpos($dashboardSources['partner dashboard'], 'max-height: none !important;') !== false, 'partner dashboard log fills the available right column height');
+dashboardCardOrderAssert(strpos($dashboardSources['partner dashboard'], 'mitra-dashboard-main-row') === false, 'partner dashboard no longer uses a separate layout system');
 
 echo 'dashboard-card-order-tests: OK' . PHP_EOL;

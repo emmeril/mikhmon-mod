@@ -143,8 +143,11 @@ if (!isset($_SESSION["mikhmon"])) {
 
 <style>
 .dashboard-revenue-card h1{font-size:24px;line-height:1.25;margin-bottom:6px}.dashboard-revenue-card a{height:100%}
+.dashboard-main-row .box>a{display:block;min-height:44px}.dashboard-main-row a:focus-visible{outline:2px solid #fff;outline-offset:2px;box-shadow:0 0 0 4px #2f353a}
+.dashboard-main-row .bg-blue,.dashboard-main-row .bg-green,.dashboard-main-row .bg-yellow,.dashboard-main-row .bg-red,.dashboard-main-row .bg-blue a,.dashboard-main-row .bg-green a,.dashboard-main-row .bg-yellow a,.dashboard-main-row .bg-red a{color:#18222d}
 @media screen and (max-width: 750px){.dashboard-revenue-card h1{font-size:20px}}
-@media screen and (min-width: 751px) {
+@media screen and (min-width: 751px) and (max-width: 1100px){.dashboard-main-row>.dashboard-main-column{float:none;width:100%}}
+@media screen and (min-width: 1101px) {
   .dashboard-main-row {
     position: relative;
   }
