@@ -40,14 +40,14 @@ foreach ($commissionRows as $invoice) {
 }
 ?>
 <div class="row"><div class="col-12"><div class="card">
-  <div class="card-header"><h3><i class="fa fa-money"></i> Komisi Saya</h3></div>
+  <div class="card-header"><h3><i class="fa fa-money"></i> Pendapatan Bersih Biller</h3></div>
   <div class="card-body">
     <div class="commission-toolbar data-toolbar" role="search" aria-label="Filter komisi">
       <div class="data-toolbar__filters"><input id="commissionSearch" type="search" class="form-control data-toolbar__search" placeholder="Cari pelanggan, username, atau invoice" autocomplete="off">
       <select id="commissionMonth" class="form-control data-toolbar__select" onchange="location='./?commission=1&session=<?= rawurlencode($session); ?>&month='+encodeURIComponent(this.value)"><?php foreach (array_keys($availableMonths) as $month): ?><option value="<?= htmlspecialchars($month, ENT_QUOTES); ?>"<?= $month === $selectedMonth ? ' selected' : ''; ?>><?= htmlspecialchars(billerCommissionMonthLabel($month), ENT_QUOTES); ?></option><?php endforeach; ?></select></div>
     </div>
     <div class="overflow box-bordered" style="max-height:75vh"><table id="commissionTable" class="table table-bordered table-hover text-nowrap">
-      <thead><tr><th>No</th><th>Tanggal Bayar</th><th>Pelanggan</th><th>Layanan</th><th>Username</th><th>Invoice</th><th>Jumlah Tagihan</th><th>Komisi</th></tr></thead>
+      <thead><tr><th>No</th><th>Tanggal Bayar</th><th>Pelanggan</th><th>Layanan</th><th>Username</th><th>Invoice</th><th>Jumlah Tagihan</th><th>Komisi Biller</th></tr></thead>
       <tbody>
       <?php $visibleIndex = 0; foreach ($commissionRows as $invoice):
         if (empty($invoice['paid_at']) || date('Y-m', (int) $invoice['paid_at']) !== $selectedMonth) continue;

@@ -9,8 +9,8 @@ if (!is_array($pools)) {
   $pools = array();
 }
 if (isset($_POST['save'])) {
-  $profileComment=pppProfileMetaEncode($_POST['price'],$_POST['selling-price'],$_POST['comment'],$_POST['expmode'],$_POST['validity']);
-  $API->comm("/ppp/profile/set",array(".id"=>$profile['.id'],"name"=>trim($_POST['name']),"local-address"=>$_POST['local-address'],"remote-address"=>$_POST['remote-address'],"rate-limit"=>$_POST['rate-limit'],"dns-server"=>$_POST['dns-server'],"comment"=>$profileComment,"on-up"=>pppProfileOnUpScript($_POST['expmode'],$_POST['validity'],trim($_POST['name']),$_POST['price'],$_POST['selling-price'])));
+  $profileComment=pppProfileMetaEncode($_POST['price'],$_POST['commission'],$_POST['selling-price'],$_POST['comment'],$_POST['expmode'],$_POST['validity']);
+  $API->comm("/ppp/profile/set",array(".id"=>$profile['.id'],"name"=>trim($_POST['name']),"local-address"=>$_POST['local-address'],"remote-address"=>$_POST['remote-address'],"rate-limit"=>$_POST['rate-limit'],"dns-server"=>$_POST['dns-server'],"comment"=>$profileComment,"on-up"=>pppProfileOnUpScript($_POST['expmode'],$_POST['validity'],trim($_POST['name']),$_POST['price'],$_POST['selling-price'],$_POST['commission'])));
   $target = './?ppp=profiles&session=' . rawurlencode($session);
   echo '<script>window.location.replace(' . json_encode($target) . ')</script>'; exit;
 }
@@ -24,8 +24,9 @@ $profileMeta=pppProfileMetaDecode(isset($profile['comment'])?$profile['comment']
 <tr><td>Local Address</td><td><select class="form-control" name="local-address"><option value=""<?= $local===''?' selected':'' ?>>none</option><?php poolOptions($pools,$local); ?></select></td></tr>
 <tr><td>Remote Address</td><td><select class="form-control" name="remote-address"><option value=""<?= $remote===''?' selected':'' ?>>none</option><?php poolOptions($pools,$remote); ?></select></td></tr>
 <tr><td>Rate Limit</td><td><input class="form-control" name="rate-limit" value="<?= pv('rate-limit',$profile) ?>"></td></tr><tr><td>DNS Server</td><td><input class="form-control" name="dns-server" value="<?= pv('dns-server',$profile) ?>"></td></tr>
-<tr><td><?= $_price . ' ' . $currency ?></td><td><input class="form-control" type="number" min="0" step="any" name="price" value="<?= htmlspecialchars($profileMeta['price'],ENT_QUOTES) ?>"></td></tr>
-<tr><td><?= $_selling_price . ' ' . $currency ?></td><td><input class="form-control" type="number" min="0" step="any" name="selling-price" value="<?= htmlspecialchars($profileMeta['selling-price'],ENT_QUOTES) ?>"></td></tr>
+<tr><td>HPP <?= htmlspecialchars($currency, ENT_QUOTES) ?></td><td><input class="form-control" type="number" min="0" step="any" name="price" value="<?= htmlspecialchars($profileMeta['price'],ENT_QUOTES) ?>"></td></tr>
+<tr><td>Komisi <?= htmlspecialchars($currency, ENT_QUOTES) ?></td><td><input class="form-control" type="number" min="0" step="any" name="commission" value="<?= htmlspecialchars($profileMeta['commission'],ENT_QUOTES) ?>"></td></tr>
+<tr><td>Harga <?= htmlspecialchars($currency, ENT_QUOTES) ?></td><td><input class="form-control" type="number" min="0" step="any" name="selling-price" value="<?= htmlspecialchars($profileMeta['selling-price'],ENT_QUOTES) ?>"></td></tr>
 <tr><td>Expired Mode</td><td><select class="form-control" name="expmode"><option value="none"<?= $profileMeta['expmode']==='none'?' selected':'' ?>>Tidak ada</option><option value="remove"<?= $profileMeta['expmode']==='remove'?' selected':'' ?>>Remove user</option><option value="disable"<?= $profileMeta['expmode']==='disable'?' selected':'' ?>>Disable user</option></select></td></tr>
 <tr><td>Validity</td><td><input class="form-control" name="validity" value="<?= htmlspecialchars($profileMeta['validity'],ENT_QUOTES) ?>" placeholder="Contoh: 30d, 12h"></td></tr>
 <tr><td><?= $_comment ?></td><td><input class="form-control" name="comment" value="<?= htmlspecialchars($profileMeta['comment'],ENT_QUOTES) ?>"></td></tr></table><div class="crud-form-actions"><button class="btn bg-primary" name="save"><i class="fa fa-save"></i> <?= $_save ?></button><a class="btn bg-warning" href="./?ppp=profiles&session=<?= $session ?>"><i class="fa fa-close"></i> <?= $_close ?></a></div></form></div></div></div></div>

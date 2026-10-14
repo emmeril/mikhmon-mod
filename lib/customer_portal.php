@@ -9,6 +9,7 @@ require_once dirname(__DIR__) . '/lib/billing_profile.php';
 require_once dirname(__DIR__) . '/lib/billing_policy.php';
 require_once dirname(__DIR__) . '/lib/partner_workflow.php';
 require_once dirname(__DIR__) . '/ppp/profilemeta.php';
+require_once dirname(__DIR__) . '/hotspot/profileprice.php';
 
 function mikhmonCustomerPortalOtp($phone, $ttl = 300) {
   $customer = mikhmonFindCustomerByPhone($phone);
@@ -29,11 +30,13 @@ function mikhmonCustomerPortalFind($session, $customerId) {
 
 function mikhmonCustomerPortalProfileDetails($profile) {
   $parts = explode(',', (string) ($profile['on-login'] ?? ''));
-  $price = isset($parts[2]) ? (float) preg_replace('/[^0-9.]/', '', $parts[2]) : 0;
-  $selling = isset($parts[4]) ? (float) preg_replace('/[^0-9.]/', '', $parts[4]) : 0;
+  $prices = mikhmonHotspotProfilePrices($profile);
+  $price = $prices['hpp'];
+  $selling = $prices['harga'];
   return array(
     'name' => (string) ($profile['name'] ?? ''),
     'price' => $price,
+    'commission' => $prices['commission'],
     'selling_price' => $selling > 0 ? $selling : $price,
     'validity' => isset($parts[3]) ? trim((string) $parts[3]) : '',
     'expired_mode' => mikhmonBillingProfileExpiredMode('hotspot', $profile),
@@ -87,12 +90,15 @@ function mikhmonCustomerPortalMonthlyServices($customer, $api) {
       $meta = pppProfileMetaDecode($profile['comment'] ?? '');
       $amount = (float) (($meta['selling-price'] ?? '') !== '' ? $meta['selling-price'] : ($meta['price'] ?? 0));
       $validity = (string) ($meta['validity'] ?? '');
+      $hpp = max(0, (float) ($meta['price'] ?? 0));
+      $commission = max(0, (float) ($meta['commission'] ?? 0));
     } else {
       $details = mikhmonCustomerPortalProfileDetails($profile);
       $amount = $details['selling_price']; $validity = $details['validity'];
+      $hpp = $details['price']; $commission = $details['commission'];
     }
     if ($amount < 1) continue;
-    $services[] = array('id' => $service['id'] ?? '', 'service' => $type, 'username' => $service['username'], 'profile' => $service['profile'], 'amount' => $amount, 'validity' => $validity);
+    $services[] = array('id' => $service['id'] ?? '', 'service' => $type, 'username' => $service['username'], 'profile' => $service['profile'], 'amount' => $amount, 'hpp' => $hpp, 'partner_commission' => $commission, 'validity' => $validity);
   }
   return $services;
 }
@@ -219,7 +225,7 @@ function mikhmonCustomerPortalCreateVoucherInvoice($session, $customer, $profile
   $invoice = array(
     'id' => 'invoice-' . bin2hex(random_bytes(8)), 'number' => $number,
     'customer_id' => $customer['id'], 'customer_name' => $customer['name'] ?? 'Pelanggan',
-    'kind' => 'voucher', 'voucher_profile' => $details['name'], 'voucher_validity' => $details['validity'], 'voucher_cost' => $details['price'], 'voucher_username' => '', 'voucher_password' => '',
+    'kind' => 'voucher', 'voucher_profile' => $details['name'], 'voucher_validity' => $details['validity'], 'voucher_cost' => $details['price'], 'voucher_commission' => $details['commission'], 'voucher_username' => '', 'voucher_password' => '',
     'services' => array(), 'service_count' => 0, 'amount' => $details['selling_price'],
     'due_date' => date('Y-m-d H:i:s', time() + 86400), 'status' => 'unpaid', 'created_at' => time(),
   );

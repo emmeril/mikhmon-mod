@@ -27,8 +27,9 @@ $operatorId = mikhmonSaveUser('', 'Operator Baru', 'operatorbaru', 'operator', '
 roleTestAssert($mitraId !== false && $billerId !== false && $adminId !== false && $financeId !== false && $operatorId !== false, 'roles can be saved');
 $billerPartner = mikhmonFindPartner($billerId, 'user_id');
 roleTestAssert($billerPartner && $billerPartner['category'] === 'biller' && $billerPartner['commission'] === 2500.0, 'biller account receives a linked partner profile');
-$billerPartner['commission'] = 3500;
-roleTestAssert(mikhmonSavePartner($billerPartner) !== false && mikhmonBillerCommissionAmount($billerId) === 3500.0, 'partner commission is configurable per biller');
+roleTestAssert(mikhmonSaveUser($billerId, 'Biller Satu', 'biller1', 'biller', 'router-a', '', true, 3500) === $billerId && mikhmonBillerCommissionAmount($billerId) === 3500.0, 'biller commission is configurable on the user account');
+roleTestAssert(mikhmonSaveUser($mitraId, 'Mitra Satu', 'mitra1', 'mitra', 'router-a', '', true, 1800) === $mitraId && mikhmonBillerCommissionAmount($mitraId) === 1800.0, 'mitra account can receive a configured biller commission');
+roleTestAssert(mikhmonSaveUser($adminId, 'Admin Baru', 'adminbaru', 'admin', '', '', true, 2200) === $adminId && mikhmonBillerCommissionAmount($adminId) === 2200.0, 'administrator account can receive a configured biller commission');
 $salesPartnerId = mikhmonSavePartner(array('name' => 'Sales Satu', 'session' => 'router-a', 'category' => 'sales', 'commission' => 1000, 'active' => true));
 roleTestAssert($salesPartnerId !== false && mikhmonFindPartner($salesPartnerId)['category'] === 'sales', 'sales partner can be stored without a login account');
 roleTestAssert(mikhmonFindUser($adminId)['session'] === 'mikhmon', 'admin accounts receive access to all routers');

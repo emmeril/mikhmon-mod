@@ -171,7 +171,7 @@ function mikhmonInvoicePdf($invoice, $customer, $currency, $brand) {
     mikhmonInvoicePdfDrawText($commands, 365, $summaryY - $summaryOffset, 9, 'Subtotal Layanan: ' . mikhmonInvoicePdfMoney($subtotal, $currency), '0.08 0.22 0.38');
     if ($collectionFee > 0) {
       $summaryOffset += 18;
-      mikhmonInvoicePdfDrawText($commands, 365, $summaryY - $summaryOffset, 9, 'Komisi Penagihan: ' . mikhmonInvoicePdfMoney($collectionFee, $currency), '0.08 0.22 0.38');
+      mikhmonInvoicePdfDrawText($commands, 365, $summaryY - $summaryOffset, 9, 'Komisi Biller: ' . mikhmonInvoicePdfMoney($collectionFee, $currency), '0.08 0.22 0.38');
     }
     $summaryOffset += 18;
     mikhmonInvoicePdfDrawText($commands, 365, $summaryY - $summaryOffset, 10, 'TOTAL TAGIHAN: ' . $total, '0.08 0.22 0.38');

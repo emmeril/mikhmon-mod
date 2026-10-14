@@ -21,7 +21,8 @@ $paidAt = strtotime('2026-10-08 10:00:00');
 mikhmonSaveInvoice($session, array(
   'id'=>'monthly-one','number'=>'INV-ONE','kind'=>'monthly','customer_id'=>$customerOne,'customer_name'=>'Pelanggan Satu',
   'status'=>'paid','paid_at'=>$paidAt,'subtotal'=>100000,'collection_fee'=>2500,'amount'=>102500,
-  'paid_by_user_id'=>$biller,'biller_commission'=>2500,
+  'paid_by_user_id'=>$biller,'biller_commission'=>2500,'mitra_user_id'=>$mitraOne,'mitra_commission'=>10000,
+  'services'=>array(array('service'=>'hotspot','profile'=>'bulanan-1','amount'=>100000,'hpp'=>60000,'partner_commission'=>10000)),
 ));
 mikhmonSaveInvoice($session, array(
   'id'=>'voucher-portal','number'=>'VCR-ONE','kind'=>'voucher','customer_id'=>$customerOne,'customer_name'=>'Pelanggan Satu',
@@ -51,6 +52,7 @@ $mitraRows = mikhmonRevenueFilterTransactions($transactions, array('owner_user_i
 $totals = mikhmonRevenueTotals($mitraRows);
 revenueReportTestAssert($totals['customer'] === 100000.0 && $totals['voucher'] === 45000.0 && $totals['revenue'] === 145000.0, 'partner revenue combines paid customers and vouchers');
 revenueReportTestAssert($totals['direct'] === 20000.0 && $totals['manual'] === 127500.0, 'direct gateway money is separated from cash held by collectors');
+revenueReportTestAssert($totals['cost'] === 80000.0 && $totals['partner_income'] === 35000.0 && $totals['biller_income'] === 2500.0 && $totals['net'] === 30000.0, 'revenue totals separate HPP, partner income, biller income, and ISP net income');
 $voucherReportRows = mikhmonRevenueVoucherReportRows($mitraRows, array($mitraOne=>'Mitra Satu'));
 revenueReportTestAssert(count($voucherReportRows) === 1 && $voucherReportRows[0]['quantity'] === 2, 'portal and manually sold vouchers share one daily profile recap');
 revenueReportTestAssert($voucherReportRows[0]['cost'] === 20000.0 && $voucherReportRows[0]['commission'] === 25000.0 && $voucherReportRows[0]['revenue'] === 45000.0, 'voucher report keeps HPP, commission, and selling total separate');

@@ -5,6 +5,7 @@ if (!mikhmonIsAdmin() && !mikhmonIsBiller() && !mikhmonIsMitra()) { header('Loca
 
 include_once('./include/database.php');
 include_once('./ppp/profilemeta.php');
+include_once('./hotspot/profileprice.php');
 include_once('./lib/fonnte.php');
 include_once('./lib/payment_gateway.php');
 include_once('./lib/payment_activation.php');
@@ -44,12 +45,15 @@ function billingProfilePrice($service, $profileName, $hotspotProfiles, $pppoePro
     if (!isset($profile['name']) || (string) $profile['name'] !== (string) $profileName) continue;
     if ($service === 'pppoe') {
       $meta = pppProfileMetaDecode($profile['comment'] ?? '');
-      return array('price' => $meta['price'], 'selling_price' => $meta['selling-price'], 'validity' => $meta['validity']);
+      return array('price' => $meta['price'], 'commission' => $meta['commission'], 'selling_price' => $meta['selling-price'], 'validity' => $meta['validity']);
     }
     $login = isset($profile['on-login']) ? (string) $profile['on-login'] : '';
-    if (preg_match('/,([^,]*),([^,]*),([^,]*),([^,]*),/', $login, $matches)) return array('price' => $matches[2], 'selling_price' => $matches[4], 'validity' => $matches[3]);
+    if (preg_match('/,([^,]*),([^,]*),([^,]*),([^,]*),/', $login, $matches)) {
+      $profilePrices = mikhmonHotspotProfilePrices($profile);
+      return array('price' => $matches[2], 'commission' => $profilePrices['commission'], 'selling_price' => $matches[4], 'validity' => $matches[3]);
+    }
   }
-  return array('price' => '', 'selling_price' => '', 'validity' => '');
+  return array('price' => '', 'commission' => '', 'selling_price' => '', 'validity' => '');
 }
 
 function billingProfileRow($service, $profileName, $hotspotProfiles, $pppoeProfiles) {
@@ -89,7 +93,7 @@ function billingInvoiceMessage($customer, $invoice, $dueDate, $currency, $brand)
   $amount = isset($invoice['amount']) ? (float) $invoice['amount'] : 0;
   $collectionFee = mikhmonInvoiceCollectionFee($invoice);
   $feeDetails = array('Subtotal Layanan: ' . billingMessageAmount(mikhmonInvoiceSubtotal($invoice), $currency));
-  if ($collectionFee > 0) $feeDetails[] = 'Komisi Penagihan: ' . billingMessageAmount($collectionFee, $currency);
+  if ($collectionFee > 0) $feeDetails[] = 'Komisi Biller: ' . billingMessageAmount($collectionFee, $currency);
   $message = "Yth. Bapak/Ibu " . $customerName . ",\n\nDETAIL TAGIHAN " . $brand . "\nNo. Invoice: " . ($invoice['number'] ?? 'baru') . "\nNama Pelanggan: " . $customerName . "\nLayanan:\n" . implode("\n", $services) . "\n\nRincian Tagihan:\n" . implode("\n", $feeDetails) . "\nTotal Tagihan: " . billingMessageAmount($amount, $currency) . "\nJatuh Tempo: " . ($invoice['due_date'] ?? $dueDate ?: '-') . "\n\nMohon melakukan pembayaran sebelum jatuh tempo. Terima kasih.";
   $paymentUrl = trim((string) ($invoice['payment_url'] ?? ''));
   if ($paymentUrl !== '') $message .= "\n\nLink Pembayaran: " . $paymentUrl;
@@ -237,7 +241,10 @@ function billingServiceDetails($customer, $customerUsers, $customerSchedulers, $
     $amount = (float) ($prices['selling_price'] !== '' ? $prices['selling_price'] : $prices['price']);
     $details[] = array(
       'id' => $serviceRow['id'], 'service' => $service, 'username' => $username,
-      'profile' => $serviceRow['profile'], 'amount' => $amount, 'validity' => $prices['validity'] ?? '',
+      'profile' => $serviceRow['profile'], 'amount' => $amount,
+      'hpp' => max(0, (float) ($prices['price'] ?? 0)),
+      'partner_commission' => max(0, (float) ($prices['commission'] ?? 0)),
+      'validity' => $prices['validity'] ?? '',
       'due_date' => billingDueDate($service, $username, $user, $customerSchedulers),
       'profile_expired_mode' => $profileRow ? mikhmonBillingProfileExpiredMode($service, $profileRow) : '',
       'status' => $missing ? 'missing' : (!$profileAllowed ? 'invalid-profile' : ($expired ? 'expired' : 'active')),
@@ -505,15 +512,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif (empty($routerConnected)) $customerError = 'Router MikroTik tidak terhubung.';
     else {
       $gatewayConfirmed = !empty($invoices[$invoiceIndex]['gateway_payment_received']);
-      $receivingPartner = !$gatewayConfirmed && mikhmonIsBiller() ? mikhmonFindPartner(mikhmonUserId(), 'user_id') : false;
-      $billerCommission = $receivingPartner ? mikhmonBillerCommissionAmount(mikhmonUserId()) : 0;
+      $collectorUserId = !$gatewayConfirmed ? mikhmonUserId() : '';
+      $receivingPartner = $collectorUserId !== '' ? mikhmonFindPartner($collectorUserId, 'user_id') : false;
+      $billerCommission = $collectorUserId !== '' ? mikhmonBillerCommissionAmount($collectorUserId) : 0;
       $actorName = $gatewayConfirmed
         ? 'Retry ' . strtoupper((string) ($invoices[$invoiceIndex]['payment_gateway'] ?? 'Gateway'))
         : (mikhmonIsAdmin() ? 'Administrator' : mikhmonUserName());
       $activationResult = mikhmonPaymentActivationProcess($session, $invoiceId, $API, array(
         'allow_manual' => !$gatewayConfirmed,
         'actor_name' => $actorName,
-        'paid_by_user_id' => $gatewayConfirmed || mikhmonIsAdmin() ? '' : mikhmonUserId(),
+        'paid_by_user_id' => $gatewayConfirmed ? '' : $collectorUserId,
         'biller_partner_id' => $receivingPartner ? $receivingPartner['id'] : '',
         'biller_commission' => $billerCommission,
       ));
@@ -542,7 +550,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif (!$customer || !$invoiceToSend || (string) ($invoiceToSend['customer_id'] ?? '') !== (string) ($customer['id'] ?? '')) $customerError = 'Invoice atau pelanggan tidak ditemukan.';
     elseif (!mikhmonBillingAutomationIsWorkHour()) $customerError = 'Pengiriman invoice melalui Fonnte hanya dapat dilakukan pada jam kerja (07.00-17.00).';
     else {
-      if (mikhmonIsBiller() && mikhmonInvoiceIsCollectible($invoiceToSend) && mikhmonInvoiceCollectionFee($invoiceToSend) <= 0) {
+      if (mikhmonBillerCommissionAmount() > 0 && mikhmonInvoiceIsCollectible($invoiceToSend) && mikhmonInvoiceCollectionFee($invoiceToSend) <= 0) {
         $partner = mikhmonFindPartner(mikhmonUserId(), 'user_id');
         $invoiceToSend = mikhmonInvoiceApplyCollectionFee($invoiceToSend, mikhmonBillerCommissionAmount(), array(
           'user_id' => mikhmonUserId(),
@@ -571,7 +579,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif (!$customer || $invoiceIndex < 0 || (string) ($invoices[$invoiceIndex]['customer_id'] ?? '') !== (string) ($customer['id'] ?? '')) $customerError = 'Invoice atau pelanggan tidak ditemukan.';
     elseif (!mikhmonInvoiceIsCollectible($invoices[$invoiceIndex])) $customerError = 'Hanya invoice terbit yang belum dibayar yang dapat dibuatkan link pembayaran.';
     else {
-      if (mikhmonIsBiller() && mikhmonInvoiceCollectionFee($invoices[$invoiceIndex]) <= 0) {
+      if (mikhmonBillerCommissionAmount() > 0 && mikhmonInvoiceCollectionFee($invoices[$invoiceIndex]) <= 0) {
         $partner = mikhmonFindPartner(mikhmonUserId(), 'user_id');
         $invoices[$invoiceIndex] = mikhmonInvoiceApplyCollectionFee($invoices[$invoiceIndex], mikhmonBillerCommissionAmount(), array(
           'user_id' => mikhmonUserId(),
@@ -668,7 +676,7 @@ if ($billingView === 'paid') {
     $currentInvoiceCount++;
     if (!mikhmonInvoiceIsCollectible($currentInvoice)) continue;
     $unpaidInvoiceCount++;
-    if (mikhmonIsBiller() && mikhmonInvoiceCollectionFee($currentInvoice) <= 0) {
+    if (mikhmonBillerCommissionAmount() > 0 && mikhmonInvoiceCollectionFee($currentInvoice) <= 0) {
       $currentInvoice = mikhmonInvoiceApplyCollectionFee($currentInvoice, mikhmonBillerCommissionAmount());
     }
     $unpaidInvoiceAmount += (float) ($currentInvoice['amount'] ?? 0);
@@ -708,7 +716,7 @@ if ($billingView === 'paid') {
     <?php if (empty($routerConnected)): ?><div class="box bg-warning">Router MikroTik tidak terhubung. Invoice baru dan aktivasi pembayaran dinonaktifkan.</div><?php endif; ?>
     <?php if ($billingView === 'paid'): ?>
       <div class="billing-summary paid" aria-label="Ringkasan invoice paid bulan ini">
-        <div class="billing-summary-card"><span class="billing-summary-label">Komisi Penagihan</span><span class="billing-summary-value"><?= htmlspecialchars($currency . ' ' . number_format($paidMonthCommission, 0, ',', '.'), ENT_QUOTES); ?></span></div>
+        <div class="billing-summary-card"><span class="billing-summary-label">Komisi Biller</span><span class="billing-summary-value"><?= htmlspecialchars($currency . ' ' . number_format($paidMonthCommission, 0, ',', '.'), ENT_QUOTES); ?></span></div>
         <div class="billing-summary-card"><span class="billing-summary-label">TOTAL <?= htmlspecialchars($currentMonthLabel, ENT_QUOTES); ?></span><span class="billing-summary-value"><?= htmlspecialchars($currency . ' ' . number_format($paidMonthAmount, 0, ',', '.'), ENT_QUOTES); ?></span></div>
       </div>
     <?php else: ?>
@@ -763,7 +771,7 @@ if ($billingView === 'paid') {
       $invoiceStatusClass = $invoiceStatus === 'paid' ? 'text-success' : (in_array($invoiceStatus, array('overdue','isolated'), true) ? 'text-danger' : 'text-secondary');
       $estimatedAmount = 0; foreach ($serviceDetails as $detail) $estimatedAmount += (float) $detail['amount'];
       $displayInvoice = $invoice;
-      if ($invoicePayable && mikhmonIsBiller() && mikhmonInvoiceCollectionFee($displayInvoice) <= 0) {
+      if ($invoicePayable && mikhmonBillerCommissionAmount() > 0 && mikhmonInvoiceCollectionFee($displayInvoice) <= 0) {
         $partner = mikhmonFindPartner(mikhmonUserId(), 'user_id');
         $displayInvoice = mikhmonInvoiceApplyCollectionFee($displayInvoice, mikhmonBillerCommissionAmount(), array(
           'user_id' => mikhmonUserId(),

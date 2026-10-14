@@ -7,12 +7,12 @@ if (!is_array($pools)) {
   $pools = array();
 }
 if (isset($_POST['save'])) {
-  $profileComment = pppProfileMetaEncode($_POST['price'], $_POST['selling-price'], $_POST['comment'], $_POST['expmode'], $_POST['validity']);
+  $profileComment = pppProfileMetaEncode($_POST['price'], $_POST['commission'], $_POST['selling-price'], $_POST['comment'], $_POST['expmode'], $_POST['validity']);
   $API->comm("/ppp/profile/add", array(
     "name" => trim($_POST['name']), "local-address" => $_POST['local-address'],
     "remote-address" => $_POST['remote-address'], "rate-limit" => $_POST['rate-limit'],
     "dns-server" => $_POST['dns-server'], "comment" => $profileComment,
-    "on-up" => pppProfileOnUpScript($_POST['expmode'], $_POST['validity'], trim($_POST['name']), $_POST['price'], $_POST['selling-price'])
+    "on-up" => pppProfileOnUpScript($_POST['expmode'], $_POST['validity'], trim($_POST['name']), $_POST['price'], $_POST['selling-price'], $_POST['commission'])
   ));
   $target = './?ppp=profiles&session=' . rawurlencode($session);
   echo '<script>window.location.replace(' . json_encode($target) . ')</script>'; exit;
@@ -23,8 +23,9 @@ if (isset($_POST['save'])) {
 <tr><td>Local Address</td><td><select class="form-control" name="local-address"><option value="">none</option><?php foreach ($pools as $pool) { if (!isset($pool['name'])) continue; $label=$pool['name'] . (isset($pool['ranges']) && $pool['ranges'] !== '' ? ' - '.$pool['ranges'] : ''); echo '<option value="'.htmlspecialchars($pool['name'],ENT_QUOTES).'">'.htmlspecialchars($label).'</option>'; } ?><?php if (count($pools) === 0) echo '<option disabled>Tidak ada IP pool</option>'; ?></select></td></tr>
 <tr><td>Remote Address</td><td><select class="form-control" name="remote-address"><option value="">none</option><?php foreach ($pools as $pool) { if (!isset($pool['name'])) continue; $label=$pool['name'] . (isset($pool['ranges']) && $pool['ranges'] !== '' ? ' - '.$pool['ranges'] : ''); echo '<option value="'.htmlspecialchars($pool['name'],ENT_QUOTES).'">'.htmlspecialchars($label).'</option>'; } ?><?php if (count($pools) === 0) echo '<option disabled>Tidak ada IP pool</option>'; ?></select></td></tr>
 <tr><td>Rate Limit</td><td><input class="form-control" name="rate-limit" placeholder="10M/10M"></td></tr><tr><td>DNS Server</td><td><input class="form-control" name="dns-server"></td></tr>
-<tr><td><?= $_price . ' ' . $currency ?></td><td><input class="form-control" type="number" min="0" step="any" name="price"></td></tr>
-<tr><td><?= $_selling_price . ' ' . $currency ?></td><td><input class="form-control" type="number" min="0" step="any" name="selling-price"></td></tr>
+<tr><td>HPP <?= htmlspecialchars($currency, ENT_QUOTES) ?></td><td><input class="form-control" type="number" min="0" step="any" name="price"></td></tr>
+<tr><td>Komisi <?= htmlspecialchars($currency, ENT_QUOTES) ?></td><td><input class="form-control" type="number" min="0" step="any" name="commission"></td></tr>
+<tr><td>Harga <?= htmlspecialchars($currency, ENT_QUOTES) ?></td><td><input class="form-control" type="number" min="0" step="any" name="selling-price"></td></tr>
 <tr><td>Expired Mode</td><td><select class="form-control" name="expmode"><option value="none">Tidak ada</option><option value="remove">Remove user</option><option value="disable">Disable user</option></select></td></tr>
 <tr><td>Validity</td><td><input class="form-control" name="validity" placeholder="Contoh: 30d, 12h"></td></tr>
 <tr><td><?= $_comment ?></td><td><input class="form-control" name="comment"></td></tr></table><div class="crud-form-actions"><button class="btn bg-primary" name="save"><i class="fa fa-save"></i> <?= $_save ?></button><a class="btn bg-warning" href="./?ppp=profiles&session=<?= $session ?>"><i class="fa fa-close"></i> <?= $_close ?></a></div></form></div></div></div></div>

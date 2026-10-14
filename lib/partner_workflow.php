@@ -89,8 +89,15 @@ function mikhmonPartnerWorkflowApplyInvoiceSnapshot($session, $invoice, $custome
   $partner = $account['partner'];
   $invoice['mitra_partner_id'] = (string) ($partner['id'] ?? '');
   $invoice['mitra_name'] = (string) ($partner['name'] ?? $account['user']['name'] ?? 'Mitra');
-  if (($invoice['kind'] ?? 'monthly') !== 'voucher') {
-    $invoice['mitra_commission'] = max(0, (float) ($partner['commission'] ?? 0));
+  if (($invoice['kind'] ?? 'monthly') === 'voucher') {
+    $invoice['mitra_commission'] = max(0, (float) ($invoice['voucher_commission'] ?? 0));
+  } else {
+    $hasProfileCommission = false;
+    foreach ((array) ($invoice['services'] ?? array()) as $service) {
+      if (array_key_exists('partner_commission', (array) $service)) $hasProfileCommission = true;
+      $invoice['mitra_commission'] += max(0, (float) ($service['partner_commission'] ?? 0));
+    }
+    if (!$hasProfileCommission) $invoice['mitra_commission'] = max(0, (float) ($partner['commission'] ?? 0));
   }
   return $invoice;
 }

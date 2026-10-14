@@ -228,8 +228,12 @@ function mikhmonCanOpenMainRoute($route) {
 }
 
 function mikhmonBillerCommissionAmount($userId = '') {
-  $userId = $userId !== '' ? (string) $userId : (mikhmonIsBiller() ? mikhmonUserId() : '');
+  $userId = $userId !== '' ? (string) $userId : mikhmonUserId();
   if ($userId !== '') {
+    $user = mikhmonFindUser($userId);
+    if ($user && !empty($user['active']) && in_array($user['role'] ?? '', array('admin', 'mitra', 'biller'), true)) {
+      if (array_key_exists('biller_commission', $user)) return max(0, (float) $user['biller_commission']);
+    }
     $partner = mikhmonFindPartner($userId, 'user_id');
     if ($partner && $partner['category'] === 'biller' && !empty($partner['active'])) return (float) $partner['commission'];
   }

@@ -458,7 +458,7 @@ function mikhmonFindUser($value, $field = 'id') {
   return false;
 }
 
-function mikhmonSaveUser($id, $name, $username, $role, $session, $password = '', $active = true) {
+function mikhmonSaveUser($id, $name, $username, $role, $session, $password = '', $active = true, $billerCommission = null) {
   $database = mikhmonReadDatabase();
   $role = in_array($role, array('admin', 'mitra', 'biller', 'finance', 'operator'), true) ? $role : '';
   $username = trim(strip_tags($username));
@@ -482,6 +482,7 @@ function mikhmonSaveUser($id, $name, $username, $role, $session, $password = '',
     'role' => $role,
     'session' => $session,
     'password_hash' => $password !== '' ? password_hash($password, PASSWORD_DEFAULT) : (isset($existingUser['password_hash']) ? $existingUser['password_hash'] : ''),
+    'biller_commission' => max(0, (float) ($billerCommission !== null ? $billerCommission : ($existingUser['biller_commission'] ?? ($role === 'biller' ? 2500 : 0)))),
     'active' => (bool) $active,
     'updated_at' => time(),
   );
@@ -609,6 +610,7 @@ function mikhmonSaveManagedUser($input) {
       'role' => $targetRole,
       'session' => $session,
       'password_hash' => $passwordHash,
+      'biller_commission' => max(0, (float) ($input['biller_commission'] ?? ($existingUser['biller_commission'] ?? ($targetRole === 'biller' ? 2500 : 0)))),
       'active' => $active,
       'updated_at' => time(),
     );

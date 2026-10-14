@@ -106,30 +106,31 @@ function mikhmonRevenuePdfAddSummaryPage(&$pages, $report, $voucherTotals, $invo
   mikhmonRevenuePdfDrawText($commands, 28, 114, 8, 'Laporan ini hanya memuat transaksi voucher terjual dan tagihan yang sudah lunas.', false, '0.3 0.34 0.38');
   $currency = (string) ($report['currency'] ?? 'Rp');
   $columns = array(
-    array('label'=>'SUMBER', 'width'=>190), array('label'=>'JUMLAH', 'width'=>80, 'align'=>'right'),
-    array('label'=>'NILAI DASAR', 'width'=>160, 'align'=>'right'), array('label'=>'KOMISI', 'width'=>160, 'align'=>'right'),
-    array('label'=>'TOTAL DITERIMA', 'width'=>196, 'align'=>'right'),
+    array('label'=>'SUMBER', 'width'=>140), array('label'=>'JUMLAH', 'width'=>60, 'align'=>'right'),
+    array('label'=>'HPP', 'width'=>135, 'align'=>'right'), array('label'=>'KOMISI MITRA', 'width'=>150, 'align'=>'right'),
+    array('label'=>'KOMISI BILLER', 'width'=>145, 'align'=>'right'), array('label'=>'BERSIH ISP', 'width'=>156, 'align'=>'right'),
   );
   $top = mikhmonRevenuePdfTableHeader($commands, 138, $columns);
   $top = mikhmonRevenuePdfTableRow($commands, $top, $columns, array(
     'Voucher', number_format((int) ($voucherTotals['quantity'] ?? 0), 0, ',', '.'),
     mikhmonRevenuePdfMoney($voucherTotals['cost'] ?? 0, $currency), mikhmonRevenuePdfMoney($voucherTotals['commission'] ?? 0, $currency),
-    mikhmonRevenuePdfMoney($voucherTotals['revenue'] ?? 0, $currency),
+    mikhmonRevenuePdfMoney(0, $currency), mikhmonRevenuePdfMoney($voucherTotals['net_income'] ?? 0, $currency),
   ));
   $top = mikhmonRevenuePdfTableRow($commands, $top, $columns, array(
     'Tagihan lunas', number_format((int) ($invoiceTotals['quantity'] ?? 0), 0, ',', '.'),
-    mikhmonRevenuePdfMoney($invoiceTotals['subtotal'] ?? 0, $currency), mikhmonRevenuePdfMoney($invoiceTotals['commission'] ?? 0, $currency),
-    mikhmonRevenuePdfMoney($invoiceTotals['total'] ?? 0, $currency),
+    mikhmonRevenuePdfMoney($invoiceTotals['cost'] ?? 0, $currency), mikhmonRevenuePdfMoney($invoiceTotals['commission'] ?? 0, $currency),
+    mikhmonRevenuePdfMoney($invoiceTotals['biller_commission'] ?? 0, $currency), mikhmonRevenuePdfMoney($invoiceTotals['net_income'] ?? 0, $currency),
   ), true);
   $top = mikhmonRevenuePdfTableRow($commands, $top, $columns, array(
     'TOTAL PENDAPATAN', number_format((int) (($voucherTotals['quantity'] ?? 0) + ($invoiceTotals['quantity'] ?? 0)), 0, ',', '.'),
-    mikhmonRevenuePdfMoney(($voucherTotals['cost'] ?? 0) + ($invoiceTotals['subtotal'] ?? 0), $currency),
+    mikhmonRevenuePdfMoney(($voucherTotals['cost'] ?? 0) + ($invoiceTotals['cost'] ?? 0), $currency),
     mikhmonRevenuePdfMoney(($voucherTotals['commission'] ?? 0) + ($invoiceTotals['commission'] ?? 0), $currency),
-    mikhmonRevenuePdfMoney(($voucherTotals['revenue'] ?? 0) + ($invoiceTotals['total'] ?? 0), $currency),
+    mikhmonRevenuePdfMoney($invoiceTotals['biller_commission'] ?? 0, $currency),
+    mikhmonRevenuePdfMoney(($voucherTotals['net_income'] ?? 0) + ($invoiceTotals['net_income'] ?? 0), $currency),
   ), false, true);
   mikhmonRevenuePdfDrawText($commands, 28, $top + 34, 9, 'Keterangan perhitungan', true, '0.08 0.22 0.38');
-  mikhmonRevenuePdfDrawText($commands, 28, $top + 53, 8, 'Voucher: Nilai dasar = HPP, Komisi = Harga jual dikurangi HPP.', false, '0.2 0.24 0.28');
-  mikhmonRevenuePdfDrawText($commands, 28, $top + 69, 8, 'Tagihan lunas: Total diterima = subtotal ditambah biaya yang tersimpan pada invoice.', false, '0.2 0.24 0.28');
+  mikhmonRevenuePdfDrawText($commands, 28, $top + 53, 8, 'Bersih Mitra = Komisi profil. Bersih Biller = Komisi Biller yang ditambahkan ke tagihan.', false, '0.2 0.24 0.28');
+  mikhmonRevenuePdfDrawText($commands, 28, $top + 69, 8, 'Bersih ISP = Harga dikurangi HPP dan Komisi Mitra.', false, '0.2 0.24 0.28');
   $pages[] = $commands;
 }
 
@@ -139,10 +140,10 @@ function mikhmonRevenuePdfAddVoucherPages(&$pages, $report, $rows, $totals) {
   $columns = $showOwner ? array(
     array('label'=>'TANGGAL', 'width'=>72), array('label'=>'MITRA', 'width'=>145), array('label'=>'PROFIL', 'width'=>129),
     array('label'=>'JUMLAH', 'width'=>62, 'align'=>'right'), array('label'=>'HPP', 'width'=>126, 'align'=>'right'),
-    array('label'=>'KOMISI', 'width'=>126, 'align'=>'right'), array('label'=>'HARGA', 'width'=>126, 'align'=>'right'),
+    array('label'=>'KOMISI MITRA', 'width'=>126, 'align'=>'right'), array('label'=>'HARGA', 'width'=>126, 'align'=>'right'),
   ) : array(
     array('label'=>'TANGGAL', 'width'=>90), array('label'=>'PROFIL', 'width'=>192), array('label'=>'JUMLAH', 'width'=>74, 'align'=>'right'),
-    array('label'=>'HPP', 'width'=>143, 'align'=>'right'), array('label'=>'KOMISI', 'width'=>143, 'align'=>'right'),
+    array('label'=>'HPP', 'width'=>143, 'align'=>'right'), array('label'=>'KOMISI MITRA', 'width'=>143, 'align'=>'right'),
     array('label'=>'HARGA', 'width'=>144, 'align'=>'right'),
   );
   $chunks = $rows ? array_chunk($rows, 20) : array(array());
@@ -179,14 +180,14 @@ function mikhmonRevenuePdfAddInvoicePages(&$pages, $report, $rows, $totals) {
     array('label'=>'MITRA', 'width'=>115), array('label'=>'BULAN', 'width'=>65), array('label'=>'TAHUN', 'width'=>42, 'align'=>'right'),
     array('label'=>'JUMLAH', 'width'=>46, 'align'=>'right'), array('label'=>'SUBTOTAL', 'width'=>90, 'align'=>'right'),
     array('label'=>'DISKON', 'width'=>67, 'align'=>'right'), array('label'=>'PPN', 'width'=>57, 'align'=>'right'),
-    array('label'=>'ADM', 'width'=>72, 'align'=>'right'), array('label'=>'KODE', 'width'=>62, 'align'=>'right'),
-    array('label'=>'TOTAL', 'width'=>90, 'align'=>'right'), array('label'=>'KOMISI', 'width'=>80, 'align'=>'right'),
+    array('label'=>'KOMISI BILLER', 'width'=>72, 'align'=>'right'), array('label'=>'KODE', 'width'=>62, 'align'=>'right'),
+    array('label'=>'TOTAL', 'width'=>90, 'align'=>'right'), array('label'=>'KOMISI MITRA', 'width'=>80, 'align'=>'right'),
   ) : array(
     array('label'=>'BULAN', 'width'=>92), array('label'=>'TAHUN', 'width'=>54, 'align'=>'right'), array('label'=>'JUMLAH', 'width'=>55, 'align'=>'right'),
     array('label'=>'SUBTOTAL', 'width'=>100, 'align'=>'right'), array('label'=>'DISKON', 'width'=>78, 'align'=>'right'),
-    array('label'=>'PPN', 'width'=>68, 'align'=>'right'), array('label'=>'ADM', 'width'=>84, 'align'=>'right'),
+    array('label'=>'PPN', 'width'=>68, 'align'=>'right'), array('label'=>'KOMISI BILLER', 'width'=>84, 'align'=>'right'),
     array('label'=>'KODE UNIK', 'width'=>76, 'align'=>'right'), array('label'=>'TOTAL', 'width'=>96, 'align'=>'right'),
-    array('label'=>'KOMISI', 'width'=>83, 'align'=>'right'),
+    array('label'=>'KOMISI MITRA', 'width'=>83, 'align'=>'right'),
   );
   $chunks = $rows ? array_chunk($rows, 20) : array(array());
   foreach ($chunks as $chunkIndex => $chunk) {
@@ -199,7 +200,7 @@ function mikhmonRevenuePdfAddInvoicePages(&$pages, $report, $rows, $totals) {
       $financials = array(
         number_format((int) $row['quantity'], 0, ',', '.'), mikhmonRevenuePdfMoney($row['subtotal'], $currency),
         mikhmonRevenuePdfMoney($row['discount'], $currency), mikhmonRevenuePdfMoney($row['tax'], $currency),
-        mikhmonRevenuePdfMoney($row['admin'], $currency), mikhmonRevenuePdfMoney($row['unique_code'], $currency),
+        mikhmonRevenuePdfMoney($row['biller_commission'], $currency), mikhmonRevenuePdfMoney($row['unique_code'], $currency),
         mikhmonRevenuePdfMoney($row['total'], $currency), mikhmonRevenuePdfMoney($row['commission'], $currency),
       );
       $values = $showOwner
@@ -211,7 +212,7 @@ function mikhmonRevenuePdfAddInvoicePages(&$pages, $report, $rows, $totals) {
       $financials = array(
         number_format((int) $totals['quantity'], 0, ',', '.'), mikhmonRevenuePdfMoney($totals['subtotal'], $currency),
         mikhmonRevenuePdfMoney($totals['discount'], $currency), mikhmonRevenuePdfMoney($totals['tax'], $currency),
-        mikhmonRevenuePdfMoney($totals['admin'], $currency), mikhmonRevenuePdfMoney($totals['unique_code'], $currency),
+        mikhmonRevenuePdfMoney($totals['biller_commission'], $currency), mikhmonRevenuePdfMoney($totals['unique_code'], $currency),
         mikhmonRevenuePdfMoney($totals['total'], $currency), mikhmonRevenuePdfMoney($totals['commission'], $currency),
       );
       $values = $showOwner ? array_merge(array('TOTAL', '', ''), $financials) : array_merge(array('TOTAL', ''), $financials);
@@ -254,8 +255,8 @@ function mikhmonRevenuePdfBuildDocument($pages) {
 function mikhmonRevenueReportPdf($report) {
   $voucherRows = (array) ($report['voucher_rows'] ?? array());
   $invoiceRows = (array) ($report['invoice_rows'] ?? array());
-  $voucherTotals = mikhmonRevenueReportSectionTotals($voucherRows, array('cost', 'commission', 'revenue'));
-  $invoiceTotals = mikhmonRevenueReportSectionTotals($invoiceRows, array('subtotal', 'discount', 'tax', 'admin', 'unique_code', 'total', 'commission'));
+  $voucherTotals = mikhmonRevenueReportSectionTotals($voucherRows, array('cost', 'commission', 'revenue', 'net_income'));
+  $invoiceTotals = mikhmonRevenueReportSectionTotals($invoiceRows, array('subtotal', 'discount', 'tax', 'admin', 'unique_code', 'total', 'commission', 'cost', 'biller_commission', 'net_income'));
   $pages = array();
   mikhmonRevenuePdfAddSummaryPage($pages, $report, $voucherTotals, $invoiceTotals);
   mikhmonRevenuePdfAddVoucherPages($pages, $report, $voucherRows, $voucherTotals);

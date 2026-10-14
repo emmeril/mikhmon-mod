@@ -51,6 +51,7 @@ billingReportPageTestAssert(strpos($html, 'INV-MITRA-ONE') !== false && strpos($
 billingReportPageTestAssert(strpos($html, 'Laporan Pendapatan') !== false && strpos($html, 'Pendapatan Pelanggan') !== false, 'admin sees the unified revenue report');
 billingReportPageTestAssert(strpos($html, 'Pendapatan Voucher') !== false && strpos($html, 'Rp 25.000') !== false, 'admin summary includes partner voucher revenue');
 billingReportPageTestAssert(strpos($html, 'Total Pendapatan') !== false && strpos($html, 'Rp 125.000') !== false, 'admin summary combines customer and voucher revenue');
+billingReportPageTestAssert(strpos($html, 'Total HPP') !== false && strpos($html, 'Pendapatan Bersih Mitra') !== false && strpos($html, 'Pendapatan Bersih Biller') !== false && strpos($html, 'Pendapatan Bersih ISP') !== false, 'admin summary names every net income component explicitly');
 billingReportPageTestAssert(strpos($html, 'Pendapatan per Mitra') !== false && strpos($html, 'Dari Pelanggan') !== false && strpos($html, 'Dari Voucher') !== false, 'admin can compare revenue sources per partner');
 billingReportPageTestAssert(strpos($html, 'Mitra Satu') !== false && strpos($html, 'Penagih Satu') !== false, 'report identifies mitra and collector separately');
 billingReportPageTestAssert(strpos($html, 'revenueReportExport') !== false && strpos($html, 'Export CSV') !== false, 'filtered report can be exported');
@@ -107,6 +108,7 @@ include dirname(__DIR__) . '/customer/billingreports.php';
 $billerHtml = ob_get_clean();
 billingReportPageTestAssert(strpos($billerHtml, 'Aktivitas Penagihan') !== false && strpos($billerHtml, 'Setoran') !== false && strpos($billerHtml, 'Komisi') !== false, 'biller sees collections, deposits, and commissions');
 billingReportPageTestAssert(strpos($billerHtml, 'Rp 305.000') !== false && strpos($billerHtml, 'Rp 5.000') !== false, 'biller summary shows gross cash and unpaid commission');
+billingReportPageTestAssert(strpos($billerHtml, 'Pendapatan Bersih Biller') !== false, 'biller sees net biller income for the selected period');
 billingReportPageTestAssert(strpos($billerHtml, 'Catat Setoran') === false && strpos($billerHtml, 'Pendapatan per Mitra') === false, 'biller cannot record deposits or inspect partner revenue');
 
 $_SESSION['mikhmon_role'] = 'admin';

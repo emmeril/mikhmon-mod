@@ -99,7 +99,9 @@ if (!function_exists('mikhmonReportBillingRows')) {
 				$type = ($service['service'] ?? '') === 'pppoe' ? 'PPPoE' : 'Hotspot';
 				$profile = trim((string) ($service['profile'] ?? ''));
 				$amount = (float) ($service['amount'] ?? 0);
-				$parts = array($date, $time, $username, $amount, '', $type, '', $profile, $sourceLabel, strtolower($type), '');
+				$hpp = array_key_exists('hpp', (array) $service) ? max(0, (float) $service['hpp']) : '';
+				$partnerCommission = array_key_exists('partner_commission', (array) $service) ? max(0, (float) $service['partner_commission']) : '';
+				$parts = array($date, $time, $username, $amount, '', $type, '', $profile, $sourceLabel, strtolower($type), $hpp, $partnerCommission);
 				$rows[] = array(
 					'name' => implode('-|-', $parts), 'source' => $date, 'owner' => strtolower(date('MY', $paidAt)),
 					'billing_invoice_id' => (string) ($invoice['id'] ?? ''), 'billing' => true,
@@ -254,6 +256,19 @@ if (!function_exists('mikhmonReportNetProfit')) {
 	}
 }
 
+if (!function_exists('mikhmonReportCommission')) {
+	function mikhmonReportCommission($row, $profileCommissions = array(), $profileCosts = array(), $profileSellingPrices = array())
+	{
+		$parts = mikhmonReportParts($row);
+		if (isset($parts[11]) && is_numeric(trim($parts[11]))) return max(0, (float) $parts[11]);
+		$service = (isset($parts[9]) && strtolower(trim($parts[9])) === 'pppoe')
+			|| (isset($parts[5]) && strtolower(trim($parts[5])) === 'pppoe') ? 'pppoe' : 'hotspot';
+		$key = $service . '|' . trim((string) ($parts[7] ?? ''));
+		if (isset($profileCommissions[$key])) return max(0, (float) $profileCommissions[$key]);
+		return max(0, mikhmonReportNetProfit($row, $profileCosts, $profileSellingPrices));
+	}
+}
+
 if (!function_exists('mikhmonReportProfileCosts')) {
 	function mikhmonReportProfileCosts($hotspotProfiles, $pppProfiles)
 	{
@@ -271,7 +286,7 @@ if (!function_exists('mikhmonReportProfileCosts')) {
 		foreach (is_array($pppProfiles) ? $pppProfiles : array() as $profile) {
 			$name = isset($profile['name']) ? trim($profile['name']) : '';
 			$comment = isset($profile['comment']) ? $profile['comment'] : '';
-			if ($name !== '' && preg_match('/^\[MIKHMON-PPPOE price=([0-9.]*) selling=/', $comment, $matches)) {
+			if ($name !== '' && preg_match('/^\[MIKHMON-PPPOE price=([0-9.]*)(?: commission=[0-9.]*)? selling=/', $comment, $matches)) {
 				$costs['pppoe|' . $name] = (float) $matches[1];
 			}
 		}
@@ -297,11 +312,29 @@ if (!function_exists('mikhmonReportProfileSellingPrices')) {
 		foreach (is_array($pppProfiles) ? $pppProfiles : array() as $profile) {
 			$name = isset($profile['name']) ? trim($profile['name']) : '';
 			$comment = isset($profile['comment']) ? $profile['comment'] : '';
-			if ($name !== '' && preg_match('/^\[MIKHMON-PPPOE price=[0-9.]* selling=([0-9.]*)/', $comment, $matches) && (float) $matches[1] > 0) {
+			if ($name !== '' && preg_match('/^\[MIKHMON-PPPOE price=[0-9.]*(?: commission=[0-9.]*)? selling=([0-9.]*)/', $comment, $matches) && (float) $matches[1] > 0) {
 				$sellingPrices['pppoe|' . $name] = (float) $matches[1];
 			}
 		}
 
 		return $sellingPrices;
+	}
+}
+
+if (!function_exists('mikhmonReportProfileCommissions')) {
+	function mikhmonReportProfileCommissions($hotspotProfiles, $pppProfiles)
+	{
+		$commissions = array();
+		foreach ((array) $hotspotProfiles as $profile) {
+			$parts = explode(',', (string) ($profile['on-login'] ?? ''));
+			$name = trim((string) ($profile['name'] ?? ''));
+			if ($name !== '' && isset($parts[7]) && is_numeric(trim($parts[7]))) $commissions['hotspot|' . $name] = max(0, (float) $parts[7]);
+		}
+		foreach ((array) $pppProfiles as $profile) {
+			$name = trim((string) ($profile['name'] ?? ''));
+			$comment = (string) ($profile['comment'] ?? '');
+			if ($name !== '' && preg_match('/^\[MIKHMON-PPPOE price=[0-9.]* commission=([0-9.]*)/', $comment, $matches)) $commissions['pppoe|' . $name] = max(0, (float) $matches[1]);
+		}
+		return $commissions;
 	}
 }

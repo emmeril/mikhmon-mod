@@ -81,6 +81,7 @@ function mikhmonRevenueTransactions($session, $hotspotProfiles = array()) {
   $customers = array();
   $sellingPrices = mikhmonReportProfileSellingPrices($hotspotProfiles, array());
   $profileCosts = mikhmonReportProfileCosts($hotspotProfiles, array());
+  $profileCommissions = mikhmonReportProfileCommissions($hotspotProfiles, array());
   $reportRecords = mikhmonFilterReportRecords(mikhmonGetReportRecords($session));
   $voucherRecordCosts = array();
   foreach ((array) mikhmonGetCustomers($session) as $customer) $customers[(string) ($customer['id'] ?? '')] = $customer;
@@ -104,9 +105,9 @@ function mikhmonRevenueTransactions($session, $hotspotProfiles = array()) {
     $ownerUserId = mikhmonPartnerWorkflowInvoiceOwnerId($invoice, $customer);
     $collectorUserId = (string) (($invoice['paid_by_user_id'] ?? '') ?: ($invoice['collection_biller_user_id'] ?? ''));
     $collector = $collectorUserId !== '' ? mikhmonFindUser($collectorUserId) : false;
-    if (!$collector || !in_array($collector['role'] ?? '', array('mitra', 'biller'), true)) $collectorUserId = '';
+    if (!$collector || !in_array($collector['role'] ?? '', array('admin', 'mitra', 'biller'), true)) $collectorUserId = '';
     $gateway = strtolower(trim((string) ($invoice['payment_gateway'] ?? '')));
-    $direct = $gateway !== '' || !empty($invoice['gateway_payment_received']) || $collectorUserId === '';
+    $direct = $gateway !== '' || !empty($invoice['gateway_payment_received']) || $collectorUserId === '' || (($collector['role'] ?? '') === 'admin');
     $subtotal = mikhmonInvoiceSubtotal($invoice);
     $gross = max($subtotal, (float) ($invoice['amount'] ?? $subtotal));
     $adminFee = max(0, (float) ($invoice['admin_fee'] ?? 0));
@@ -127,7 +128,12 @@ function mikhmonRevenueTransactions($session, $hotspotProfiles = array()) {
       if (isset($invoice['voucher_cost'])) $cost = max(0, (float) $invoice['voucher_cost']);
       elseif ($voucherUsername !== '' && isset($voucherRecordCosts[strtolower($voucherUsername)])) $cost = $voucherRecordCosts[strtolower($voucherUsername)];
       elseif (isset($profileCosts['hotspot|' . $profile])) $cost = max(0, (float) $profileCosts['hotspot|' . $profile]);
+    } else {
+      foreach ((array) ($invoice['services'] ?? array()) as $service) $cost += max(0, (float) ($service['hpp'] ?? 0));
     }
+    $voucherCommission = $kind === 'voucher'
+      ? max(0, (float) (array_key_exists('voucher_commission', (array) $invoice) ? $invoice['voucher_commission'] : ($subtotal - $cost)))
+      : 0.0;
     if ($kind === 'voucher' && $voucherUsername !== '') $portalVoucherUsers[strtolower($voucherUsername)] = true;
     $transactions[] = array(
       'id' => 'invoice:' . (string) ($invoice['id'] ?? sha1(json_encode($invoice))),
@@ -145,7 +151,7 @@ function mikhmonRevenueTransactions($session, $hotspotProfiles = array()) {
       'revenue' => $subtotal,
       'gross' => $gross,
       'cost' => $cost,
-      'voucher_commission' => $kind === 'voucher' ? max(0, $subtotal - $cost) : 0.0,
+      'voucher_commission' => $voucherCommission,
       'commission' => $commission,
       'partner_commission' => $partnerCommission,
       'discount' => max(0, (float) ($invoice['discount'] ?? 0)),
@@ -175,6 +181,8 @@ function mikhmonRevenueTransactions($session, $hotspotProfiles = array()) {
     $ownerUserId = mikhmonRevenueOwnerIdFromText(implode(' ', array_map('strval', $record)));
     $amount = max(0, mikhmonReportSellingPrice($record, $sellingPrices));
     if ($amount <= 0) continue;
+    $recordCost = max(0, mikhmonReportCostPrice($record, $profileCosts, $sellingPrices));
+    $recordCommission = mikhmonReportCommission($record, $profileCommissions, $profileCosts, $sellingPrices);
     $transactions[] = array(
       'id' => 'voucher:' . sha1((string) ($record['name'] ?? json_encode($record))),
       'date' => $soldAt,
@@ -188,9 +196,11 @@ function mikhmonRevenueTransactions($session, $hotspotProfiles = array()) {
       'direct_received' => $ownerUserId === '',
       'revenue' => $amount,
       'gross' => $amount,
+      'voucher_commission' => $recordCommission,
+      'partner_commission' => $recordCommission,
       'commission' => 0.0,
       'commission_settled' => true,
-      'cost' => max(0, mikhmonReportCostPrice($record, $profileCosts, $sellingPrices)),
+      'cost' => $recordCost,
       'invoice_id' => '',
     );
   }
@@ -224,13 +234,16 @@ function mikhmonRevenueVoucherReportRows($transactions, $ownerNames = array()) {
       'cost' => 0.0,
       'commission' => 0.0,
       'revenue' => 0.0,
+      'net_income' => 0.0,
     );
     $revenue = max(0, (float) ($transaction['revenue'] ?? 0));
     $cost = max(0, (float) ($transaction['cost'] ?? 0));
     $rows[$key]['quantity']++;
     $rows[$key]['cost'] += $cost;
-    $rows[$key]['commission'] += max(0, (float) ($transaction['voucher_commission'] ?? ($revenue - $cost)));
+    $partnerCommission = max(0, (float) ($transaction['voucher_commission'] ?? ($revenue - $cost)));
+    $rows[$key]['commission'] += $partnerCommission;
     $rows[$key]['revenue'] += $revenue;
+    $rows[$key]['net_income'] += $revenue - $cost - $partnerCommission;
   }
   $rows = array_values($rows);
   usort($rows, function ($left, $right) {
@@ -267,15 +280,24 @@ function mikhmonRevenuePaidInvoiceReportRows($transactions, $ownerNames = array(
       'unique_code' => 0.0,
       'total' => 0.0,
       'commission' => 0.0,
+      'cost' => 0.0,
+      'biller_commission' => 0.0,
+      'net_income' => 0.0,
     );
+    $revenue = max(0, (float) ($transaction['revenue'] ?? 0));
+    $cost = max(0, (float) ($transaction['cost'] ?? 0));
+    $partnerCommission = max(0, (float) ($transaction['partner_commission'] ?? 0));
     $rows[$key]['quantity']++;
-    $rows[$key]['subtotal'] += max(0, (float) ($transaction['revenue'] ?? 0));
+    $rows[$key]['subtotal'] += $revenue;
     $rows[$key]['discount'] += max(0, (float) ($transaction['discount'] ?? 0));
     $rows[$key]['tax'] += max(0, (float) ($transaction['tax'] ?? 0));
     $rows[$key]['admin'] += max(0, (float) ($transaction['admin_fee'] ?? 0)) + max(0, (float) ($transaction['collection_fee'] ?? 0));
     $rows[$key]['unique_code'] += max(0, (float) ($transaction['unique_code'] ?? 0));
     $rows[$key]['total'] += max(0, (float) ($transaction['gross'] ?? $transaction['revenue'] ?? 0));
-    $rows[$key]['commission'] += max(0, (float) ($transaction['partner_commission'] ?? 0));
+    $rows[$key]['commission'] += $partnerCommission;
+    $rows[$key]['cost'] += $cost;
+    $rows[$key]['biller_commission'] += max(0, (float) ($transaction['commission'] ?? 0));
+    $rows[$key]['net_income'] += $revenue - $cost - $partnerCommission;
   }
   $rows = array_values($rows);
   usort($rows, function ($left, $right) {
@@ -290,7 +312,7 @@ function mikhmonRevenueReportSectionTotals($rows, $fields) {
   foreach ((array) $fields as $field) $totals[$field] = 0.0;
   foreach ((array) $rows as $row) {
     $totals['quantity'] += max(0, (int) ($row['quantity'] ?? 0));
-    foreach ((array) $fields as $field) $totals[$field] += max(0, (float) ($row[$field] ?? 0));
+    foreach ((array) $fields as $field) $totals[$field] += (float) ($row[$field] ?? 0);
   }
   return $totals;
 }
@@ -312,7 +334,7 @@ function mikhmonRevenueFilterTransactions($transactions, $filters) {
 }
 
 function mikhmonRevenueTotals($transactions) {
-  $totals = array('customer' => 0.0, 'voucher' => 0.0, 'revenue' => 0.0, 'gross' => 0.0, 'commission' => 0.0, 'direct' => 0.0, 'manual' => 0.0);
+  $totals = array('customer' => 0.0, 'voucher' => 0.0, 'revenue' => 0.0, 'gross' => 0.0, 'cost' => 0.0, 'partner_income' => 0.0, 'biller_income' => 0.0, 'net' => 0.0, 'commission' => 0.0, 'direct' => 0.0, 'manual' => 0.0);
   foreach ((array) $transactions as $row) {
     $source = ($row['source'] ?? '') === 'voucher' ? 'voucher' : 'customer';
     $revenue = max(0, (float) ($row['revenue'] ?? 0));
@@ -320,7 +342,14 @@ function mikhmonRevenueTotals($transactions) {
     $totals[$source] += $revenue;
     $totals['revenue'] += $revenue;
     $totals['gross'] += $gross;
-    $totals['commission'] += max(0, (float) ($row['commission'] ?? 0));
+    $cost = max(0, (float) ($row['cost'] ?? 0));
+    $partnerIncome = $source === 'voucher' ? max(0, (float) ($row['voucher_commission'] ?? 0)) : max(0, (float) ($row['partner_commission'] ?? 0));
+    $billerIncome = max(0, (float) ($row['commission'] ?? 0));
+    $totals['cost'] += $cost;
+    $totals['partner_income'] += $partnerIncome;
+    $totals['biller_income'] += $billerIncome;
+    $totals['net'] += $revenue - $cost - $partnerIncome;
+    $totals['commission'] += $billerIncome;
     $totals[!empty($row['direct_received']) ? 'direct' : 'manual'] += $gross;
   }
   return $totals;
@@ -334,12 +363,15 @@ function mikhmonRevenuePartnerSummaries($transactions, $ownerNames = array()) {
     if (!isset($summaries[$key])) $summaries[$key] = array(
       'owner_user_id' => $ownerId,
       'name' => $ownerId !== '' ? ($ownerNames[$ownerId] ?? 'Mitra tidak ditemukan') : 'Belum ditetapkan',
-      'customer' => 0.0, 'voucher' => 0.0, 'total' => 0.0,
+      'customer' => 0.0, 'voucher' => 0.0, 'total' => 0.0, 'net_income' => 0.0,
     );
     $source = ($row['source'] ?? '') === 'voucher' ? 'voucher' : 'customer';
     $amount = max(0, (float) ($row['revenue'] ?? 0));
     $summaries[$key][$source] += $amount;
     $summaries[$key]['total'] += $amount;
+    $summaries[$key]['net_income'] += $source === 'voucher'
+      ? max(0, (float) ($row['voucher_commission'] ?? 0))
+      : max(0, (float) ($row['partner_commission'] ?? 0));
   }
   uasort($summaries, function ($left, $right) {
     return $right['total'] <=> $left['total'];

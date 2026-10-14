@@ -46,6 +46,12 @@ $invoice = mikhmonPartnerWorkflowApplyInvoiceSnapshot('router-a', array(
   'subtotal' => 100000, 'amount' => 100000,
 ), $customer);
 partnerWorkflowTestAssert($invoice['mitra_user_id'] === $ownerA && (float) $invoice['mitra_commission'] === 5000.0, 'paid invoice snapshots assigned partner and configured commission');
+$profileInvoice = mikhmonPartnerWorkflowApplyInvoiceSnapshot('router-a', array(
+  'kind' => 'monthly', 'services' => array(
+    array('partner_commission' => 3000), array('partner_commission' => 1500),
+  ),
+), $customer);
+partnerWorkflowTestAssert((float) $profileInvoice['mitra_commission'] === 4500.0, 'paid invoice adds the commissions configured on all customer profiles');
 mikhmonSaveInvoice('router-a', $invoice);
 mikhmonAssignCustomer('router-a', $customerId, $ownerB);
 

@@ -4,6 +4,7 @@
  */
 
 require_once dirname(__DIR__) . '/ppp/profilemeta.php';
+require_once dirname(__DIR__) . '/hotspot/profileprice.php';
 require_once dirname(__DIR__) . '/lib/billing_profile.php';
 require_once dirname(__DIR__) . '/lib/payment_gateway.php';
 require_once dirname(__DIR__) . '/lib/billing_policy.php';
@@ -157,7 +158,7 @@ function mikhmonBillingAutomationMessage($template, $customer, $invoice, $curren
   }
   $feeDetails = array('Subtotal Layanan: ' . mikhmonBillingAutomationAmount(mikhmonInvoiceSubtotal($invoice), $currency));
   $collectionFee = mikhmonInvoiceCollectionFee($invoice);
-  if ($collectionFee > 0) $feeDetails[] = 'Komisi Penagihan: ' . mikhmonBillingAutomationAmount($collectionFee, $currency);
+  if ($collectionFee > 0) $feeDetails[] = 'Komisi Biller: ' . mikhmonBillingAutomationAmount($collectionFee, $currency);
   $feeBreakdown = implode("\n", $feeDetails);
   $hasFeePlaceholder = strpos((string) $template, '{{rincian_biaya}}') !== false;
   $message = mikhmonFonnteRenderTemplate($template, array(
@@ -302,19 +303,21 @@ function mikhmonBillingAutomationInitialService($service, $serviceRow, $hotspotP
   $profiles = $service === 'pppoe' ? $pppoeProfiles : $hotspotProfiles;
   foreach ((array) $profiles as $profile) {
     if ((string) ($profile['name'] ?? '') !== $profileName) continue;
-    $price = ''; $sellingPrice = ''; $validity = '';
+    $price = ''; $sellingPrice = ''; $commission = ''; $validity = '';
     if ($service === 'pppoe') {
       $meta = pppProfileMetaDecode($profile['comment'] ?? '');
-      $price = $meta['price']; $sellingPrice = $meta['selling-price']; $validity = $meta['validity'];
+      $price = $meta['price']; $sellingPrice = $meta['selling-price']; $commission = $meta['commission']; $validity = $meta['validity'];
     } elseif (preg_match('/,([^,]*),([^,]*),([^,]*),([^,]*),/', (string) ($profile['on-login'] ?? ''), $matches)) {
-      $price = $matches[2]; $validity = $matches[3]; $sellingPrice = $matches[4];
+      $profilePrices = mikhmonHotspotProfilePrices($profile);
+      $price = $matches[2]; $validity = $matches[3]; $sellingPrice = $matches[4]; $commission = $profilePrices['commission'];
     }
     if (!mikhmonBillingProfileCanManage($service, $profile)) return array();
     $amount = (float) ($sellingPrice !== '' ? $sellingPrice : $price);
     if ($amount <= 0) return array();
     return array(
       'id' => $serviceRow['id'] ?? '', 'service' => $service, 'username' => (string) ($serviceRow['username'] ?? ''),
-      'profile' => $profileName, 'amount' => $amount, 'validity' => $validity,
+      'profile' => $profileName, 'amount' => $amount, 'hpp' => max(0, (float) $price),
+      'partner_commission' => max(0, (float) $commission), 'validity' => $validity,
       'due_date' => '',
     );
   }

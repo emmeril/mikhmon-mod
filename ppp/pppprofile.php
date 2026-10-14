@@ -40,8 +40,9 @@ if (!is_array($profiles)) {
                 <th>Local Address</th>
                 <th>Remote Address</th>
                 <th>Rate Limit</th>
-                <th class="text-right"><?= $_price . ' ' . $currency ?></th>
-                  <th class="text-right"><?= $_selling_price . ' ' . $currency ?></th>
+                <th class="text-right">HPP <?= htmlspecialchars($currency, ENT_QUOTES) ?></th>
+                  <th class="text-right">Komisi <?= htmlspecialchars($currency, ENT_QUOTES) ?></th>
+                  <th class="text-right">Harga <?= htmlspecialchars($currency, ENT_QUOTES) ?></th>
                   <th>Expired</th>
                   <th>Validity</th>
                   <th><?= $_comment ?></th>
@@ -59,6 +60,7 @@ if (!is_array($profiles)) {
                   <td><?= htmlspecialchars(isset($profile['remote-address']) ? $profile['remote-address'] : '') ?></td>
                   <td><?= htmlspecialchars(isset($profile['rate-limit']) ? $profile['rate-limit'] : '') ?></td>
                   <td class="text-right"><?= htmlspecialchars(pppProfilePriceFormat($meta['price'], $currency, $cekindo['indo'])) ?></td>
+                  <td class="text-right"><?= htmlspecialchars(pppProfilePriceFormat($meta['commission'], $currency, $cekindo['indo'])) ?></td>
                   <td class="text-right"><?= htmlspecialchars(pppProfilePriceFormat($meta['selling-price'], $currency, $cekindo['indo'])) ?></td>
                   <td><?= htmlspecialchars($meta['expmode']) ?></td>
                   <td><?= htmlspecialchars($meta['validity']) ?></td>

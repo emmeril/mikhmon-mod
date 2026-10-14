@@ -1,4 +1,5 @@
 <?php
+include_once(__DIR__ . '/profileprice.php');
 /*
  *  Copyright (C) 2018 Laksamadi Guko.
  *
@@ -75,8 +76,9 @@ if (!isset($_SESSION["mikhmon"])) {
 		<th class="align-middle">Rate<br>Limit</th>
 		<th class="align-middle"><?= $_expired_mode ?></th>
 		<th class="align-middle"><?= $_validity ?></th>
-		<th class="text-right align-middle" > <?= $_price." ".$currency; ?></th>
-		<th class="text-right align-middle" > <?= $_selling_price." ".$currency; ?></th>
+		<th class="text-right align-middle">HPP <?= htmlspecialchars($currency, ENT_QUOTES); ?></th>
+		<th class="text-right align-middle">Komisi <?= htmlspecialchars($currency, ENT_QUOTES); ?></th>
+		<th class="text-right align-middle">Harga <?= htmlspecialchars($currency, ENT_QUOTES); ?></th>
 		<th class="align-middle"><?= $_lock_user ?></th>
 		<th class="text-center align-middle"><?= $_action ?></th>
     </tr>
@@ -149,6 +151,13 @@ for ($i = 0; $i < $TotalReg; $i++) {
 		}
 	}
 
+	echo "</td>";
+	echo "<td style='text-align:right;'>";
+	$commission = mikhmonHotspotProfilePrices($ponlogin)['commission'];
+	if ($commission > 0) {
+		if ($currency == in_array($currency, $cekindo['indo'])) echo number_format((float)$commission, 0, ",", ".");
+		else echo number_format((float)$commission, 2);
+	}
 	echo "</td>";
 	echo "<td style='text-align:right;'>";
 // get price

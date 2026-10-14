@@ -27,7 +27,7 @@ foreach (mikhmonVisibleInvoices($session) as $candidate) {
 }
 if (!$invoice) { http_response_code(404); exit('Invoice tidak ditemukan.'); }
 $invoiceStatus = (string) ($invoice['status'] ?? '');
-if (mikhmonIsBiller() && mikhmonInvoiceIsCollectible($invoice) && mikhmonInvoiceCollectionFee($invoice) <= 0) {
+if (mikhmonBillerCommissionAmount() > 0 && mikhmonInvoiceIsCollectible($invoice) && mikhmonInvoiceCollectionFee($invoice) <= 0) {
   $partner = mikhmonFindPartner(mikhmonUserId(), 'user_id');
   $invoice = mikhmonInvoiceApplyCollectionFee($invoice, mikhmonBillerCommissionAmount(), array(
     'user_id' => mikhmonUserId(),

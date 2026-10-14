@@ -20,12 +20,14 @@ $created = mikhmonSaveManagedUser(array(
   'password' => 'secret',
   'active' => true,
   'commission' => 1000,
+  'biller_commission' => 1750,
 ));
 managedUserTestAssert(!empty($created['status']), 'reseller profile and login are created together');
 $partner = mikhmonFindPartner($created['partner_id']);
 $account = mikhmonFindUser($created['user_id']);
 managedUserTestAssert($partner && $partner['user_id'] === $account['id'], 'partner is linked to the generated login');
 managedUserTestAssert($account['role'] === 'mitra', 'reseller role is assigned automatically');
+managedUserTestAssert((float) $account['biller_commission'] === 1750.0, 'mitra account stores its customer-funded biller commission');
 
 $updated = mikhmonSaveManagedUser(array(
   'partner_id' => $partner['id'],
@@ -38,10 +40,12 @@ $updated = mikhmonSaveManagedUser(array(
   'password' => '',
   'active' => true,
   'commission' => 2500,
+  'biller_commission' => 3250,
 ));
 managedUserTestAssert(!empty($updated['status']), 'partner category can be updated in the unified workflow');
 managedUserTestAssert(mikhmonFindUser($account['id'])['role'] === 'biller', 'biller role follows the selected category');
 managedUserTestAssert(mikhmonFindPartner($partner['id'])['category'] === 'biller', 'partner category and login role stay synchronized');
+managedUserTestAssert((float) mikhmonFindUser($account['id'])['biller_commission'] === 3250.0, 'biller commission can be updated from user management');
 
 $withoutLogin = mikhmonSaveManagedUser(array(
   'type' => 'sales',
@@ -65,6 +69,8 @@ managedUserTestAssert(empty($duplicate['status']), 'duplicate usernames are reje
 $finance = mikhmonSaveManagedUser(array('type' => 'finance', 'name' => 'Keuangan Satu', 'username' => 'finance1', 'password' => 'secret', 'active' => true));
 managedUserTestAssert(!empty($finance['status']) && mikhmonFindUser($finance['user_id'])['role'] === 'finance', 'finance role is stored without a partner profile');
 managedUserTestAssert(mikhmonFindUser($finance['user_id'])['session'] === 'mikhmon', 'finance role receives global router scope');
+$admin = mikhmonSaveManagedUser(array('type' => 'admin', 'name' => 'Admin Penagih', 'username' => 'admin-penagih', 'password' => 'secret', 'biller_commission' => 4000, 'active' => true));
+managedUserTestAssert(!empty($admin['status']) && (float) mikhmonFindUser($admin['user_id'])['biller_commission'] === 4000.0, 'administrator account stores its customer-funded biller commission');
 $operator = mikhmonSaveManagedUser(array('type' => 'operator', 'name' => 'Operator Satu', 'session' => 'router-a', 'username' => 'operator1', 'password' => 'secret', 'active' => true));
 managedUserTestAssert(!empty($operator['status']) && mikhmonFindUser($operator['user_id'])['role'] === 'operator', 'operator role is stored with one router scope');
 
