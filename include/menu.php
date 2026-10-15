@@ -258,7 +258,7 @@ if (!isset($_SESSION["mikhmon"])) {
 }
 
 if($idleto != "disable"){
-  $didleto = 'display:block;';
+  $didleto = 'display:flex;';
 }else{
   $didleto = 'display:none;';
 }
@@ -316,20 +316,22 @@ if($idleto != "disable"){
   <div class="navbar-left">
     <a id="brand" class="text-center" href="javascript:void(0)"><?= htmlspecialchars($brandname, ENT_QUOTES) ?></a>
 
-<a id="openNav" class="navbar-hover" href="javascript:void(0)"><i class="fa fa-bars"></i></a>
-<a id="closeNav" class="navbar-hover" href="javascript:void(0)"><i class="fa fa-bars"></i></a>
+<button id="openNav" class="navbar-hover nav-toggle" type="button" aria-controls="sidenav" aria-expanded="false"><i class="fa fa-bars" aria-hidden="true"></i><span class="nav-toggle-label">Menu</span></button>
+<button id="closeNav" class="navbar-hover nav-toggle" type="button" aria-controls="sidenav" aria-expanded="true"><i class="fa fa-times" aria-hidden="true"></i><span class="nav-toggle-label">Tutup</span></button>
 <a id="cpage" class="navbar-left" href="javascript:void(0)"><?= $mpage; ?></a>
 </div>
  <div class="navbar-right">
   <a id="logout" href="./admin.php?id=logout" ><i class="fa fa-sign-out mr-1"></i> <?= $_logout ?></a>
-  <select class="stheme ses text-right mr-t-10 pd-5">
+  <button class="mobile-tools-toggle" type="button" aria-controls="mobileToolsPanel" aria-expanded="false"><i class="fa fa-gear" aria-hidden="true"></i><span>Pengaturan Cepat</span><i class="fa fa-caret-down mobile-tools-caret" aria-hidden="true"></i></button>
+  <div id="mobileToolsPanel" class="mobile-tools-panel">
+  <select class="stheme ses text-right mr-t-10 pd-5" aria-label="Pilih tema">
     <option> <?= $_theme?></option>
     <?php for ($i = 0; $i < count($mtheme); $i++) {
       echo '<option value="'.$url.'&set-theme='.$mtheme[$i],'">'.ucfirst($mtheme[$i]),'</option>';
     }
     ?>
   </select>
-  <select class="slang ses text-right mr-t-10 pd-5">
+  <select class="slang ses text-right mr-t-10 pd-5" aria-label="Pilih bahasa">
     <option><?= $language ?>: <?= $langname ?></option>
     <?php 
       $fileList = glob('lang/*');
@@ -343,7 +345,8 @@ if($idleto != "disable"){
       }
     ?>
   </select>
-  <a title="Idle Timeout" style="<?= $didleto; ?>"><span style="width:70px;" class="pd-5 radius-3"><i class="fa fa-clock-o mr-1"></i>  <span class="mr-1" id="timer"></span></span></a>
+  <span class="idle-time-status" title="Idle Timeout" style="<?= $didleto; ?>"><i class="fa fa-clock-o mr-1" aria-hidden="true"></i><span class="idle-time-label">Idle Time</span><span class="mr-1" id="timer"></span></span>
+  </div>
 </div>
 </div>
 
@@ -398,13 +401,15 @@ include('./info.php');
   <div class="navbar-left">
     <a id="brand" class="text-center" href="./?session=<?= $session; ?>"><?= htmlspecialchars($brandname, ENT_QUOTES) ?></a>
 
-<a id="openNav" class="navbar-hover" href="javascript:void(0)"><i class="fa fa-bars"></i></a>
-<a id="closeNav" class="navbar-hover" href="javascript:void(0)"><i class="fa fa-bars"></i></a>
+<button id="openNav" class="navbar-hover nav-toggle" type="button" aria-controls="sidenav" aria-expanded="false"><i class="fa fa-bars" aria-hidden="true"></i><span class="nav-toggle-label">Menu</span></button>
+<button id="closeNav" class="navbar-hover nav-toggle" type="button" aria-controls="sidenav" aria-expanded="true"><i class="fa fa-times" aria-hidden="true"></i><span class="nav-toggle-label">Tutup</span></button>
 <a id="cpage" class="navbar-left" href="javascript:void(0)"><?= $mpage; ?></a>
 </div>
  <div class="navbar-right">
   <a id="logout" href="./?hotspot=logout&session=<?= $session; ?>" ><i class="fa fa-sign-out mr-1"></i> <?= $_logout ?></a>
-  <select class="stheme ses text-right mr-t-10 pd-5">
+  <button class="mobile-tools-toggle" type="button" aria-controls="mobileToolsPanel" aria-expanded="false"><i class="fa fa-gear" aria-hidden="true"></i><span>Pengaturan Cepat</span><i class="fa fa-caret-down mobile-tools-caret" aria-hidden="true"></i></button>
+  <div id="mobileToolsPanel" class="mobile-tools-panel">
+  <select class="stheme ses text-right mr-t-10 pd-5" aria-label="Pilih tema">
     <option> <?= $_theme ?></option>
     <?php for ($i = 0; $i < count($mtheme); $i++) {
       echo '<option value="'.$url.'&set-theme='.$mtheme[$i],'">'.ucfirst($mtheme[$i]),'</option>';
@@ -423,7 +428,7 @@ include('./info.php');
       }
     ?>
   </select>
-  <select class="connect optfa ses text-right mr-t-10 pd-5">
+  <select class="connect optfa ses text-right mr-t-10 pd-5" aria-label="Pilih session">
     <option id="MikhmonSession" value="<?= $session; ?>"><?= $hotspotname; ?></option>
       <?php
       foreach (file('./include/config.php') as $line) {
@@ -441,7 +446,8 @@ include('./info.php');
       ?>
     
   </select>
-  <a title="Idle Timeout" style="<?= $didleto; ?>"><span style="width:70px;" class="pd-5 radius-3"><i class="fa fa-clock-o mr-1"></i>  <span class="mr-1" id="timer"></span></span></a>
+  <span class="idle-time-status" title="Idle Timeout" style="<?= $didleto; ?>"><i class="fa fa-clock-o mr-1" aria-hidden="true"></i><span class="idle-time-label">Idle Time</span><span class="mr-1" id="timer"></span></span>
+  </div>
 </div>
 </div>
 

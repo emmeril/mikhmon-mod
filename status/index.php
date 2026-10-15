@@ -56,11 +56,12 @@ if ($currency == in_array($currency, $cekindo['indo'])) {
 <title><?= $title[0] . " " . $hotspotname; ?></title>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <meta http-equiv="pragma" content="no-cache" />
-<meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0;"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 <!-- Font Awesome -->
 <link rel="stylesheet" type="text/css" href="../css/font-awesome/css/font-awesome.min.css" />
 <!-- Mikhmon UI -->
 <link rel="stylesheet" href="../css/mikhmon-ui.<?= $theme; ?>.min.css">
+<link rel="stylesheet" href="../css/mikhmon-responsive.css">
 <link rel="icon" href="../img/favicon.png" />
 <script>
 function goBack() {
@@ -69,14 +70,14 @@ function goBack() {
 </script>
 
 </head>
-<body >
+<body class="theme-<?= htmlspecialchars((string) $theme, ENT_QUOTES); ?> status-page">
 <div class="login-box" style="padding-top: 10px;">
 <h3 class="text-center">Status Voucher<br><?= $hotspotname; ?></h3>
 <p class="text-center" id="date1"><?= $title[11] . " : " . date("d-m-Y") . "<br>"; ?></p>
 <form autocomplete="off"class="form" method="post" action="">
 	<div class="input-group">
         <div class="input-group-7">
-			<input type="text" class="group-item group-item-l" name="nama" placeholder="<?= $title[1]; ?>" autofocus required="1" />
+			<input type="text" class="group-item group-item-l" name="nama" placeholder="<?= $title[1]; ?>" aria-label="<?= htmlspecialchars($title[1], ENT_QUOTES); ?>" autofocus required="1" />
 		</div>
 		<div class="input-group-5">
 			<button type="submit" style="cursor: pointer; padding: 2.5px;" class="group-item group-item-r"><i class="fa fa-search"></i> <?= " " . $title[12]; ?></button>

@@ -39,15 +39,17 @@ $loginLogo .= '?v=' . (is_file('./img/login-logo.png') ? filemtime('./img/login-
       </div>
       <center>
       <form autocomplete="off" action="" method="post">
-      <table class="table" style="width:90%">
+      <table class="table login-form-table" style="width:90%">
         <tr>
           <td class="align-middle text-center">
-            <input style="width: 100%; height: 35px; font-size: 16px;" class="form-control" type="text" name="user" id="_username" placeholder="Username" required="1" autofocus>
+            <label class="sr-only" for="_username">Username</label>
+            <input style="width: 100%; height: 35px; font-size: 16px;" class="form-control" type="text" name="user" id="_username" placeholder="Username" autocomplete="username" required="1" autofocus>
           </td>
         </tr>
         <tr>
           <td class="align-middle text-center">
-            <input style="width: 100%; height: 35px; font-size: 16px;" class="form-control" type="password" name="pass" placeholder="Password" required="1">
+            <label class="sr-only" for="_password">Password</label>
+            <input id="_password" style="width: 100%; height: 35px; font-size: 16px;" class="form-control" type="password" name="pass" placeholder="Password" autocomplete="current-password" required="1">
           </td>
         </tr>
         <tr>

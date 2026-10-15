@@ -38,6 +38,8 @@ include_once('./include/brand.php');
 		<!-- Mikhmon UI -->
 		<link rel="stylesheet" href="css/mikhmon-ui.<?= $theme; ?>.min.css">
 		<link rel="stylesheet" href="css/mikhmon-toolbar.css">
+		<link rel="stylesheet" href="css/mikhmon-responsive.css?v=<?= (int) @filemtime(__DIR__ . '/../css/mikhmon-responsive.css'); ?>">
+		<script defer src="js/mikhmon-responsive.js?v=<?= (int) @filemtime(__DIR__ . '/../js/mikhmon-responsive.js'); ?>"></script>
 		<style>
 			.dropdown-btn.active .fa-caret-down::before {
 				content: "\f0d8";
@@ -53,7 +55,7 @@ include_once('./include/brand.php');
 
 		
 	</head>
-	<body>
+	<body class="theme-<?= htmlspecialchars((string) $theme, ENT_QUOTES); ?>">
 		<div class="wrapper">
 
 			
