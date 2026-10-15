@@ -28,9 +28,18 @@
   <div id="sidenav" class="sidenav">
     <a class="menu" href="#dashboard">Dashboard</a>
     <div class="dropdown-btn">Pelanggan</div>
-    <div class="dropdown-container menu-open"><a href="#customers">Daftar Pelanggan</a></div>
+    <div class="dropdown-container menu-open">
+      <a href="#vouchers"><i class="fa fa-ticket"></i> Voucher List</a>
+      <a href="#customers"><i class="fa fa-id-card"></i> Daftar Pelanggan</a>
+      <a class="billing-submenu" href="#billing"><i class="fa fa-file-text-o"></i><span>Tagihan Berjalan</span></a>
+      <a href="#logs"><i class="fa fa-history"></i> System Logs</a>
+      <div class="dropdown-btn nested-dropdown-btn" role="button" tabindex="0" aria-expanded="false">
+        <i class="fa fa-pie-chart"></i><span class="nested-dropdown-label">Profil Pengguna</span><i class="fa fa-caret-down"></i>
+      </div>
+      <div class="dropdown-container nested-dropdown-container"><a href="#profiles"><i class="fa fa-list"></i> Daftar Profil</a></div>
+    </div>
     <div class="dropdown-btn">Billing</div>
-    <div class="dropdown-container"><a href="#billing">Tagihan</a></div>
+    <div class="dropdown-container"><a href="#paid"><i class="fa fa-check-square-o"></i> Invoice Lunas</a></div>
     <a class="menu" href="#settings">Pengaturan</a>
   </div>
   <div id="main"><output id="result">PENDING</output></div>
@@ -54,6 +63,44 @@
         return window.getComputedStyle(item).display !== 'none';
       });
       var activeSubmenu = document.querySelector('.dropdown-container.menu-open');
+      var submenuLinks = activeSubmenu.querySelectorAll(':scope > a');
+      var submenuIconLefts = [];
+      var submenuLabelLefts = [];
+      var submenuTargetsLargeEnough = true;
+      submenuLinks.forEach(function (link) {
+        var icon = link.querySelector('i');
+        var walker = document.createTreeWalker(link, NodeFilter.SHOW_TEXT);
+        var textNode = walker.nextNode();
+        while (textNode && !textNode.nodeValue.trim()) textNode = walker.nextNode();
+        var range = document.createRange();
+        range.selectNodeContents(textNode);
+        submenuIconLefts.push(icon.getBoundingClientRect().left);
+        submenuLabelLefts.push(range.getBoundingClientRect().left);
+        if (link.getBoundingClientRect().height < 44) submenuTargetsLargeEnough = false;
+      });
+      var submenuAlignmentMatches = Math.max.apply(Math, submenuIconLefts) - Math.min.apply(Math, submenuIconLefts) < 0.5 &&
+        Math.max.apply(Math, submenuLabelLefts) - Math.min.apply(Math, submenuLabelLefts) < 0.5;
+      var topLevelButton = document.querySelector('#sidenav > .dropdown-btn');
+      var nestedButton = activeSubmenu.querySelector(':scope > .nested-dropdown-btn');
+      var nestedCaret = nestedButton.querySelector('.fa-caret-down');
+      var nestedLabel = nestedButton.querySelector('.nested-dropdown-label');
+      var nestedContainer = activeSubmenu.querySelector(':scope > .nested-dropdown-container');
+      nestedButton.click();
+      var nestedOpenedByClick = window.getComputedStyle(nestedContainer).display !== 'none';
+      var nestedLink = nestedContainer.querySelector(':scope > a');
+      var nestedLinkText = nestedLink.lastChild;
+      var nestedLinkTextRange = document.createRange();
+      nestedLinkTextRange.selectNodeContents(nestedLinkText);
+      var nestedButtonRect = nestedButton.getBoundingClientRect();
+      var nestedCaretRect = nestedCaret.getBoundingClientRect();
+      var nestedButtonAligned = window.getComputedStyle(nestedButton).display === 'grid' &&
+        Math.abs(nestedButtonRect.left - topLevelButton.getBoundingClientRect().left) < 0.5 &&
+        Math.abs(nestedLabel.getBoundingClientRect().left - Math.min.apply(Math, submenuLabelLefts)) < 0.5 &&
+        nestedButtonRect.height >= 44 &&
+        Math.abs((nestedCaretRect.top + nestedCaretRect.height / 2) - (nestedButtonRect.top + nestedButtonRect.height / 2)) < 0.5;
+      var nestedLinkIndented = window.getComputedStyle(nestedContainer).display !== 'none' &&
+        nestedLinkTextRange.getBoundingClientRect().left - Math.min.apply(Math, submenuLabelLefts) >= 10 &&
+        nestedLink.getBoundingClientRect().height >= 44;
       var toolsToggle = document.querySelector('.mobile-tools-toggle');
       var toolsPanel = document.querySelector('.mobile-tools-panel');
       if (window.innerWidth > 1024) {
@@ -62,6 +109,7 @@
           window.getComputedStyle(toolsToggle).display === 'none' &&
           window.getComputedStyle(toolsPanel).display === 'contents' &&
           window.getComputedStyle(toolsPanel.querySelector('select')).display !== 'none' &&
+          submenuAlignmentMatches && submenuTargetsLargeEnough && nestedButtonAligned && nestedLinkIndented && nestedOpenedByClick &&
           document.documentElement.scrollWidth <= window.innerWidth);
         return;
       }
@@ -81,6 +129,7 @@
       var passed = document.body.classList.contains('nav-open') &&
         visibleItems.length === items.length &&
         window.getComputedStyle(activeSubmenu).display !== 'none' &&
+        submenuAlignmentMatches && submenuTargetsLargeEnough && nestedButtonAligned && nestedLinkIndented && nestedOpenedByClick &&
         parseFloat(window.getComputedStyle(toolsToggle).height) >= 44 &&
         document.documentElement.scrollWidth <= window.innerWidth &&
         toolsInitiallyHidden && toolsOpened && toolsClosedWithEscape && drawerClosedWithEscape;

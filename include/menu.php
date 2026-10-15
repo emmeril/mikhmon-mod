@@ -288,25 +288,6 @@ if($idleto != "disable"){
     font-size: 12px;
     min-width: 0;
   }
-  #sidenav .billing-submenu {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    min-height: 34px;
-    white-space: nowrap;
-  }
-  #sidenav .billing-submenu > i {
-    flex: 0 0 32px;
-    width: 32px;
-    padding-left: 7px;
-    box-sizing: border-box;
-    text-align: center;
-  }
-  #sidenav .hotspot-submenu-icon {
-    width: 43px;
-    box-sizing: border-box;
-    text-align: center;
-  }
 </style>
 
 
@@ -483,23 +464,23 @@ include('./info.php');
   <a href="./?session=<?= $session; ?>" class="menu <?= $shome; ?>"><i class="fa fa-dashboard"></i> <?= $_dashboard ?></a>
   <div class="dropdown-btn <?= $susers; ?>"><i class="fa fa-ticket"></i> Voucher <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $umenu; ?>">
-    <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-ticket"></i> Voucher List</a>
-    <a href="./?hotspot=users-by-profile&session=<?= $session; ?>" class="<?= $susersbp; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-bar-chart"></i> Jumlah Voucher</a>
+    <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>"><i class="fa fa-ticket"></i> Voucher List</a>
+    <a href="./?hotspot=users-by-profile&session=<?= $session; ?>" class="<?= $susersbp; ?>"><i class="fa fa-bar-chart"></i> Jumlah Voucher</a>
   </div>
   <div class="dropdown-btn <?= $sactive . $susersbp . $smaclocks; ?>"><i class="fa fa-wifi"></i> Hotspot <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $hamenu . $hotspotmenu . $macmenu; ?>">
-    <a href="./?hotspot=active&session=<?= $session; ?>" class="<?= $sactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi hotspot-submenu-icon"></i> <?= $_hotspot_active ?></a>
-    <a href="./?hotspot=mac-locks&session=<?= $session; ?>" class="<?= $smaclocks; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-unlock-alt hotspot-submenu-icon"></i> <?= $_reset_mac_lock; ?></a>
+    <a href="./?hotspot=active&session=<?= $session; ?>" class="<?= $sactive; ?>"><i class="fa fa-wifi hotspot-submenu-icon"></i> <?= $_hotspot_active ?></a>
+    <a href="./?hotspot=mac-locks&session=<?= $session; ?>" class="<?= $smaclocks; ?>"><i class="fa fa-unlock-alt hotspot-submenu-icon"></i> <?= $_reset_mac_lock; ?></a>
   </div>
   <div class="dropdown-btn <?= $mppp; ?>"><i class="fa fa-exchange"></i> PPPoE <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $pppmenu; ?>">
-    <a href="./?ppp=secrets&session=<?= $session; ?>" class="<?= $ssecrets; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-users"></i> <?= $_ppp_secrets ?></a>
-    <a href="./?ppp=active&session=<?= $session; ?>" class="<?= $spactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi"></i> <?= $_ppp_active ?></a>
+    <a href="./?ppp=secrets&session=<?= $session; ?>" class="<?= $ssecrets; ?>"><i class="fa fa-users"></i> <?= $_ppp_secrets ?></a>
+    <a href="./?ppp=active&session=<?= $session; ?>" class="<?= $spactive; ?>"><i class="fa fa-wifi"></i> <?= $_ppp_active ?></a>
   </div>
   <div class="dropdown-btn <?= $mcustomers; ?>"><i class="fa fa-address-card"></i> Pelanggan <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $customermenu; ?>">
-    <a href="./?customer=identity-list&session=<?= $session; ?>" class="<?= $sidentitylist; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-id-card"></i> Daftar Identitas</a>
-    <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> Daftar Pelanggan</a>
+    <a href="./?customer=identity-list&session=<?= $session; ?>" class="<?= $sidentitylist; ?>"><i class="fa fa-id-card"></i> Daftar Identitas</a>
+    <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>"><i class="fa fa-list"></i> Daftar Pelanggan</a>
   </div>
   <div class="dropdown-btn <?= $mbilling; ?>" role="button" tabindex="0" aria-label="Buka submenu Billing" aria-expanded="<?= $billingmenu === 'menu-open' ? 'true' : 'false'; ?>"><i class="fa fa-money"></i> Billing <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $billingmenu; ?>">
@@ -515,8 +496,8 @@ include('./info.php');
     <i class="fa fa-caret-down"></i>
   </div>
   <div class="dropdown-container <?= $umenu; ?>">
-    <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-ticket "></i> Voucher List </a>
-    <a href="./?hotspot=users-by-profile&session=<?= $session; ?>" class="<?= $susersbp; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-bar-chart"></i> Jumlah Voucher </a>
+    <a href="./?hotspot=users&profile=all&session=<?= $session; ?>" class="<?= $susersl; ?>"><i class="fa fa-ticket "></i> Voucher List </a>
+    <a href="./?hotspot=users-by-profile&session=<?= $session; ?>" class="<?= $susersbp; ?>"><i class="fa fa-bar-chart"></i> Jumlah Voucher </a>
   </div>
   <!--hotspot-->
   <div class="dropdown-btn <?= $suserprof . $sactive . $smaclocks . $shosts . $sipbind . $scookies; ?>"><i class="fa fa-wifi"></i> Hotspot
@@ -524,11 +505,11 @@ include('./info.php');
   </div>
   <div class="dropdown-container <?= $upmenu . $hamenu . $macmenu . $hmenu . $ibmenu . $cmenu; ?>">
   <!--profile-->
-  <div class="dropdown-btn <?= $suserprof; ?>"><i class=" fa fa-pie-chart"></i>  <?= $_user_profile ?>
-    <i class="fa fa-caret-down"></i>
+  <div class="dropdown-btn nested-dropdown-btn <?= $suserprof; ?>" role="button" tabindex="0" aria-label="Buka submenu <?= htmlspecialchars($_user_profile, ENT_QUOTES); ?>" aria-expanded="<?= $upmenu === 'menu-open' ? 'true' : 'false'; ?>">
+    <i class="fa fa-pie-chart" aria-hidden="true"></i><span class="nested-dropdown-label"><?= $_user_profile ?></span><i class="fa fa-caret-down" aria-hidden="true"></i>
   </div>
-  <div class="dropdown-container <?= $upmenu; ?>">
-    <a href="./?hotspot=user-profiles&session=<?= $session; ?>" class=" <?= $suserprofiles; ?>"> &nbsp;&nbsp;&nbsp;<i class="fa fa-list "></i> <?= $_user_profile_list ?> </a>
+  <div class="dropdown-container nested-dropdown-container <?= $upmenu; ?>">
+    <a href="./?hotspot=user-profiles&session=<?= $session; ?>" class=" <?= $suserprofiles; ?>"><i class="fa fa-list "></i> <?= $_user_profile_list ?> </a>
   </div>
   <!--active-->
   <a href="./?hotspot=active&session=<?= $session; ?>" class="menu <?= $sactive; ?>"><i class="fa fa-wifi hotspot-submenu-icon"></i> <?= $_hotspot_active ?></a>
@@ -544,14 +525,14 @@ include('./info.php');
   <!-- PPPoE -->
   <div class="dropdown-btn <?= $mppp; ?>"><i class="fa fa-exchange"></i> PPPoE <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $pppmenu; ?>">
-    <a href="./?ppp=secrets&session=<?= $session; ?>" class="<?= $ssecrets; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-users"></i> <?= $_ppp_secrets ?></a>
-    <a href="./?ppp=profiles&session=<?= $session; ?>" class="<?= $spprofile; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-pie-chart"></i> <?= $_ppp_profiles ?></a>
-    <a href="./?ppp=active&session=<?= $session; ?>" class="<?= $spactive; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-wifi"></i> <?= $_ppp_active ?></a>
+    <a href="./?ppp=secrets&session=<?= $session; ?>" class="<?= $ssecrets; ?>"><i class="fa fa-users"></i> <?= $_ppp_secrets ?></a>
+    <a href="./?ppp=profiles&session=<?= $session; ?>" class="<?= $spprofile; ?>"><i class="fa fa-pie-chart"></i> <?= $_ppp_profiles ?></a>
+    <a href="./?ppp=active&session=<?= $session; ?>" class="<?= $spactive; ?>"><i class="fa fa-wifi"></i> <?= $_ppp_active ?></a>
   </div>
   <div class="dropdown-btn <?= $mcustomers; ?>"><i class="fa fa-address-card"></i> Pelanggan <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $customermenu; ?>">
-    <a href="./?customer=identity-list&session=<?= $session; ?>" class="<?= $sidentitylist; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-id-card"></i> Daftar Identitas</a>
-    <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>">&nbsp;&nbsp;&nbsp;<i class="fa fa-list"></i> Daftar Pelanggan</a>
+    <a href="./?customer=identity-list&session=<?= $session; ?>" class="<?= $sidentitylist; ?>"><i class="fa fa-id-card"></i> Daftar Identitas</a>
+    <a href="./?customer=list&session=<?= $session; ?>" class="<?= $scustomers; ?>"><i class="fa fa-list"></i> Daftar Pelanggan</a>
   </div>
   <div class="dropdown-btn <?= $mbilling; ?>" role="button" tabindex="0" aria-label="Buka submenu Billing" aria-expanded="<?= $billingmenu === 'menu-open' ? 'true' : 'false'; ?>"><i class="fa fa-money"></i> Billing <i class="fa fa-caret-down"></i></div>
   <div class="dropdown-container <?= $billingmenu; ?>">

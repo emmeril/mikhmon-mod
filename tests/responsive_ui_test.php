@@ -29,7 +29,13 @@ responsiveUiAssert(strpos($responsiveJs, "event.key === 'Escape'") !== false, 't
 responsiveUiAssert(strpos($responsiveJs, "event.key !== 'Tab'") !== false, 'keyboard focus stays inside the open mobile drawer');
 responsiveUiAssert(strpos($responsiveJs, 'restoreNavigationItems') !== false, 'opening the drawer clears stale legacy visibility styles');
 responsiveUiAssert(strpos($responsiveJs, "querySelectorAll('.menu, .dropdown-btn')") !== false, 'all permitted top-level navigation items are restored');
-responsiveUiAssert(strpos($responsiveCss, 'body.nav-open #sidenav .menu') !== false, 'open drawer items remain visible despite legacy inline styles');
+responsiveUiAssert(strpos($responsiveCss, 'body.nav-open #sidenav > .menu') !== false, 'open drawer items remain visible despite legacy inline styles');
+responsiveUiAssert(strpos($responsiveCss, '#sidenav .dropdown-container > a > i:first-child') !== false, 'submenu icons use one shared alignment column');
+responsiveUiAssert(strpos($menu, '&nbsp;&nbsp;&nbsp;') === false, 'submenu indentation does not depend on manual spaces');
+responsiveUiAssert(strpos($menu, 'class="dropdown-btn nested-dropdown-btn') !== false, 'the user-profile submenu exposes its nested hierarchy');
+responsiveUiAssert(strpos($responsiveCss, 'grid-template-columns: 36px minmax(0, 1fr) 20px') !== false, 'nested submenu icon, label, and caret stay on one row');
+responsiveUiAssert(strpos($menu, 'dropdown-container nested-dropdown-container') !== false, 'the user-profile child menu has an explicit second-level container');
+responsiveUiAssert(strpos($responsiveCss, '#sidenav .nested-dropdown-container > a') !== false, 'the user-profile child menu uses a consistent second-level indent');
 responsiveUiAssert(substr_count($menu, 'aria-controls="mobileToolsPanel"') === 2, 'both navigation variants expose the mobile settings toggle');
 responsiveUiAssert(substr_count($menu, 'id="mobileToolsPanel"') === 2, 'both navigation variants group toolbar controls in a mobile settings panel');
 responsiveUiAssert(strpos($responsiveCss, '.mobile-tools-panel.is-open') !== false, 'mobile toolbar controls stay hidden until requested');
