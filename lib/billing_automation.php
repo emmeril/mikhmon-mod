@@ -40,6 +40,28 @@ function mikhmonBillingAutomationNextDueTimestamp($baseTimestamp = null, $now = 
   return mikhmonBillingNextDueTimestamp($baseTimestamp);
 }
 
+function mikhmonBillingAutomationIsolationDisplayTimestamp($invoice, $fallbackDueDate = '', $graceDays = 0) {
+  $invoice = is_array($invoice) ? $invoice : array();
+  $isPaid = ($invoice['status'] ?? '') === 'paid';
+  $isolatedAt = (int) ($invoice['automation']['isolated_at'] ?? 0);
+  if (!$isPaid && $isolatedAt > 0) return $isolatedAt;
+
+  $dueDate = $isPaid
+    ? (string) ($invoice['next_due_date'] ?? $fallbackDueDate)
+    : (string) ($invoice['due_date'] ?? $fallbackDueDate);
+  if ($dueDate === '') $dueDate = (string) $fallbackDueDate;
+  $dueAt = mikhmonBillingAutomationDueTimestamp($dueDate);
+  if ($dueAt <= 0) return 0;
+  return $dueAt + (max(0, (int) $graceDays) * 86400);
+}
+
+function mikhmonBillingAutomationInvoiceIsCurrentlyIsolated($invoice) {
+  $invoice = is_array($invoice) ? $invoice : array();
+  $status = (string) ($invoice['status'] ?? '');
+  if (in_array($status, array('paid', 'void'), true)) return false;
+  return $status === 'isolated' || !empty($invoice['automation']['isolated_at']);
+}
+
 function mikhmonBillingAutomationIsWorkHour($timestamp = null) {
   $timestamp = $timestamp === null ? time() : (int) $timestamp;
   $hour = (int) date('G', $timestamp);

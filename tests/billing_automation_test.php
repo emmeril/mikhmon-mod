@@ -64,6 +64,29 @@ billingAutomationTestAssert(mikhmonBillingAutomationRetryReady($failedInvoice, '
 $novemberDue = strtotime('2026-11-05 00:00:00');
 $latePayment = strtotime('2027-02-01 12:00:00');
 billingAutomationTestAssert(date('Y-m-d H:i:s', mikhmonBillingAutomationNextDueTimestamp($novemberDue, $latePayment)) === '2026-12-05 23:59:59', 'late payment advances exactly one monthly billing cycle and keeps the full due day');
+$staleIsolationInvoice = array(
+  'status' => 'paid',
+  'due_date' => '2026-10-05 23:59:59',
+  'next_due_date' => '2026-11-05 23:59:59',
+  'automation' => array('isolated_at' => strtotime('2026-10-05 00:00:00')),
+);
+billingAutomationTestAssert(
+  date('Y-m-d H:i:s', mikhmonBillingAutomationIsolationDisplayTimestamp($staleIsolationInvoice)) === '2026-11-05 23:59:59',
+  'a paid invoice displays the next isolation schedule instead of its previous isolation event'
+);
+billingAutomationTestAssert(
+  !mikhmonBillingAutomationInvoiceIsCurrentlyIsolated($staleIsolationInvoice),
+  'a paid invoice is no longer treated as currently isolated when only its historical isolation event remains'
+);
+$currentIsolationAt = strtotime('2026-10-10 08:15:00');
+billingAutomationTestAssert(
+  mikhmonBillingAutomationIsolationDisplayTimestamp(array('status' => 'isolated', 'automation' => array('isolated_at' => $currentIsolationAt))) === $currentIsolationAt,
+  'an unpaid isolated invoice still displays its actual isolation event'
+);
+billingAutomationTestAssert(
+  mikhmonBillingAutomationInvoiceIsCurrentlyIsolated(array('status' => 'isolated', 'automation' => array('isolated_at' => $currentIsolationAt))),
+  'an isolated invoice remains marked as currently isolated'
+);
 $futureDue = strtotime('2026-10-05 00:00:00');
 billingAutomationTestAssert(!mikhmonBillingAutomationPaymentWindowOpen($futureDue, 7, strtotime('2026-09-20 12:00:00')), 'future invoice stays outside the payment window');
 billingAutomationTestAssert(mikhmonBillingAutomationPaymentWindowOpen($futureDue, 7, strtotime('2026-09-28 00:00:00')), 'payment window opens on the reminder date');

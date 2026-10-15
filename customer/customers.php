@@ -308,20 +308,14 @@ if (!empty($routerConnected)) {
           $customerIsOnline = !empty($customerServiceOnline[0]);
           $customerId = (string) ($customerRow['id'] ?? '');
           $customerInvoice = isset($customerInvoices[$customerId]) ? $customerInvoices[$customerId] : array();
-          $isolatedAt = (int) ($customerInvoice['automation']['isolated_at'] ?? 0);
-          $isolationTimestamp = $isolatedAt;
-          if ($isolationTimestamp <= 0) {
-            $billingDueDate = ($customerInvoice['status'] ?? '') === 'paid' && !empty($customerInvoice['next_due_date'])
-              ? $customerInvoice['next_due_date']
-              : ($customerInvoice['due_date'] ?? '');
-            if ($billingDueDate === '') $billingDueDate = date('Y-m-d H:i:s', mikhmonBillingAutomationUpcomingDueTimestamp());
-            $dueTimestamp = customerListDueTimestamp($billingDueDate);
-            if ($dueTimestamp > 0 && (empty($customerFonnteConfig['automation_enabled']) || !empty($customerFonnteConfig['isolation_enabled']))) {
-              $graceDays = !empty($customerFonnteConfig['automation_enabled']) ? (int) ($customerFonnteConfig['grace_days'] ?? 0) : 0;
-              $isolationTimestamp = $dueTimestamp + ($graceDays * 86400);
-            }
-          }
-          $customerIsIsolated = $isolatedAt > 0;
+          $billingDueDate = date('Y-m-d H:i:s', mikhmonBillingAutomationUpcomingDueTimestamp());
+          $graceDays = !empty($customerFonnteConfig['automation_enabled'])
+            ? (int) ($customerRow['grace_days'] ?? $customerFonnteConfig['grace_days'] ?? 0)
+            : 0;
+          $isolationTimestamp = empty($customerFonnteConfig['automation_enabled']) || !empty($customerFonnteConfig['isolation_enabled'])
+            ? mikhmonBillingAutomationIsolationDisplayTimestamp($customerInvoice, $billingDueDate, $graceDays)
+            : 0;
+          $customerIsIsolated = mikhmonBillingAutomationInvoiceIsCurrentlyIsolated($customerInvoice);
           if (!empty($routerConnected)) foreach ($customerServices as $customerService) {
             $serviceIsIsolated = customerListServiceIsIsolated($customerService, $customerRouterUsers);
             if ($serviceIsIsolated === null) continue;
