@@ -41,7 +41,7 @@ if (!isset($_SESSION["mikhmon"])) {
     <input id="filterTable" type="search" class="form-control data-toolbar__search" placeholder="Search.." autocomplete="off">
 </div>
 <div style="padding: 5px; max-height: 75vh;" class="mr-t-10 overflow">
-<table class="table table-sm table-bordered table-hover" id="dataTable" >
+<table class="table table-sm table-bordered table-hover mobile-readable-table" id="dataTable" >
 	<thead>
         <tr>
             <th><?= $_time ?></th>
@@ -65,7 +65,7 @@ for ($i = 0; $i < $TotalReg; $i++) {
 			echo $mess[1];
 		}
 		echo "</td>";
-		echo "<td>";
+		echo "<td class=\"mobile-table-detail\">";
 		if (count($mess) > 6) {
 			echo str_replace("trying to", "", $mess[7] . " " . $mess[8] . " " . $mess[9] . " " . $mess[10]);
 		} else {

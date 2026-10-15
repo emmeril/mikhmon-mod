@@ -16,6 +16,7 @@ $status = file_get_contents($root . '/status/index.php');
 $customerPortal = file_get_contents($root . '/pelanggan.php');
 $revenueReport = file_get_contents($root . '/customer/billingreports.php');
 $systemLogs = file_get_contents($root . '/dashboard/systemlogs.php');
+$hotspotLog = file_get_contents($root . '/hotspot/log.php');
 
 responsiveUiAssert(strpos($head, 'mikhmon-responsive.css') !== false, 'shared responsive stylesheet is loaded after the theme');
 responsiveUiAssert(strpos($head, 'mikhmon-responsive.js') !== false, 'responsive navigation behavior is loaded');
@@ -47,6 +48,7 @@ responsiveUiAssert(strpos($responsiveCss, 'body.theme-dark .navbar-right.nav-dra
 responsiveUiAssert(strpos(file_get_contents($root . '/tests/fixtures/responsive_nav.html'), 'logoutContrastPasses') !== false, 'browser regression checks logout contrast after toolbar reflow');
 responsiveUiAssert(substr_count($revenueReport, 'mobile-readable-table') === 6, 'every revenue report table preserves readable mobile column spacing');
 responsiveUiAssert(strpos($systemLogs, 'table-hover mobile-readable-table') !== false, 'the system log table preserves readable mobile column spacing');
+responsiveUiAssert(strpos($hotspotLog, 'table-hover mobile-readable-table') !== false && strpos($hotspotLog, 'mobile-table-detail') !== false, 'the full Hotspot log keeps readable mobile columns and a wrapping message column');
 responsiveUiAssert(strpos($responsiveCss, '.mobile-readable-table .mobile-table-detail') !== false, 'long table details wrap without compressing adjacent columns');
 responsiveUiAssert(strpos($status, 'maximum-scale') === false, 'the voucher status page allows browser zoom');
 responsiveUiAssert(strpos($status, '../css/mikhmon-responsive.css') !== false, 'the standalone voucher status page uses shared responsive rules');

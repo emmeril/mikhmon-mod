@@ -43,6 +43,8 @@ dashboardCardOrderAssert($adminSystemSummaryPosition > $adminSidebarPosition && 
 dashboardCardOrderAssert(strpos($dashboardSources['admin dashboard'], 'overflow dashboard-log-scroll') !== false, 'admin dashboard applies the taller scroll area to the initial Hotspot log');
 dashboardCardOrderAssert(strpos($dashboardAjaxSource, 'overflow dashboard-log-scroll') !== false, 'admin dashboard preserves the taller Hotspot log after an AJAX refresh');
 dashboardCardOrderAssert(strpos($systemLogSource, 'overflow dashboard-log-scroll') !== false, 'admin dashboard applies the taller scroll area to the application system log');
+dashboardCardOrderAssert(strpos($dashboardSources['admin dashboard'], 'table-hover mobile-readable-table') !== false, 'admin dashboard keeps the initial Hotspot log readable on mobile');
+dashboardCardOrderAssert(strpos($dashboardAjaxSource, 'table-hover mobile-readable-table') !== false && strpos($dashboardAjaxSource, 'mobile-table-detail') !== false, 'admin dashboard keeps refreshed Hotspot log columns readable on mobile');
 dashboardCardOrderAssert(strpos($dashboardSources['admin dashboard'], 'height:420px;max-height:420px!important') !== false, 'admin dashboard provides a 420px log viewport outside mobile screens');
 dashboardCardOrderAssert(strpos($dashboardSources['admin dashboard'], 'height:360px;max-height:360px!important') !== false, 'admin dashboard keeps a balanced log viewport on mobile screens');
 $partnerSidebarPosition = strpos($dashboardSources['partner dashboard'], 'class="col-4 dashboard-main-column dashboard-main-right"');
@@ -51,6 +53,7 @@ $partnerLogPosition = strpos($dashboardSources['partner dashboard'], 'id="r_3"')
 dashboardCardOrderAssert(strpos($dashboardSources['partner dashboard'], 'class="row dashboard-main-row"') !== false, 'partner dashboard uses the same main grid as admin');
 dashboardCardOrderAssert($partnerSystemSummaryPosition > $partnerSidebarPosition && $partnerLogPosition > $partnerSystemSummaryPosition, 'partner system summary is grouped above the log in the right column');
 dashboardCardOrderAssert(strpos($dashboardSources['partner dashboard'], 'overflow dashboard-log-scroll') !== false, 'partner dashboard applies the taller scroll area to its Hotspot log');
+dashboardCardOrderAssert(strpos($dashboardSources['partner dashboard'], 'table-hover mobile-readable-table') !== false && strpos($dashboardSources['partner dashboard'], 'mobile-table-detail') !== false, 'partner dashboard keeps Hotspot log columns readable on mobile');
 dashboardCardOrderAssert(strpos($dashboardSources['partner dashboard'], 'height:420px;max-height:420px!important') !== false, 'partner dashboard provides a 420px Hotspot log viewport outside mobile screens');
 dashboardCardOrderAssert(strpos($dashboardSources['partner dashboard'], 'height:360px;max-height:360px!important') !== false, 'partner dashboard keeps a balanced Hotspot log viewport on mobile screens');
 dashboardCardOrderAssert(strpos($dashboardSources['partner dashboard'], 'position: static;') !== false, 'partner dashboard log column contributes its natural height to the page');

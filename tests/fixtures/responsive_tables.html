@@ -31,6 +31,17 @@
         </div>
       </div>
     </div>
+    <div class="card">
+      <div class="card-header"><h3>Hotspot Log</h3></div>
+      <div class="card-body">
+        <div class="overflow box-bordered" data-table-wrap>
+          <table class="table table-bordered table-hover mobile-readable-table" data-responsive-table>
+            <thead><tr><th>Waktu</th><th>Pengguna (IP)</th><th>Pesan</th></tr></thead>
+            <tbody><tr><td>2026-10-15 10:00:00</td><td>pelanggan-01 (10.0.0.8)</td><td class="mobile-table-detail">Pengguna berhasil masuk melalui layanan hotspot.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </main>
   <output id="result">PENDING</output>
   <script>
@@ -58,7 +69,7 @@
         passed = passed && detailStyle.whiteSpace === 'normal';
         if (window.innerWidth < 720) passed = passed && wrapper.scrollWidth > wrapper.clientWidth;
       });
-      passed = passed && tables.length === 2;
+      passed = passed && tables.length === 3;
       document.documentElement.setAttribute('data-test-result', passed ? 'PASS' : 'FAIL');
       document.getElementById('result').textContent = passed ? 'PASS' : 'FAIL';
     });

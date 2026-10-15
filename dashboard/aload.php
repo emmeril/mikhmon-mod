@@ -275,7 +275,7 @@ include('../lang/'.$langid.'.php');
                   <h3><a href="./?hotspot=log&session=<?= $session; ?>" title="Open Hotspot Log" ><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></a><?= $routerOffline ? ' <small class="text-warning router-offline">(Router offline, menampilkan cache terakhir)</small>' : ''; ?></h3></div>
                     <div class="card-body">
                       <div style="padding: 5px; max-height: 420px;" class="mr-t-10 overflow dashboard-log-scroll">
-                        <table class="table table-sm table-bordered table-hover" style="font-size: 12px; td.padding:2px;">
+                        <table class="table table-sm table-bordered table-hover mobile-readable-table" style="font-size: 12px; td.padding:2px;">
                           <thead>
                             <tr>
                             <th><?= $_time .$THotspotLog; ?></th>
@@ -302,7 +302,7 @@ include('../lang/'.$langid.'.php');
         echo $mess[1];
       }
       echo "</td>";
-      echo "<td>";
+      echo "<td class=\"mobile-table-detail\">";
       if (count($mess) > 6) {
         echo str_replace("trying to", "", $mess[7] . " " . $mess[8] . " " . $mess[9] . " " . $mess[10]);
       } else {

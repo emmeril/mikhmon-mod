@@ -527,7 +527,7 @@ if (!isset($_SESSION["mikhmon"])) {
                 <h3><a onclick="cancelPage()" href="./?hotspot=log&session=<?= $session; ?>" title="Open Hotspot Log" ><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></a></h3></div>
                   <div class="card-body">
                     <div style="padding: 5px; max-height: 420px;" class="mr-t-10 overflow dashboard-log-scroll">
-                      <table class="table table-sm table-bordered table-hover" style="font-size: 12px; td.padding:2px;">
+                      <table class="table table-sm table-bordered table-hover mobile-readable-table" style="font-size: 12px; td.padding:2px;">
                         <thead>
                           <tr>
                             <th><?= $_time ?></th>

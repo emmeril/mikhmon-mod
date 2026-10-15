@@ -288,13 +288,13 @@ $mitraCustomerMonth = mikhmonRevenueMoney($mitraDashboardRevenue['customer_month
         <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-server"></i></div><div class="box-group-area"><span><?= $_cpu_load ?> : <?= htmlspecialchars(isset($resource['cpu-load']) ? $resource['cpu-load'] : '0', ENT_QUOTES); ?>%<br><?= $_free_memory ?> : <?= htmlspecialchars(isset($resource['free-memory']) ? formatBytes($resource['free-memory'], 2) : '-', ENT_QUOTES); ?><br><?= $_free_hdd ?> : <?= htmlspecialchars(isset($resource['free-hdd-space']) ? formatBytes($resource['free-hdd-space'], 2) : '-', ENT_QUOTES); ?></span></div></div></div></div>
       </div>
       <div id="r_3" class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></h3></div><div class="card-body"><div style="padding: 5px; max-height: 420px;" class="mr-t-10 overflow dashboard-log-scroll">
-        <table class="table table-sm table-bordered table-hover" style="font-size: 12px;">
+        <table class="table table-sm table-bordered table-hover mobile-readable-table" style="font-size: 12px;">
           <thead><tr><th><?= $_time ?></th><th><?= $_users ?> (IP)</th><th><?= $_messages ?></th></tr></thead>
           <tbody>
           <?php if (empty($mitraHotspotLogs)): ?>
             <tr><td colspan="3" class="text-center">Belum ada log hotspot.</td></tr>
           <?php else: foreach ($mitraHotspotLogs as $hotspotLog): ?>
-            <tr><td><?= htmlspecialchars($hotspotLog['time'], ENT_QUOTES); ?></td><td><?= htmlspecialchars($hotspotLog['user'], ENT_QUOTES); ?></td><td><?= htmlspecialchars($hotspotLog['message'], ENT_QUOTES); ?></td></tr>
+            <tr><td><?= htmlspecialchars($hotspotLog['time'], ENT_QUOTES); ?></td><td><?= htmlspecialchars($hotspotLog['user'], ENT_QUOTES); ?></td><td class="mobile-table-detail"><?= htmlspecialchars($hotspotLog['message'], ENT_QUOTES); ?></td></tr>
           <?php endforeach; endif; ?>
           </tbody>
         </table>
