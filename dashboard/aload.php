@@ -274,7 +274,7 @@ include('../lang/'.$langid.'.php');
                 <div class="card-header">
                   <h3><a href="./?hotspot=log&session=<?= $session; ?>" title="Open Hotspot Log" ><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></a><?= $routerOffline ? ' <small class="text-warning router-offline">(Router offline, menampilkan cache terakhir)</small>' : ''; ?></h3></div>
                     <div class="card-body">
-                      <div style="padding: 5px; max-height: 320px;" class="mr-t-10 overflow">
+                      <div style="padding: 5px; max-height: 420px;" class="mr-t-10 overflow dashboard-log-scroll">
                         <table class="table table-sm table-bordered table-hover" style="font-size: 12px; td.padding:2px;">
                           <thead>
                             <tr>

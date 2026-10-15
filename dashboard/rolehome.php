@@ -103,24 +103,32 @@ $mitraCustomerMonth = mikhmonRevenueMoney($mitraDashboardRevenue['customer_month
 .dashboard-revenue-card h1{font-size:24px;line-height:1.25;margin-bottom:6px}.dashboard-revenue-card a{height:100%}
 .dashboard-main-row .box>a{display:block;min-height:44px}.dashboard-main-row a:focus-visible{outline:2px solid #fff;outline-offset:2px;box-shadow:0 0 0 4px #2f353a}
 .dashboard-main-row .bg-blue,.dashboard-main-row .bg-green,.dashboard-main-row .bg-yellow,.dashboard-main-row .bg-red,.dashboard-main-row .bg-blue a,.dashboard-main-row .bg-green a,.dashboard-main-row .bg-yellow a,.dashboard-main-row .bg-red a{color:#18222d}
-@media screen and (max-width: 750px){.dashboard-revenue-card h1{font-size:20px}}
+.dashboard-main-right .dashboard-log-scroll{height:420px;max-height:420px!important}
+@media screen and (max-width: 750px){.dashboard-revenue-card h1{font-size:20px}.dashboard-main-right .dashboard-log-scroll{height:360px;max-height:360px!important}}
 @media screen and (min-width: 751px) and (max-width: 1100px){.dashboard-main-row>.dashboard-main-column{float:none;width:100%}}
 @media screen and (min-width: 1101px) {
   .dashboard-main-row {
-    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(340px, 1fr);
+    align-items: start;
+  }
+  .dashboard-main-row::before,
+  .dashboard-main-row::after {
+    display: none;
   }
   .dashboard-main-row > .dashboard-main-column {
     display: flex;
     flex-direction: column;
+    float: none;
+    width: auto;
+    min-width: 0;
   }
   .dashboard-main-right {
-    display: grid !important;
-    grid-template-rows: auto minmax(0, 1fr);
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
+    display: flex !important;
+    flex-direction: column;
+    position: static;
     float: none;
+    min-width: 0;
   }
   .dashboard-main-right #r_1 > .col-4 {
     float: none;
@@ -137,7 +145,7 @@ $mitraCustomerMonth = mikhmonRevenueMoney($mitraDashboardRevenue['customer_month
   }
   .dashboard-main-right #r_3 {
     display: grid;
-    grid-template-rows: minmax(0, 1fr);
+    grid-template-rows: auto;
     height: auto;
     min-height: 0;
   }
@@ -150,15 +158,9 @@ $mitraCustomerMonth = mikhmonRevenueMoney($mitraDashboardRevenue['customer_month
     min-height: 0;
   }
   .dashboard-main-right #r_3 > .card .card-body {
-    display: flex;
-    flex: 1;
-    min-height: 0;
+    display: block;
   }
   .dashboard-main-right #r_3 > .card .overflow {
-    flex: 1;
-    height: auto !important;
-    max-height: none !important;
-    min-height: 0;
     width: 100%;
   }
 }
@@ -285,7 +287,7 @@ $mitraCustomerMonth = mikhmonRevenueMoney($mitraDashboardRevenue['customer_month
         <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-info-circle"></i></div><div class="box-group-area"><span><?= $_board_name ?> : <?= htmlspecialchars(isset($resource['board-name']) ? $resource['board-name'] : '-', ENT_QUOTES); ?><br><?= $_model ?> : <?= htmlspecialchars(isset($routerboard['model']) ? $routerboard['model'] : '-', ENT_QUOTES); ?><br>Router OS : <?= htmlspecialchars(isset($resource['version']) ? $resource['version'] : '-', ENT_QUOTES); ?></span></div></div></div></div>
         <div class="col-4"><div class="box bmh-75 box-bordered"><div class="box-group"><div class="box-group-icon"><i class="fa fa-server"></i></div><div class="box-group-area"><span><?= $_cpu_load ?> : <?= htmlspecialchars(isset($resource['cpu-load']) ? $resource['cpu-load'] : '0', ENT_QUOTES); ?>%<br><?= $_free_memory ?> : <?= htmlspecialchars(isset($resource['free-memory']) ? formatBytes($resource['free-memory'], 2) : '-', ENT_QUOTES); ?><br><?= $_free_hdd ?> : <?= htmlspecialchars(isset($resource['free-hdd-space']) ? formatBytes($resource['free-hdd-space'], 2) : '-', ENT_QUOTES); ?></span></div></div></div></div>
       </div>
-      <div id="r_3" class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></h3></div><div class="card-body"><div style="padding: 5px; max-height: 320px;" class="mr-t-10 overflow">
+      <div id="r_3" class="row"><div class="card"><div class="card-header"><h3><i class="fa fa-align-justify"></i> <?= $_hotspot_log ?></h3></div><div class="card-body"><div style="padding: 5px; max-height: 420px;" class="mr-t-10 overflow dashboard-log-scroll">
         <table class="table table-sm table-bordered table-hover" style="font-size: 12px;">
           <thead><tr><th><?= $_time ?></th><th><?= $_users ?> (IP)</th><th><?= $_messages ?></th></tr></thead>
           <tbody>
