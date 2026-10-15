@@ -291,6 +291,22 @@ input[type="radio"] {
   vertical-align: middle;
 }
 
+.mobile-readable-table {
+  min-width: 720px;
+}
+
+.table.mobile-readable-table th,
+.table.mobile-readable-table td {
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.table.mobile-readable-table .mobile-table-detail {
+  min-width: 220px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .table .btn {
   margin-top: 2px;
   margin-bottom: 2px;
@@ -492,6 +508,14 @@ body.nav-open #sidenav > .dropdown-btn {
 
   .navbar-right.nav-drawer-tools > #logout {
     order: 3;
+  }
+
+  body:not(.theme-dark) .navbar-right.nav-drawer-tools > #logout {
+    color: #0b0c0c;
+  }
+
+  body.theme-dark .navbar-right.nav-drawer-tools > #logout {
+    color: #e4e7ea;
   }
 
   .navbar-right.nav-drawer-tools > #logout,

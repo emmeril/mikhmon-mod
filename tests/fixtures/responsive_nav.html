@@ -4,11 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Responsive navigation regression fixture</title>
-  <link rel="stylesheet" href="../../css/mikhmon-ui.dark.min.css">
+  <script>
+    var fixtureThemes = ['blue', 'dark', 'green', 'light', 'pink'];
+    var requestedTheme = new URLSearchParams(window.location.search).get('theme');
+    window.fixtureTheme = fixtureThemes.indexOf(requestedTheme) === -1 ? 'dark' : requestedTheme;
+    document.write('<link rel="stylesheet" href="../../css/mikhmon-ui.' + window.fixtureTheme + '.min.css">');
+  </script>
   <link rel="stylesheet" href="../../css/mikhmon-responsive.css">
   <script defer src="../../js/mikhmon-responsive.js"></script>
 </head>
-<body class="theme-dark">
+<body>
+  <script>document.body.className = 'theme-' + window.fixtureTheme;</script>
   <div id="navbar" class="navbar">
     <div class="navbar-left">
       <button id="openNav" type="button">Menu</button>
@@ -47,8 +53,25 @@
   <script src="../../js/mikhmon-ui.dark.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function () {
+      function luminance(color) {
+        var channels = color.match(/[\d.]+/g).slice(0, 3).map(function (channel) {
+          var value = Number(channel) / 255;
+          return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+      }
+
+      function contrastRatio(foreground, background) {
+        var foregroundLuminance = luminance(foreground);
+        var backgroundLuminance = luminance(background);
+        var lighter = Math.max(foregroundLuminance, backgroundLuminance);
+        var darker = Math.min(foregroundLuminance, backgroundLuminance);
+        return (lighter + 0.05) / (darker + 0.05);
+      }
+
       function finish(passed) {
         document.documentElement.setAttribute('data-test-result', passed ? 'PASS' : 'FAIL');
+        document.documentElement.setAttribute('data-test-theme', window.fixtureTheme);
         document.getElementById('result').textContent = passed ? 'PASS' : 'FAIL';
       }
 
@@ -62,6 +85,17 @@
       var visibleItems = Array.prototype.filter.call(items, function (item) {
         return window.getComputedStyle(item).display !== 'none';
       });
+      var logout = document.getElementById('logout');
+      var logoutStyle = window.getComputedStyle(logout);
+      var logoutSurface = window.innerWidth <= 1024 ? document.getElementById('sidenav') : document.getElementById('navbar');
+      var logoutVisible = logoutStyle.display !== 'none' && logoutStyle.visibility !== 'hidden' && Number(logoutStyle.opacity) > 0;
+      var logoutSurfaceColor = window.getComputedStyle(logoutSurface).backgroundColor;
+      var logoutContrast = contrastRatio(logoutStyle.color, logoutSurfaceColor);
+      var logoutContrastPasses = logoutContrast >= 4.5;
+      document.documentElement.setAttribute('data-logout-color', logoutStyle.color);
+      document.documentElement.setAttribute('data-logout-surface', logoutSurfaceColor);
+      document.documentElement.setAttribute('data-logout-contrast', logoutContrast.toFixed(2));
+      document.documentElement.setAttribute('data-logout-visible', logoutVisible ? 'true' : 'false');
       var activeSubmenu = document.querySelector('.dropdown-container.menu-open');
       var submenuLinks = activeSubmenu.querySelectorAll(':scope > a');
       var submenuIconLefts = [];
@@ -109,6 +143,7 @@
           window.getComputedStyle(toolsToggle).display === 'none' &&
           window.getComputedStyle(toolsPanel).display === 'contents' &&
           window.getComputedStyle(toolsPanel.querySelector('select')).display !== 'none' &&
+          logoutVisible && logoutContrastPasses &&
           submenuAlignmentMatches && submenuTargetsLargeEnough && nestedButtonAligned && nestedLinkIndented && nestedOpenedByClick &&
           document.documentElement.scrollWidth <= window.innerWidth);
         return;
@@ -129,6 +164,7 @@
       var passed = document.body.classList.contains('nav-open') &&
         visibleItems.length === items.length &&
         window.getComputedStyle(activeSubmenu).display !== 'none' &&
+        logoutVisible && logoutContrastPasses &&
         submenuAlignmentMatches && submenuTargetsLargeEnough && nestedButtonAligned && nestedLinkIndented && nestedOpenedByClick &&
         parseFloat(window.getComputedStyle(toolsToggle).height) >= 44 &&
         document.documentElement.scrollWidth <= window.innerWidth &&

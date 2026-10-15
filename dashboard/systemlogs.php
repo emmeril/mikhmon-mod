@@ -26,7 +26,7 @@ $systemLogLevelClasses = array(
   </div>
   <div class="card-body">
     <div style="padding: 5px; max-height: <?= $systemLogMaxHeight; ?>;" class="mr-t-10 overflow dashboard-log-scroll">
-      <table class="table table-sm table-bordered table-hover" style="font-size: 12px;" id="dataTable">
+      <table class="table table-sm table-bordered table-hover mobile-readable-table" style="font-size: 12px;" id="dataTable">
         <thead>
           <tr><th>Waktu</th><th>Level</th><th>Aktivitas</th><th>Pengguna</th></tr>
         </thead>
@@ -38,7 +38,7 @@ $systemLogLevelClasses = array(
           <tr>
             <td class="text-nowrap"><?= htmlspecialchars($systemLogFormatTime($systemLog), ENT_QUOTES); ?></td>
             <td class="<?= $levelClass; ?>"><?= strtoupper(htmlspecialchars($systemLog['level'], ENT_QUOTES)); ?></td>
-            <td><b><?= htmlspecialchars($systemLog['category'], ENT_QUOTES); ?></b><br><?= htmlspecialchars($systemLog['message'], ENT_QUOTES); ?><?php if ($systemLog['session'] !== ''): ?><br><small>Router: <?= htmlspecialchars($systemLog['session'], ENT_QUOTES); ?></small><?php elseif ($systemLog['role'] === 'admin'): ?><br><small>Router: Semua Router</small><?php endif; ?></td>
+            <td class="mobile-table-detail"><b><?= htmlspecialchars($systemLog['category'], ENT_QUOTES); ?></b><br><?= htmlspecialchars($systemLog['message'], ENT_QUOTES); ?><?php if ($systemLog['session'] !== ''): ?><br><small>Router: <?= htmlspecialchars($systemLog['session'], ENT_QUOTES); ?></small><?php elseif ($systemLog['role'] === 'admin'): ?><br><small>Router: Semua Router</small><?php endif; ?></td>
             <td><?= htmlspecialchars($systemLog['user'], ENT_QUOTES); ?><br><small><?= strtoupper(htmlspecialchars($systemLog['role'], ENT_QUOTES)); ?><?= $systemLog['ip'] !== '' ? ' &middot; ' . htmlspecialchars($systemLog['ip'], ENT_QUOTES) : ''; ?></small></td>
           </tr>
         <?php endforeach; endif; ?>
