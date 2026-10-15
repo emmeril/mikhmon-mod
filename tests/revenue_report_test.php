@@ -82,5 +82,28 @@ $legacyAdmin = 0.0;
 foreach ($legacyRows as $row) if ($row['owner_user_id'] === $mitraTwo) $legacyAdmin = $row['admin'];
 revenueReportTestAssert($legacyAdmin === 2500.0, 'legacy admin fee is treated once as collection administration');
 
+$localSession = 'router-local-report';
+mikhmonSaveReportRecords($localSession, array(
+  array('name'=>'oct/08/2026-|-12:00:00-|-LOCAL-LEGACY-|-8000-|-10.0.0.3-|-CC-|-1d-|-local-voucher-|-sold-direct-|-hotspot'),
+  array('name'=>'oct/08/2026-|-12:05:00-|-LOCAL-SNAPSHOT-|-9000-|-10.0.0.4-|-DD-|-1d-|-new-voucher-|-sold-direct-|-hotspot-|-5000-|-4000'),
+));
+$snapshotAt = time();
+revenueReportTestAssert(mikhmonWriteRouterDatabase(array('routers'=>array($localSession=>array(
+  'latest'=>array('session'=>$localSession,'updated_at'=>$snapshotAt,'hotspot_profiles'=>array(
+    array('name'=>'local-voucher','on-login'=>':put (",remc,5000,1d,8000,,Disable,")'),
+  )),
+  'history'=>array(),'settings'=>mikhmonDefaultSyncSettings(),'last_checked_at'=>$snapshotAt,
+)))), 'local router profile snapshot is stored');
+$localTransactions = mikhmonRevenueTransactions($localSession);
+revenueReportTestAssert(count($localTransactions) === 2, 'local revenue report recognizes voucher records without comment markers');
+$localTotals = mikhmonRevenueTotals($localTransactions);
+revenueReportTestAssert($localTotals['voucher'] === 17000.0, 'local revenue report matches voucher sales stored by the dashboard');
+revenueReportTestAssert($localTotals['cost'] === 10000.0 && $localTotals['partner_income'] === 0.0 && $localTotals['net'] === 7000.0, 'admin voucher sales add price minus HPP to ISP income without partner commission');
+$localVoucherRows = mikhmonRevenueVoucherReportRows($localTransactions);
+$localVoucherTotals = mikhmonRevenueReportSectionTotals($localVoucherRows, array('cost','commission','revenue','net_income'));
+revenueReportTestAssert($localVoucherTotals['commission'] === 0.0 && $localVoucherTotals['net_income'] === 7000.0, 'voucher recap does not assign partner commission to direct admin sales');
+
 @unlink($databasePath);
+@unlink($databasePath . '.routers');
+@unlink($databasePath . '.routers.index');
 echo 'revenue-report-tests: OK' . PHP_EOL;
