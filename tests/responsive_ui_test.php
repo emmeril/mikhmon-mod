@@ -43,6 +43,8 @@ responsiveUiAssert(substr_count($menu, 'aria-controls="mobileToolsPanel"') === 2
 responsiveUiAssert(substr_count($menu, 'id="mobileToolsPanel"') === 2, 'both navigation variants group toolbar controls in a mobile settings panel');
 responsiveUiAssert(strpos($responsiveCss, '.mobile-tools-panel.is-open') !== false, 'mobile toolbar controls stay hidden until requested');
 responsiveUiAssert(strpos($responsiveJs, 'setToolsExpanded') !== false, 'the mobile settings panel has working open and close behavior');
+responsiveUiAssert(strpos($responsiveCss, '.idle-time-status #timer') !== false && strpos($responsiveCss, 'flex: 0 0 5ch') !== false, 'the idle countdown reserves a stable width in the navbar');
+responsiveUiAssert(strpos($responsiveCss, 'font-variant-numeric: tabular-nums') !== false, 'the idle countdown uses fixed-width numerals');
 responsiveUiAssert(strpos($responsiveCss, 'body:not(.theme-dark) .navbar-right.nav-drawer-tools > #logout') !== false, 'logout uses readable text in light mobile drawers');
 responsiveUiAssert(strpos($responsiveCss, 'body.theme-dark .navbar-right.nav-drawer-tools > #logout') !== false, 'logout uses readable text in the dark mobile drawer');
 responsiveUiAssert(strpos(file_get_contents($root . '/tests/fixtures/responsive_nav.html'), 'logoutContrastPasses') !== false, 'browser regression checks logout contrast after toolbar reflow');

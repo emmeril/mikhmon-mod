@@ -139,9 +139,18 @@ body:not(.theme-dark) .navbar .ses {
 
 .idle-time-status {
   align-items: center;
+  flex: 0 0 auto;
   min-height: 50px;
   padding: 0 12px;
   white-space: nowrap;
+}
+
+.idle-time-status #timer {
+  display: inline-block;
+  flex: 0 0 5ch;
+  width: 5ch;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
 .idle-time-label {

@@ -27,7 +27,11 @@
         <select aria-label="Pilih tema"><option>Dark</option></select>
         <select aria-label="Pilih bahasa"><option>Indonesia</option></select>
         <select aria-label="Pilih session"><option>Router A</option></select>
-        <span class="idle-time-status">Idle Time 10:00</span>
+        <span class="idle-time-status">
+          <i class="fa fa-clock-o" aria-hidden="true"></i>
+          <span class="idle-time-label">Idle Time</span>
+          <span id="timer">10:00</span>
+        </span>
       </div>
     </div>
   </div>
@@ -137,12 +141,30 @@
         nestedLink.getBoundingClientRect().height >= 44;
       var toolsToggle = document.querySelector('.mobile-tools-toggle');
       var toolsPanel = document.querySelector('.mobile-tools-panel');
+      var navbarTools = document.querySelector('.navbar-right');
+      var toolbarSelects = toolsPanel.querySelectorAll('select');
+      var timer = document.getElementById('timer');
+      var toolbarLeftsBeforeCountdown = Array.prototype.map.call(toolbarSelects, function (select) {
+        return select.getBoundingClientRect().left;
+      });
+      var navbarToolsRectBeforeCountdown = navbarTools.getBoundingClientRect();
+      timer.textContent = '9:59';
+      var toolbarLeftsAfterCountdown = Array.prototype.map.call(toolbarSelects, function (select) {
+        return select.getBoundingClientRect().left;
+      });
+      var navbarToolsRectAfterCountdown = navbarTools.getBoundingClientRect();
+      var toolbarStableDuringCountdown = toolbarLeftsBeforeCountdown.every(function (left, index) {
+        return Math.abs(left - toolbarLeftsAfterCountdown[index]) < 0.5;
+      }) && Math.abs(navbarToolsRectBeforeCountdown.left - navbarToolsRectAfterCountdown.left) < 0.5 &&
+        Math.abs(navbarToolsRectBeforeCountdown.width - navbarToolsRectAfterCountdown.width) < 0.5 &&
+        window.getComputedStyle(timer).fontVariantNumeric.indexOf('tabular-nums') !== -1;
       if (window.innerWidth > 1024) {
         finish(document.body.classList.contains('nav-open') &&
           visibleItems.length === items.length &&
           window.getComputedStyle(toolsToggle).display === 'none' &&
           window.getComputedStyle(toolsPanel).display === 'contents' &&
           window.getComputedStyle(toolsPanel.querySelector('select')).display !== 'none' &&
+          toolbarStableDuringCountdown &&
           logoutVisible && logoutContrastPasses &&
           submenuAlignmentMatches && submenuTargetsLargeEnough && nestedButtonAligned && nestedLinkIndented && nestedOpenedByClick &&
           document.documentElement.scrollWidth <= window.innerWidth);
@@ -167,6 +189,7 @@
         logoutVisible && logoutContrastPasses &&
         submenuAlignmentMatches && submenuTargetsLargeEnough && nestedButtonAligned && nestedLinkIndented && nestedOpenedByClick &&
         parseFloat(window.getComputedStyle(toolsToggle).height) >= 44 &&
+        toolbarStableDuringCountdown &&
         document.documentElement.scrollWidth <= window.innerWidth &&
         toolsInitiallyHidden && toolsOpened && toolsClosedWithEscape && drawerClosedWithEscape;
 
