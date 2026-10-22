@@ -28,8 +28,9 @@ foreach (mikhmonGetUsers('admin') as $user) {
   if ($id !== '') $collectorNames[$id] = (string) ($user['name'] ?? $user['username'] ?? 'Administrator');
 }
 
-$dateFromValue = trim((string) ($_GET['report_from'] ?? ''));
-$dateToValue = trim((string) ($_GET['report_to'] ?? ''));
+$currentReportDate = date('Y-m-d');
+$dateFromValue = trim((string) ($_GET['report_from'] ?? $currentReportDate));
+$dateToValue = trim((string) ($_GET['report_to'] ?? $currentReportDate));
 if ($dateFromValue !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFromValue)) { $reportError = 'Tanggal awal filter tidak valid.'; $dateFromValue = ''; }
 if ($dateToValue !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateToValue)) { $reportError = 'Tanggal akhir filter tidak valid.'; $dateToValue = ''; }
 $dateFrom = $dateFromValue !== '' ? strtotime($dateFromValue . ' 00:00:00') : 0;

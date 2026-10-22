@@ -98,11 +98,16 @@ ob_start();
 include dirname(__DIR__) . '/customer/billingreports.php';
 $operatorHtml = ob_get_clean();
 billingReportPageTestAssert(strpos($operatorHtml, 'Pendapatan bersih ISP') === false && strpos($operatorHtml, 'name="report_mitra"') === false, 'operator cannot access net revenue or partner financial filters');
+billingReportPageTestAssert(
+  strpos($operatorHtml, 'name="report_from" value="' . date('Y-m-d') . '"') !== false
+    && strpos($operatorHtml, 'name="report_to" value="' . date('Y-m-d') . '"') !== false,
+  'date filters default to the current date when no range is supplied'
+);
 
 $_SESSION['mikhmon_role'] = 'biller';
 $_SESSION['mikhmon_user_id'] = $biller;
 $_SESSION['mikhmon_name'] = 'Penagih Satu';
-$_GET = array('billing' => 'reports', 'session' => $session);
+$_GET = array('billing' => 'reports', 'session' => $session, 'report_from' => '2026-10-01', 'report_to' => '2026-10-31');
 ob_start();
 include dirname(__DIR__) . '/customer/billingreports.php';
 $billerHtml = ob_get_clean();
