@@ -271,11 +271,13 @@ function mikhmonBillingAutomationSetServices($api, $customer, $disabled) {
       foreach ($changed as $rollback) if (empty($rollback['was_disabled'])) $api->comm($rollback['command'] . '/set', array('.id' => $rollback['id'], 'disabled' => 'no'));
       return false;
     }
+    $wasDisabled = isset($rows[0]['disabled']) && in_array($rows[0]['disabled'], array('true', 'yes'), true);
     if ($disabled) {
       $activeCommand = $type === 'pppoe' ? '/ppp/active' : '/ip/hotspot/active';
       $activeFilter = $type === 'pppoe' ? array('?name' => $username) : array('?user' => $username);
       $activeRows = $api->comm($activeCommand . '/print', $activeFilter);
       foreach ((array) $activeRows as $activeRow) if (isset($activeRow['.id'])) $api->comm($activeCommand . '/remove', array('.id' => $activeRow['.id']));
+      if ($wasDisabled) continue;
     }
     $args = array('.id' => $rows[0]['.id'], 'disabled' => $disabled ? 'yes' : 'no');
     if (!$disabled && $type === 'hotspot') $args['limit-uptime'] = '0';
@@ -285,7 +287,7 @@ function mikhmonBillingAutomationSetServices($api, $customer, $disabled) {
     }
     $changed[] = array(
       'command' => $command, 'id' => $rows[0]['.id'],
-      'was_disabled' => isset($rows[0]['disabled']) && in_array($rows[0]['disabled'], array('true', 'yes'), true),
+      'was_disabled' => $wasDisabled,
     );
   }
   return true;
@@ -569,12 +571,14 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
       elseif (!empty($send['attempted'])) { mikhmonBillingAutomationRecordFailure($invoice, 'reminder', $send['reason'] ?? 'Fonnte error', $now); $result['errors']++; }
     }
     $isolationAt = mikhmonBillingIsolationTimestamp($dueAt, $graceDays);
-    if (!empty($fonnteConfig['automation_enabled']) && !empty($fonnteConfig['isolation_enabled']) && empty($automation['isolated_at']) && $now >= $isolationAt) {
+    if (!empty($fonnteConfig['automation_enabled']) && !empty($fonnteConfig['isolation_enabled']) && $now >= $isolationAt) {
       if (mikhmonBillingAutomationSetServices($api, $customer, true)) {
-        $invoice['automation']['isolated_at'] = $now;
+        if (empty($automation['isolated_at'])) {
+          $invoice['automation']['isolated_at'] = $now;
+          $result['isolated']++;
+        }
         $invoice['status'] = 'isolated';
         mikhmonBillingAutomationClearFailure($invoice, 'isolation');
-        $result['isolated']++;
       } else { mikhmonBillingAutomationRecordFailure($invoice, 'isolation', 'Gagal mengubah status layanan MikroTik.', $now); $result['errors']++; }
     }
     if ($workHours && !empty($fonnteConfig['automation_enabled']) && !empty($fonnteConfig['isolation_enabled']) && !empty($invoice['automation']['isolated_at']) && empty($invoice['automation']['isolation_sent_at']) && mikhmonBillingAutomationRetryReady($invoice, 'isolation_message', $now)) {

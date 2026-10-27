@@ -16,10 +16,24 @@ function billingAutomationTestAssert($condition, $message) {
 
 class BillingAutomationFakeApi {
   public $commands = array();
+  public $disabled;
+  public $activeRows;
+  public function __construct($disabled = 'no', $activeRows = array()) {
+    $this->disabled = $disabled;
+    $this->activeRows = $activeRows;
+  }
   public function comm($command, $args = array()) {
     $this->commands[] = array($command, $args);
-    if ($command === '/ip/hotspot/user/print') return array(array('.id' => '*1', 'name' => 'cust-a', 'disabled' => 'no'));
-    if ($command === '/ip/hotspot/active/print') return array();
+    if ($command === '/ip/hotspot/user/print') return array(array('.id' => '*1', 'name' => 'cust-a', 'disabled' => $this->disabled));
+    if ($command === '/ip/hotspot/active/print') return $this->activeRows;
+    if ($command === '/ip/hotspot/active/remove') {
+      $this->activeRows = array();
+      return array();
+    }
+    if ($command === '/ip/hotspot/user/set') {
+      $this->disabled = (string) ($args['disabled'] ?? $this->disabled);
+      return array();
+    }
     return array();
   }
 }
@@ -153,12 +167,24 @@ $setSeen = false;
 foreach ($api->commands as $command) if ($command[0] === '/ip/hotspot/user/set' && ($command[1]['disabled'] ?? '') === 'yes') $setSeen = true;
 billingAutomationTestAssert($setSeen, 'hotspot user is disabled');
 
-$secondApi = new BillingAutomationFakeApi();
+$secondApi = new BillingAutomationFakeApi('yes');
 $secondResult = mikhmonBillingAutomationProcessSession($secondApi, 'router-a', $routerConfig, mikhmonFonnteReadConfig());
 billingAutomationTestAssert($secondResult['isolated'] === 0, 'persisted event prevents duplicate isolation');
 $secondSetSeen = false;
 foreach ($secondApi->commands as $command) if ($command[0] === '/ip/hotspot/user/set') $secondSetSeen = true;
-billingAutomationTestAssert(!$secondSetSeen, 'duplicate run does not disable the service again');
+billingAutomationTestAssert(!$secondSetSeen, 'an already disabled service is not written again');
+
+$reenabledApi = new BillingAutomationFakeApi('no', array(array('.id' => '*active-1')));
+$reenabledResult = mikhmonBillingAutomationProcessSession($reenabledApi, 'router-a', $routerConfig, mikhmonFonnteReadConfig());
+billingAutomationTestAssert($reenabledResult['isolated'] === 0, 'reconciliation does not create a duplicate isolation event');
+$reenabledSetSeen = false;
+$activeRemoveSeen = false;
+foreach ($reenabledApi->commands as $command) {
+  if ($command[0] === '/ip/hotspot/user/set' && ($command[1]['disabled'] ?? '') === 'yes') $reenabledSetSeen = true;
+  if ($command[0] === '/ip/hotspot/active/remove') $activeRemoveSeen = true;
+}
+billingAutomationTestAssert($reenabledSetSeen, 'an isolated service re-enabled on MikroTik is disabled again');
+billingAutomationTestAssert($activeRemoveSeen, 'an active session for a re-enabled isolated service is disconnected');
 
 $paidInvoiceId = mikhmonSaveInvoice('router-a', array(
   'id' => 'invoice-paid', 'number' => 'INV-PAID', 'customer_id' => $customerId,
@@ -221,6 +247,9 @@ billingAutomationTestAssert($orphanSkippedAgain === 0, 'skipped orphan notificat
 $storedOrphan = array();
 foreach (mikhmonGetInvoices('router-a') as $candidateInvoice) if (($candidateInvoice['id'] ?? '') === $orphanInvoiceId) { $storedOrphan = $candidateInvoice; break; }
 billingAutomationTestAssert(empty($storedOrphan['automation']['payment_notification_pending']) && !empty($storedOrphan['automation']['payment_notification_skipped_at']), 'orphan notification skip is persisted');
+$savedInvoice['status'] = 'paid';
+$savedInvoice['paid_at'] = time();
+mikhmonSaveInvoice('router-a', $savedInvoice);
 $paidApi = new BillingAutomationFakeApi();
 $paidOnlyResult = mikhmonBillingAutomationProcessSession($paidApi, 'router-a', $routerConfig, array_merge($reconcileConfig, array('enabled' => false)));
 $paidSetSeen = false;
