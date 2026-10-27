@@ -46,7 +46,10 @@ performanceTestAssert(strpos($dashboardAjax, 'mikhmonSynchronizeRouterData(') ==
 performanceTestAssert(strpos($maintenance, 'mikhmonSynchronizeRouterData($api, $session)') !== false, 'the maintenance cron owns background router synchronization');
 performanceTestAssert(strpos($index, '@filemtime(__DIR__') !== false, 'static JavaScript uses stable file-version cache keys');
 performanceTestAssert(strpos($index, 'dashboardRefreshInFlight') !== false, 'dashboard section refreshes cannot overlap');
-performanceTestAssert(strpos($index, 'loadDashboardSection("#r_1"') < strpos($index, 'loadDashboardSection("#r_2"') && strpos($index, 'loadDashboardSection("#r_2"') < strpos($index, 'loadDashboardSection("#r_3"'), 'dashboard sections refresh sequentially');
+performanceTestAssert(substr_count($index, 'loadDashboardSection("#r_3"') === 2, 'Hotspot logs load immediately and continue refreshing on schedule');
+performanceTestAssert(strpos($index, 'Log Hotspot gagal dimuat.') !== false, 'a failed initial log request replaces the endless processing state with a useful error');
+performanceTestAssert(strpos($index, 'dashboardInitialLogTimer') !== false && strpos($index, '20000') !== false, 'a slow initial log request stops showing an endless processing indicator');
+performanceTestAssert(strpos($index, 'loadDashboardSection("#r_1"') < strpos($index, 'loadDashboardSection("#r_2"') && strpos($index, 'loadDashboardSection("#r_2"') < strrpos($index, 'loadDashboardSection("#r_3"'), 'dashboard sections refresh sequentially');
 performanceTestAssert(strpos($billing, 'mikhmonBillingAutomationRemoveSchedulers($api, $customers)') !== false, 'billing removes legacy schedulers in bulk');
 performanceTestAssert(strpos($billing, 'mikhmonBillingAutomationLoadServiceState($api)') !== false, 'billing loads service status in bulk');
 

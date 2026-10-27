@@ -753,7 +753,10 @@ if (!empty($routerConnected) && mikhmonIsAdmin() && ($hotspot == "dashboard" || 
     var dashboardRefreshInFlight = false;
     function loadDashboardSection(selector, url, done) {
       if (dashboardOffline) { if (done) done(); return; }
-      $(selector).load(url, function () {
+      $(selector).load(url, function (responseText, status) {
+        if (status === "error") {
+          $(this).find("#loader").html("<span class=\"text-warning\">Log Hotspot gagal dimuat. Muat ulang halaman untuk mencoba lagi.</span>");
+        }
         if ($(this).is(".router-offline") || $(this).find(".router-offline").length) {
           dashboardOffline = true;
           clearInterval(dashboard);
@@ -761,6 +764,12 @@ if (!empty($routerConnected) && mikhmonIsAdmin() && ($hotspot == "dashboard" || 
         if (done) done();
       });
     }
+    var dashboardInitialLogTimer = setTimeout(function () {
+      $("#r_3 #loader").html("<span class=\"text-warning\">Log Hotspot membutuhkan waktu terlalu lama. Muat ulang halaman untuk mencoba lagi.</span>");
+    }, 20000);
+    loadDashboardSection("#r_3", "./dashboard/aload.php?session=' . $session . '&load=logs #r_3", function () {
+      clearTimeout(dashboardInitialLogTimer);
+    });
     function refreshDashboardSections() {
       if (dashboardOffline || dashboardRefreshInFlight || document.hidden) return;
       dashboardRefreshInFlight = true;
