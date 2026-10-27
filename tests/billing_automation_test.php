@@ -151,6 +151,25 @@ billingAutomationTestAssert($immediateResult === true && $immediateSendCount ===
 $storedImmediateInvoice = array();
 foreach (mikhmonGetInvoices('router-a') as $candidateInvoice) if (($candidateInvoice['id'] ?? '') === 'invoice-immediate-payment') { $storedImmediateInvoice = $candidateInvoice; break; }
 billingAutomationTestAssert(!empty($storedImmediateInvoice['automation']['payment_sent_at']) && empty($storedImmediateInvoice['automation']['payment_notification_pending']), 'successful immediate payment notification is persisted and not queued again');
+$deferredInvoice = array(
+  'id' => 'invoice-deferred-payment', 'number' => 'INV-DEFERRED', 'customer_id' => $customerId,
+  'customer_name' => 'Pelanggan A', 'amount' => 10000, 'due_date' => date('Y-m-d H:i:s'),
+  'status' => 'paid', 'automation' => array('payment_notification_pending' => true),
+);
+$deferredInvoices = array($deferredInvoice);
+$deferredResult = mikhmonBillingAutomationProcessPaidNotification(
+  'router-a',
+  $deferredInvoices,
+  array($customerId => mikhmonFindCustomer('router-a', $customerId)),
+  $deferredInvoice,
+  'Rp',
+  'Mikhmon',
+  $immediateConfig,
+  strtotime('2026-09-01 23:01:00'),
+  function () { return array('attempted' => false, 'status' => false, 'reason' => 'Menunggu slot antrean berikutnya.'); }
+);
+billingAutomationTestAssert($deferredResult === null, 'a queued payment notification waiting for its slot is not recorded as a failed send');
+billingAutomationTestAssert(empty($deferredInvoices[0]['automation']['last_error']), 'a deferred payment notification keeps its retry state clean');
 $invoiceId = mikhmonSaveInvoice('router-a', array(
   'id' => 'invoice-a', 'number' => 'INV-A', 'customer_id' => $customerId,
   'customer_name' => 'Pelanggan A', 'amount' => 10000, 'due_date' => date('Y-m-d H:i:s', time() - 3600),

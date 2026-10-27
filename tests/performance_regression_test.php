@@ -52,6 +52,7 @@ performanceTestAssert(strpos($index, 'dashboardInitialLogTimer') !== false && st
 performanceTestAssert(strpos($index, 'loadDashboardSection("#r_1"') < strpos($index, 'loadDashboardSection("#r_2"') && strpos($index, 'loadDashboardSection("#r_2"') < strrpos($index, 'loadDashboardSection("#r_3"'), 'dashboard sections refresh sequentially');
 performanceTestAssert(strpos($billing, 'mikhmonBillingAutomationRemoveSchedulers($api, $customers)') !== false, 'billing removes legacy schedulers in bulk');
 performanceTestAssert(strpos($billing, 'mikhmonBillingAutomationLoadServiceState($api)') !== false, 'billing loads service status in bulk');
+performanceTestAssert(strpos($billing, 'mikhmonBillingAutomationQueuedSend($target, $message, $config, $now, false)') !== false, 'pending payment notifications use the global queue instead of retrying the whole backlog at once');
 
 foreach (array(
   $testDatabase,

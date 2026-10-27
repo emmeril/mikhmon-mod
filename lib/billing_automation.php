@@ -109,10 +109,10 @@ function mikhmonBillingAutomationNextQueueAttempt($now, $delayMinutes) {
  * Send one automatic message when its global queue slot is available. The
  * caller records the event on its invoice only after a successful response.
  */
-function mikhmonBillingAutomationQueuedSend($target, $message, $config, $now = null) {
+function mikhmonBillingAutomationQueuedSend($target, $message, $config, $now = null, $workHoursOnly = true) {
   static $attemptedThisRun = false;
   $now = $now === null ? time() : (int) $now;
-  if (!mikhmonBillingAutomationIsWorkHour($now)) return array('attempted' => false, 'status' => false, 'reason' => 'Di luar jam kerja.');
+  if ($workHoursOnly && !mikhmonBillingAutomationIsWorkHour($now)) return array('attempted' => false, 'status' => false, 'reason' => 'Di luar jam kerja.');
   if ($attemptedThisRun) return array('attempted' => false, 'status' => false, 'reason' => 'Menunggu putaran worker berikutnya.');
   $queue = mikhmonBillingAutomationReadQueue();
   $nextAt = (int) ($queue['next_attempt_at'] ?? 0);
@@ -121,7 +121,9 @@ function mikhmonBillingAutomationQueuedSend($target, $message, $config, $now = n
   $minimum = max(1, min(120, (int) ($config['queue_min_delay_minutes'] ?? 5)));
   $maximum = max($minimum, min(240, (int) ($config['queue_max_delay_minutes'] ?? 20)));
   try { $delayMinutes = random_int($minimum, $maximum); } catch (Exception $exception) { $delayMinutes = $minimum; }
-  $candidate = mikhmonBillingAutomationNextQueueAttempt($now, $delayMinutes);
+  $candidate = $workHoursOnly
+    ? mikhmonBillingAutomationNextQueueAttempt($now, $delayMinutes)
+    : $now + ($delayMinutes * 60);
   $queue = array(
     'last_attempt_at' => $now,
     'last_status' => 'sending',
@@ -131,7 +133,7 @@ function mikhmonBillingAutomationQueuedSend($target, $message, $config, $now = n
   $send = mikhmonFonnteSend($target, $message, $config);
   $queue['last_status'] = !empty($send['status']) ? 'sent' : 'failed';
   mikhmonBillingAutomationWriteQueue($queue);
-  $send['attempted'] = true;
+  if (!array_key_exists('attempted', $send)) $send['attempted'] = true;
   return $send;
 }
 
@@ -477,7 +479,7 @@ function mikhmonBillingAutomationProcessPaidNotification($session, &$invoices, $
     ? call_user_func($sender, $customersById[$customerId]['phone'] ?? '', $message, $fonnteConfig)
     : mikhmonFonnteSend($customersById[$customerId]['phone'] ?? '', $message, $fonnteConfig);
   if (!is_array($send)) $send = array('status' => false, 'reason' => 'Respons pengiriman Fonnte tidak valid.');
-  $send['attempted'] = true;
+  if (!array_key_exists('attempted', $send)) $send['attempted'] = true;
   if (!empty($send['status'])) {
     $invoice['automation']['payment_notification_pending'] = false;
     $invoice['automation']['payment_sent_at'] = $now;
@@ -574,6 +576,20 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
   foreach ($customers as $customer) $customersById[(string) ($customer['id'] ?? '')] = $customer;
   $result['payments_queued'] = mikhmonBillingAutomationReconcilePaymentNotifications($session, $invoices, $customersById, $fonnteConfig, $now);
   mikhmonBillingAutomationSkipOrphanPaymentNotifications($session, $invoices, $customersById, $now);
+  if (!empty($fonnteConfig['payment_enabled'])) foreach ($invoices as $invoice) {
+    if (!mikhmonBillingAutomationIsMonthlyInvoice($invoice)) continue;
+    if (($invoice['status'] ?? '') !== 'paid' || empty($invoice['automation']['payment_notification_pending'])) continue;
+    $customerId = (string) ($invoice['customer_id'] ?? '');
+    if (!isset($customersById[$customerId])) continue;
+    $paymentResult = mikhmonBillingAutomationProcessPaidNotification(
+      $session, $invoices, $customersById, $invoice, $currency, $brand, $fonnteConfig, $now,
+      function ($target, $message, $config) use ($now) {
+        return mikhmonBillingAutomationQueuedSend($target, $message, $config, $now, false);
+      }
+    );
+    if ($paymentResult === true) $result['payments']++;
+    elseif ($paymentResult === false) $result['errors']++;
+  }
   if (!empty($fonnteConfig['automation_enabled'])) mikhmonBillingAutomationRemoveSchedulers($api, $customers);
   $serviceState = null;
   foreach ($customers as $customer) {
@@ -638,17 +654,6 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
       if ($saved === false) $result['errors']++;
       else foreach ($invoices as $index => $row) if (($row['id'] ?? '') === ($invoice['id'] ?? '')) { $invoices[$index] = $invoice; break; }
     }
-  }
-  // Payment confirmations are transactional messages. Send pending ones at
-  // any hour; only reminders and isolation notices follow business hours.
-  if (!empty($fonnteConfig['payment_enabled'])) foreach ($invoices as $invoice) {
-    if (!mikhmonBillingAutomationIsMonthlyInvoice($invoice)) continue;
-    if (($invoice['status'] ?? '') !== 'paid' || empty($invoice['automation']['payment_notification_pending'])) continue;
-    $customerId = (string) ($invoice['customer_id'] ?? '');
-    if (!isset($customersById[$customerId])) continue;
-    $paymentResult = mikhmonBillingAutomationProcessPaidNotification($session, $invoices, $customersById, $invoice, $currency, $brand, $fonnteConfig, $now);
-    if ($paymentResult === true) $result['payments']++;
-    elseif ($paymentResult === false) $result['errors']++;
   }
   return $result;
 }
