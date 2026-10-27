@@ -28,6 +28,7 @@ class RouterosAPI
     var $web_mode  = null;  //  null follows PHP_SAPI; tests may override it
     var $circuit_skipped = false;
     var $connection_attempts_made = 0;
+    var $read_failed = false;
 
     var $socket;            //  Variable for storing socket resource
     var $error_no;          //  Variable for storing connection error number, if any
@@ -135,6 +136,26 @@ class RouterosAPI
         if ($this->debug) {
             echo $text . "\n";
         }
+    }
+
+    public function readExactBytes($length)
+    {
+        $buffer = '';
+        while (strlen($buffer) < $length) {
+            $chunk = fread($this->socket, $length - strlen($buffer));
+            if ($chunk !== false && $chunk !== '') {
+                $buffer .= $chunk;
+                continue;
+            }
+            $status = is_resource($this->socket) ? stream_get_meta_data($this->socket) : array();
+            $this->read_failed = true;
+            $this->connected = false;
+            if (!empty($status['timed_out'])) $this->error_str = 'RouterOS API read timed out.';
+            elseif (!empty($status['eof'])) $this->error_str = 'RouterOS API connection closed during read.';
+            else $this->error_str = 'RouterOS API read failed.';
+            return false;
+        }
+        return $buffer;
     }
 
 
@@ -401,10 +422,13 @@ class RouterosAPI
     {
         $RESPONSE     = array();
         $receiveddone = false;
+        $this->read_failed = false;
         while (true) {
             // Read the first byte of input which gives us some or all of the length
             // of the remaining reply.
-            $BYTE   = ord(fread($this->socket, 1));
+            $firstByte = $this->readExactBytes(1);
+            if ($firstByte === false) return array();
+            $BYTE   = ord($firstByte);
             $LENGTH = 0;
             // If the first bit is set then we need to remove the first four bits, shift left 8
             // and then read another byte in.
@@ -413,21 +437,29 @@ class RouterosAPI
             // and then read in yet another byte.
             if ($BYTE & 128) {
                 if (($BYTE & 192) == 128) {
-                    $LENGTH = (($BYTE & 63) << 8) + ord(fread($this->socket, 1));
+                    $next = $this->readExactBytes(1);
+                    if ($next === false) return array();
+                    $LENGTH = (($BYTE & 63) << 8) + ord($next);
                 } else {
                     if (($BYTE & 224) == 192) {
-                        $LENGTH = (($BYTE & 31) << 8) + ord(fread($this->socket, 1));
-                        $LENGTH = ($LENGTH << 8) + ord(fread($this->socket, 1));
+                        $next = $this->readExactBytes(2);
+                        if ($next === false) return array();
+                        $LENGTH = (($BYTE & 31) << 8) + ord($next[0]);
+                        $LENGTH = ($LENGTH << 8) + ord($next[1]);
                     } else {
                         if (($BYTE & 240) == 224) {
-                            $LENGTH = (($BYTE & 15) << 8) + ord(fread($this->socket, 1));
-                            $LENGTH = ($LENGTH << 8) + ord(fread($this->socket, 1));
-                            $LENGTH = ($LENGTH << 8) + ord(fread($this->socket, 1));
+                            $next = $this->readExactBytes(3);
+                            if ($next === false) return array();
+                            $LENGTH = (($BYTE & 15) << 8) + ord($next[0]);
+                            $LENGTH = ($LENGTH << 8) + ord($next[1]);
+                            $LENGTH = ($LENGTH << 8) + ord($next[2]);
                         } else {
-                            $LENGTH = ord(fread($this->socket, 1));
-                            $LENGTH = ($LENGTH << 8) + ord(fread($this->socket, 1));
-                            $LENGTH = ($LENGTH << 8) + ord(fread($this->socket, 1));
-                            $LENGTH = ($LENGTH << 8) + ord(fread($this->socket, 1));
+                            $next = $this->readExactBytes(4);
+                            if ($next === false) return array();
+                            $LENGTH = ord($next[0]);
+                            $LENGTH = ($LENGTH << 8) + ord($next[1]);
+                            $LENGTH = ($LENGTH << 8) + ord($next[2]);
+                            $LENGTH = ($LENGTH << 8) + ord($next[3]);
                         }
                     }
                 }
@@ -439,13 +471,9 @@ class RouterosAPI
 
             // If we have got more characters to read, read them in.
             if ($LENGTH > 0) {
-                $_      = "";
-                $retlen = 0;
-                while ($retlen < $LENGTH) {
-                    $toread = $LENGTH - $retlen;
-                    $_ .= fread($this->socket, $toread);
-                    $retlen = strlen($_);
-                }
+                $_ = $this->readExactBytes($LENGTH);
+                if ($_ === false) return array();
+                $retlen = strlen($_);
                 $RESPONSE[] = $_;
                 $this->debug('>>> [' . $retlen . '/' . $LENGTH . '] bytes read.');
             }

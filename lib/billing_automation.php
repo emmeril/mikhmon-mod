@@ -258,7 +258,30 @@ function mikhmonBillingAutomationEnsurePaymentLink($session, &$invoice, $custome
   return $result;
 }
 
-function mikhmonBillingAutomationSetServices($api, $customer, $disabled) {
+function mikhmonBillingAutomationLoadServiceState($api) {
+  if (!is_object($api) || !method_exists($api, 'comm')) return false;
+  $queries = array(
+    'hotspot_users' => array('/ip/hotspot/user/print', array('.proplist' => '.id,name,disabled')),
+    'pppoe_users' => array('/ppp/secret/print', array('.proplist' => '.id,name,disabled')),
+    'hotspot_active' => array('/ip/hotspot/active/print', array('.proplist' => '.id,user')),
+    'pppoe_active' => array('/ppp/active/print', array('.proplist' => '.id,name')),
+  );
+  $state = array('hotspot_users' => array(), 'pppoe_users' => array(), 'hotspot_active' => array(), 'pppoe_active' => array());
+  foreach ($queries as $key => $query) {
+    $rows = $api->comm($query[0], $query[1]);
+    if (mikhmonBillingAutomationApiError($rows) !== '') return false;
+    $nameField = strpos($key, 'hotspot_active') === 0 ? 'user' : 'name';
+    foreach ((array) $rows as $row) {
+      $name = trim((string) ($row[$nameField] ?? ''));
+      if ($name === '') continue;
+      if (substr($key, -7) === '_active') $state[$key][$name][] = $row;
+      else $state[$key][$name] = $row;
+    }
+  }
+  return $state;
+}
+
+function mikhmonBillingAutomationSetServices($api, $customer, $disabled, &$serviceState = null) {
   if (!is_object($api) || !method_exists($api, 'comm')) return false;
   $changed = array();
   foreach (mikhmonCustomerServices($customer) as $service) {
@@ -266,7 +289,11 @@ function mikhmonBillingAutomationSetServices($api, $customer, $disabled) {
     $command = $type === 'pppoe' ? '/ppp/secret' : '/ip/hotspot/user';
     $username = trim((string) ($service['username'] ?? ''));
     if ($username === '') continue;
-    $rows = $api->comm($command . '/print', array('?name' => $username));
+    $userStateKey = $type === 'pppoe' ? 'pppoe_users' : 'hotspot_users';
+    $activeStateKey = $type === 'pppoe' ? 'pppoe_active' : 'hotspot_active';
+    $rows = is_array($serviceState)
+      ? (isset($serviceState[$userStateKey][$username]) ? array($serviceState[$userStateKey][$username]) : array())
+      : $api->comm($command . '/print', array('?name' => $username, '.proplist' => '.id,name,disabled'));
     if (mikhmonBillingAutomationApiError($rows) !== '' || empty($rows[0]['.id'])) {
       foreach ($changed as $rollback) if (empty($rollback['was_disabled'])) $api->comm($rollback['command'] . '/set', array('.id' => $rollback['id'], 'disabled' => 'no'));
       return false;
@@ -275,8 +302,11 @@ function mikhmonBillingAutomationSetServices($api, $customer, $disabled) {
     if ($disabled) {
       $activeCommand = $type === 'pppoe' ? '/ppp/active' : '/ip/hotspot/active';
       $activeFilter = $type === 'pppoe' ? array('?name' => $username) : array('?user' => $username);
-      $activeRows = $api->comm($activeCommand . '/print', $activeFilter);
+      $activeRows = is_array($serviceState)
+        ? ($serviceState[$activeStateKey][$username] ?? array())
+        : $api->comm($activeCommand . '/print', $activeFilter + array('.proplist' => '.id'));
       foreach ((array) $activeRows as $activeRow) if (isset($activeRow['.id'])) $api->comm($activeCommand . '/remove', array('.id' => $activeRow['.id']));
+      if (is_array($serviceState)) $serviceState[$activeStateKey][$username] = array();
       if ($wasDisabled) continue;
     }
     $args = array('.id' => $rows[0]['.id'], 'disabled' => $disabled ? 'yes' : 'no');
@@ -289,16 +319,30 @@ function mikhmonBillingAutomationSetServices($api, $customer, $disabled) {
       'command' => $command, 'id' => $rows[0]['.id'],
       'was_disabled' => $wasDisabled,
     );
+    if (is_array($serviceState)) $serviceState[$userStateKey][$username]['disabled'] = $disabled ? 'yes' : 'no';
+  }
+  return true;
+}
+
+function mikhmonBillingAutomationRemoveSchedulers($api, $customers) {
+  if (!is_object($api) || !method_exists($api, 'comm')) return false;
+  $names = array();
+  foreach ((array) $customers as $customer) {
+    $id = (string) ($customer['id'] ?? '');
+    if ($id !== '') $names['mikhmon-customer-' . substr(md5($id), 0, 12)] = true;
+  }
+  if (empty($names)) return true;
+  $rows = $api->comm('/system/scheduler/print', array('.proplist' => '.id,name'));
+  if (mikhmonBillingAutomationApiError($rows) !== '') return false;
+  foreach ((array) $rows as $row) {
+    if (!isset($row['.id']) || empty($names[(string) ($row['name'] ?? '')])) continue;
+    $api->comm('/system/scheduler/remove', array('.id' => $row['.id']));
   }
   return true;
 }
 
 function mikhmonBillingAutomationRemoveScheduler($api, $customer) {
-  if (!is_object($api) || !method_exists($api, 'comm')) return false;
-  $name = 'mikhmon-customer-' . substr(md5((string) ($customer['id'] ?? '')), 0, 12);
-  $rows = $api->comm('/system/scheduler/print', array('?name' => $name));
-  foreach ((array) $rows as $row) if (isset($row['.id'])) $api->comm('/system/scheduler/remove', array('.id' => $row['.id']));
-  return true;
+  return mikhmonBillingAutomationRemoveSchedulers($api, array($customer));
 }
 
 function mikhmonBillingAutomationLatestUnpaid($invoices, $customerId) {
@@ -530,8 +574,9 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
   foreach ($customers as $customer) $customersById[(string) ($customer['id'] ?? '')] = $customer;
   $result['payments_queued'] = mikhmonBillingAutomationReconcilePaymentNotifications($session, $invoices, $customersById, $fonnteConfig, $now);
   mikhmonBillingAutomationSkipOrphanPaymentNotifications($session, $invoices, $customersById, $now);
+  if (!empty($fonnteConfig['automation_enabled'])) mikhmonBillingAutomationRemoveSchedulers($api, $customers);
+  $serviceState = null;
   foreach ($customers as $customer) {
-    if (!empty($fonnteConfig['automation_enabled'])) mikhmonBillingAutomationRemoveScheduler($api, $customer);
     $invoice = mikhmonBillingAutomationLatestUnpaid($invoices, $customer['id'] ?? '');
     if (!$invoice) {
       $invoice = mikhmonBillingAutomationEnsureUnpaidInvoice($session, $invoices, $customer);
@@ -572,7 +617,8 @@ function mikhmonBillingAutomationProcessSession($api, $session, $routerConfig, $
     }
     $isolationAt = mikhmonBillingIsolationTimestamp($dueAt, $graceDays);
     if (!empty($fonnteConfig['automation_enabled']) && !empty($fonnteConfig['isolation_enabled']) && $now >= $isolationAt) {
-      if (mikhmonBillingAutomationSetServices($api, $customer, true)) {
+      if ($serviceState === null) $serviceState = mikhmonBillingAutomationLoadServiceState($api);
+      if (mikhmonBillingAutomationSetServices($api, $customer, true, $serviceState)) {
         if (empty($automation['isolated_at'])) {
           $invoice['automation']['isolated_at'] = $now;
           $result['isolated']++;

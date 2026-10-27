@@ -31,6 +31,9 @@ foreach ($dashboardSources as $dashboardName => $source) {
   dashboardCardOrderAssert(strpos($source, '.dashboard-main-row .box>a{display:block;min-height:44px}') !== false, $dashboardName . ' keeps dashboard links large enough for touch');
   dashboardCardOrderAssert(strpos($source, '.dashboard-main-row a:focus-visible') !== false, $dashboardName . ' shows keyboard focus on dashboard links');
   dashboardCardOrderAssert(strpos($source, '.dashboard-main-row .bg-blue') !== false && strpos($source, 'color:#18222d') !== false, $dashboardName . ' uses readable text contrast on colored cards');
+  dashboardCardOrderAssert(strpos($source, '20000') !== false, $dashboardName . ' limits traffic polling to once every 20 seconds');
+  dashboardCardOrderAssert(strpos($source, 'document.hidden') !== false, $dashboardName . ' pauses traffic polling while the page is hidden');
+  dashboardCardOrderAssert(strpos($source, 'RequestInFlight') !== false, $dashboardName . ' prevents overlapping traffic requests');
 }
 
 dashboardCardOrderAssert(strpos($dashboardSources['admin dashboard'], 'grid-template-columns: minmax(0, 2fr) minmax(340px, 1fr);') !== false, 'admin dashboard keeps its two-column desktop layout while allowing the log column to grow');

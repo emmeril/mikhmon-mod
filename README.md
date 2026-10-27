@@ -64,7 +64,12 @@ that runs even when nobody opens Mikhmon, add a daily system cron entry:
 
 ```cron
 5 0 * * * /usr/bin/php /path/to/mikhmon/cron/backup.php >> /path/to/mikhmon/data/backup-cron.log 2>&1
+2-57/5 * * * * /usr/bin/php /path/to/mikhmon/cron/maintenance.php >> /path/to/mikhmon/data/maintenance-cron.log 2>&1
 ```
+
+The maintenance worker synchronizes report records and encrypted database
+backup metadata outside normal web requests. Do not run the same cron entries
+from both `/etc/cron.d` and a user crontab.
 
 Backup is one-way (`MikroTik -> local database`). Restore is always manual
 from `Settings > Database Backup`; automatic recovery is intentionally disabled

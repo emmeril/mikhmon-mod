@@ -9,6 +9,7 @@ include_once('./include/database.php');
 include_once('./lib/fonnte.php');
 include_once('./lib/billing_automation.php');
 include_once('./lib/customer_account.php');
+include_once('./lib/router_cache.php');
 
 $customerMessage = '';
 $customerError = '';
@@ -221,14 +222,18 @@ foreach ($customerInvoiceCandidates as $customerId => $candidates) {
 $customerRouterUsers = array('hotspot' => array(), 'pppoe' => array());
 $customerActiveUsers = array('hotspot' => array(), 'pppoe' => array());
 if (!empty($routerConnected)) {
-  foreach (array('hotspot' => '/ip/hotspot/user/print', 'pppoe' => '/ppp/secret/print') as $serviceType => $command) {
-    $rows = $API->comm($command);
+  $customerUserQueries = array(
+    'hotspot' => array('/ip/hotspot/user/print', array('.proplist' => 'name,password,disabled,limit-uptime')),
+    'pppoe' => array('/ppp/secret/print', array('.proplist' => 'name,password,disabled')),
+  );
+  foreach ($customerUserQueries as $serviceType => $query) {
+    $rows = $API->comm($query[0], $query[1]);
     if (is_array($rows) && customerListApiError($rows) === '') foreach ($rows as $row) {
       if (is_array($row) && isset($row['name'])) $customerRouterUsers[$serviceType][(string) $row['name']] = $row;
     }
   }
   foreach (array('hotspot' => array('/ip/hotspot/active/print', 'user'), 'pppoe' => array('/ppp/active/print', 'name')) as $serviceType => $activeDefinition) {
-    $activeRows = $API->comm($activeDefinition[0]);
+    $activeRows = mikhmonRouterCachedComm($API, $session, $activeDefinition[0], array('.proplist' => $activeDefinition[1]), 10);
     if (is_array($activeRows) && customerListApiError($activeRows) === '') foreach ($activeRows as $activeRow) {
       $activeUsername = trim((string) ($activeRow[$activeDefinition[1]] ?? ''));
       if ($activeUsername !== '') $customerActiveUsers[$serviceType][$activeUsername] = true;

@@ -12,6 +12,7 @@ include_once('./lib/payment_activation.php');
 include_once('./lib/customer_portal.php');
 include_once('./lib/billing_automation.php');
 include_once('./lib/billing_profile.php');
+include_once('./lib/router_cache.php');
 
 function billingApiError($response) {
   if (!is_array($response)) return '';
@@ -398,10 +399,14 @@ if (isset($automaticActivation)) {
 }
 
 if (!empty($routerConnected)) {
-  $hotspotProfiles = $API->comm('/ip/hotspot/user/profile/print');
-  $pppoeProfiles = $API->comm('/ppp/profile/print');
-  foreach (array('hotspot' => '/ip/hotspot/user/print', 'pppoe' => '/ppp/secret/print') as $service => $command) {
-    $rows = $API->comm($command);
+  $hotspotProfiles = mikhmonRouterCachedComm($API, $session, '/ip/hotspot/user/profile/print', array('.proplist' => 'name,on-login,comment'), 15);
+  $pppoeProfiles = mikhmonRouterCachedComm($API, $session, '/ppp/profile/print', array('.proplist' => 'name,comment'), 15);
+  $userQueries = array(
+    'hotspot' => array('/ip/hotspot/user/print', array('.proplist' => 'name,profile,disabled,limit-uptime,comment')),
+    'pppoe' => array('/ppp/secret/print', array('.proplist' => 'name,profile,disabled')),
+  );
+  foreach ($userQueries as $service => $query) {
+    $rows = mikhmonRouterCachedComm($API, $session, $query[0], $query[1], 10);
     if (is_array($rows) && billingApiError($rows) === '') foreach ($rows as $row) if (is_array($row) && isset($row['name'])) $customerUsers[$service][(string) $row['name']] = $row;
   }
   // Scheduler state is maintained by the billing worker when automation is on.

@@ -35,6 +35,21 @@ performanceTestAssert(count($api->commands) === $firstCommandCount, 'throttled r
 $forced = mikhmonSynchronizeRouterData($api, 'router-a', true);
 performanceTestAssert($forced['status'] === 'backed-up' && count($api->commands) > $firstCommandCount, 'manual synchronization bypasses the maintenance throttle');
 
+$root = dirname(__DIR__);
+$index = file_get_contents($root . '/index.php');
+$dashboardAjax = file_get_contents($root . '/dashboard/aload.php');
+$maintenance = file_get_contents($root . '/cron/maintenance.php');
+$billing = file_get_contents($root . '/lib/billing_automation.php');
+
+performanceTestAssert(strpos($index, 'mikhmonSynchronizeRouterData(') === false, 'normal navigation does not run router maintenance');
+performanceTestAssert(strpos($dashboardAjax, 'mikhmonSynchronizeRouterData(') === false, 'dashboard polling does not run router maintenance');
+performanceTestAssert(strpos($maintenance, 'mikhmonSynchronizeRouterData($api, $session)') !== false, 'the maintenance cron owns background router synchronization');
+performanceTestAssert(strpos($index, '@filemtime(__DIR__') !== false, 'static JavaScript uses stable file-version cache keys');
+performanceTestAssert(strpos($index, 'dashboardRefreshInFlight') !== false, 'dashboard section refreshes cannot overlap');
+performanceTestAssert(strpos($index, 'loadDashboardSection("#r_1"') < strpos($index, 'loadDashboardSection("#r_2"') && strpos($index, 'loadDashboardSection("#r_2"') < strpos($index, 'loadDashboardSection("#r_3"'), 'dashboard sections refresh sequentially');
+performanceTestAssert(strpos($billing, 'mikhmonBillingAutomationRemoveSchedulers($api, $customers)') !== false, 'billing removes legacy schedulers in bulk');
+performanceTestAssert(strpos($billing, 'mikhmonBillingAutomationLoadServiceState($api)') !== false, 'billing loads service status in bulk');
+
 foreach (array(
   $testDatabase,
   $testDatabase . '.routers',

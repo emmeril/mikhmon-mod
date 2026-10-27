@@ -372,7 +372,7 @@ if (!isset($_SESSION["mikhmon"])) {
 
               <div class="card-body">
   
-                  <?php $getinterface = $API->comm("/interface/print");
+                  <?php $getinterface = $API->comm("/interface/print", array('.proplist' => 'name'));
                   $interface = $getinterface[$iface - 1]['name']; 
                   /*$TotalReg = count($getinterface);
                   for ($i = 0; $i < $TotalReg; $i++) {
@@ -388,6 +388,7 @@ if (!isset($_SESSION["mikhmon"])) {
                     var trafficTimeLabel = <?= json_encode(htmlspecialchars($_time, ENT_QUOTES, 'UTF-8')); ?>;
                     var n = 3000;
                     var trafficRetryAt = 0;
+                    var trafficRequestInFlight = false;
 
                     function formatDashboardTrafficRate(value) {
                       var rate = Number(value) || 0;
@@ -399,7 +400,8 @@ if (!isset($_SESSION["mikhmon"])) {
                     }
 
                     function requestDatta(session,iface) {
-                      if (Date.now() < trafficRetryAt) return;
+                      if (document.hidden || trafficRequestInFlight || Date.now() < trafficRetryAt) return;
+                      trafficRequestInFlight = true;
                       $.ajax({
                         url: './traffic/traffic.php?session='+session+'&iface='+iface,
                         dataType: "json",
@@ -420,7 +422,10 @@ if (!isset($_SESSION["mikhmon"])) {
                         },
                         error: function(XMLHttpRequest, textStatus, errorThrown) { 
                           console.error("Status: " + textStatus + " request: " + XMLHttpRequest); console.error("Error: " + errorThrown); 
-                        }       
+                        },
+                        complete: function () {
+                          trafficRequestInFlight = false;
+                        }
                       });
                     }	
 
@@ -448,9 +453,13 @@ if (!isset($_SESSION["mikhmon"])) {
                           type: 'areaspline',
                           events: {
                             load: function () {
+                              requestDatta(sessiondata,interface);
                               setInterval(function () {
                                 requestDatta(sessiondata,interface);
-                              }, 8000);
+                              }, 20000);
+                              document.addEventListener('visibilitychange', function () {
+                                if (!document.hidden) requestDatta(sessiondata,interface);
+                              });
                             }				
                           }
                         },

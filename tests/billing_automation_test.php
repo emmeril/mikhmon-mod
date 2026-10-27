@@ -20,7 +20,10 @@ class BillingAutomationFakeApi {
   public $activeRows;
   public function __construct($disabled = 'no', $activeRows = array()) {
     $this->disabled = $disabled;
-    $this->activeRows = $activeRows;
+    $this->activeRows = array_map(function ($row) {
+      if (!isset($row['user'])) $row['user'] = 'cust-a';
+      return $row;
+    }, $activeRows);
   }
   public function comm($command, $args = array()) {
     $this->commands[] = array($command, $args);
@@ -166,6 +169,12 @@ billingAutomationTestAssert(!empty($savedInvoice['automation']['isolated_at']), 
 $setSeen = false;
 foreach ($api->commands as $command) if ($command[0] === '/ip/hotspot/user/set' && ($command[1]['disabled'] ?? '') === 'yes') $setSeen = true;
 billingAutomationTestAssert($setSeen, 'hotspot user is disabled');
+$schedulerPrints = 0;
+foreach ($api->commands as $command) if ($command[0] === '/system/scheduler/print') $schedulerPrints++;
+billingAutomationTestAssert($schedulerPrints === 1, 'legacy customer schedulers are discovered with one bulk query');
+$hotspotUserPrints = 0;
+foreach ($api->commands as $command) if ($command[0] === '/ip/hotspot/user/print') $hotspotUserPrints++;
+billingAutomationTestAssert($hotspotUserPrints === 1, 'service state is loaded once instead of once per customer');
 
 $secondApi = new BillingAutomationFakeApi('yes');
 $secondResult = mikhmonBillingAutomationProcessSession($secondApi, 'router-a', $routerConfig, mikhmonFonnteReadConfig());

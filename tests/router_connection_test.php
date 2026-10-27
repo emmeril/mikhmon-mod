@@ -41,6 +41,20 @@ $cli->timeout = 1;
 $cli->connect('127.0.0.1', 'test', 'test');
 routerConnectionTestAssert($cli->connection_attempts_made === 2 && !$cli->circuit_skipped, 'CLI workers keep their configured retry policy');
 
+$pair = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+$partial = new RouterosAPI();
+$partial->socket = $pair[0];
+$partial->connected = true;
+stream_set_timeout($partial->socket, 0, 100000);
+fwrite($pair[1], chr(5) . 'ab');
+$readStartedAt = microtime(true);
+$partialResponse = $partial->read(false);
+$readDuration = microtime(true) - $readStartedAt;
+routerConnectionTestAssert($readDuration < 1, 'partial RouterOS responses stop at the stream timeout');
+routerConnectionTestAssert($partialResponse === array() && $partial->read_failed && !$partial->connected, 'a partial response marks the connection unusable');
+fclose($pair[1]);
+$partial->disconnect();
+
 if (is_file($statePath)) @unlink($statePath);
 putenv('MIKHMON_ROUTER_STATE_PATH');
 putenv('MIKHMON_ROUTER_OFFLINE_COOLDOWN');

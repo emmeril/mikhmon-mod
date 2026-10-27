@@ -21,7 +21,7 @@ if (!empty($routerConnected)) {
   $clockRows = $API->comm('/system/clock/print');
   $resourceRows = $API->comm('/system/resource/print');
   $routerboardRows = $API->comm('/system/routerboard/print');
-  $interfaceRows = (array) $API->comm('/interface/print');
+  $interfaceRows = (array) $API->comm('/interface/print', array('.proplist' => 'name'));
   if (isset($clockRows[0])) $clock = $clockRows[0];
   if (isset($resourceRows[0])) $resource = $resourceRows[0];
   if (isset($routerboardRows[0])) $routerboard = $routerboardRows[0];
@@ -206,6 +206,7 @@ $mitraCustomerMonth = mikhmonRevenueMoney($mitraDashboardRevenue['customer_month
         var mitraTrafficTooltipTitle = <?= json_encode(htmlspecialchars($brandname . ' - ' . $_traffic, ENT_QUOTES, 'UTF-8')); ?>;
         var mitraTrafficTimeLabel = <?= json_encode(htmlspecialchars($_time, ENT_QUOTES, 'UTF-8')); ?>;
         var mitraTrafficRetryAt = 0;
+        var mitraTrafficRequestInFlight = false;
 
         function formatMitraTrafficRate(value) {
           var rate = Number(value) || 0;
@@ -217,7 +218,8 @@ $mitraCustomerMonth = mikhmonRevenueMoney($mitraDashboardRevenue['customer_month
         }
 
         function requestMitraTraffic() {
-          if (!mitraTrafficChart || !mitraTrafficInterface || Date.now() < mitraTrafficRetryAt) return;
+          if (document.hidden || mitraTrafficRequestInFlight || !mitraTrafficChart || !mitraTrafficInterface || Date.now() < mitraTrafficRetryAt) return;
+          mitraTrafficRequestInFlight = true;
           $.ajax({
             url: './traffic/traffic.php?session=' + encodeURIComponent(mitraTrafficSession) + '&iface=' + encodeURIComponent(mitraTrafficInterface),
             dataType: 'json',
@@ -233,6 +235,9 @@ $mitraCustomerMonth = mikhmonRevenueMoney($mitraDashboardRevenue['customer_month
               var shift = mitraTrafficChart.series[0].data.length > 19;
               mitraTrafficChart.series[0].addPoint([now, tx], true, shift);
               mitraTrafficChart.series[1].addPoint([now, rx], true, shift);
+            },
+            complete: function () {
+              mitraTrafficRequestInFlight = false;
             }
           });
         }
@@ -275,7 +280,10 @@ $mitraCustomerMonth = mikhmonRevenueMoney($mitraDashboardRevenue['customer_month
             }
           });
           requestMitraTraffic();
-          setInterval(requestMitraTraffic, 8000);
+          setInterval(requestMitraTraffic, 20000);
+          document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) requestMitraTraffic();
+          });
         });
       })();
       </script>

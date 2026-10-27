@@ -111,6 +111,7 @@ if (!isset($_SESSION["mikhmon"])) {
 // when a configured MikroTik is offline.
   include_once('./lib/routeros_api.class.php');
   include_once('./lib/formatbytesbites.php');
+  include_once('./lib/router_cache.php');
   
 
 // get variable
@@ -215,9 +216,8 @@ if (!isset($_SESSION["mikhmon"])) {
     $API->debug = false;
     $routerConnected = $API->connect($iphost, $userhost, decrypt($passwdhost));
     if ($routerConnected) {
-      $getidentity = $API->comm("/system/identity/print");
+      $getidentity = mikhmonRouterCachedComm($API, $session, "/system/identity/print", array('.proplist' => 'name'), 300);
       $identity = isset($getidentity[0]['name']) ? $getidentity[0]['name'] : '';
-      mikhmonSynchronizeRouterData($API, $session);
     }
   }
   $routerUnavailable = !in_array($requestedRoute, $localRoutes, true) && !$routerConnected;
@@ -743,31 +743,40 @@ elseif ($ppp == "edit-profile") {
 <script src="./js/highcharts/highcharts.js"></script>
 <script src="./js/highcharts/themes/hc.<?= $theme; ?>.js"></script>
 <script src="./js/mikhmon-ui.<?= $theme; ?>.min.js"></script>
-<script src="./js/mikhmon.js?t=<?= str_replace(" ","_",date("Y-m-d H:i:s")); ?>"></script>
-<script src="./js/table-sort.js?t=<?= str_replace(" ","_",date("Y-m-d H:i:s")); ?>"></script>
+<script src="./js/mikhmon.js?v=<?= (int) @filemtime(__DIR__ . '/js/mikhmon.js'); ?>"></script>
+<script src="./js/table-sort.js?v=<?= (int) @filemtime(__DIR__ . '/js/table-sort.js'); ?>"></script>
 
 <?php
 if (!empty($routerConnected) && mikhmonIsAdmin() && ($hotspot == "dashboard" || substr(end(explode("/", $url)), 0, 8) == "?session")) {
   echo '<script>
     var dashboardOffline = false;
-    function loadDashboardSection(selector, url) {
-      if (dashboardOffline) return;
+    var dashboardRefreshInFlight = false;
+    function loadDashboardSection(selector, url, done) {
+      if (dashboardOffline) { if (done) done(); return; }
       $(selector).load(url, function () {
         if ($(this).is(".router-offline") || $(this).find(".router-offline").length) {
           dashboardOffline = true;
           clearInterval(dashboard);
         }
+        if (done) done();
       });
     }
-    loadDashboardSection("#r_3", "./dashboard/aload.php?session=' . $session . '&load=logs #r_3");
+    function refreshDashboardSections() {
+      if (dashboardOffline || dashboardRefreshInFlight || document.hidden) return;
+      dashboardRefreshInFlight = true;
+      loadDashboardSection("#r_1", "./dashboard/aload.php?session=' . $session . '&load=sysresource #r_1", function () {
+        loadDashboardSection("#r_2", "./dashboard/aload.php?session=' . $session . '&load=hotspot #r_2", function () {
+          loadDashboardSection("#r_3", "./dashboard/aload.php?session=' . $session . '&load=logs #r_3", function () {
+            dashboardRefreshInFlight = false;
+          });
+        });
+      });
+    }
     var interval1 = Math.max(60000, ' . ((int) $areload * 1000) . ');
-    var dashboard = setInterval(function() {
-    if (document.hidden) return;
-    loadDashboardSection("#r_1", "./dashboard/aload.php?session=' . $session . '&load=sysresource #r_1");
-    loadDashboardSection("#r_2", "./dashboard/aload.php?session=' . $session . '&load=hotspot #r_2");
-    loadDashboardSection("#r_3", "./dashboard/aload.php?session=' . $session . '&load=logs #r_3");
-    
-  }, interval1);
+    var dashboard = setInterval(refreshDashboardSections, interval1);
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) refreshDashboardSections();
+    });
 
 ';
   echo '

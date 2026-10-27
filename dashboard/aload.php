@@ -59,9 +59,6 @@ include('../lang/'.$langid.'.php');
       mikhmonDashboardOfflineFragment('r_1', 'Status Router');
       exit;
     }
-    // Dashboard polling keeps versioned backups current while Mikhmon is open.
-    mikhmonSynchronizeRouterData($API, $session);
-
 // get MikroTik system clock
     $getclock = $API->comm("/system/clock/print");
     $clock = $getclock[0];
