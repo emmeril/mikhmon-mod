@@ -84,11 +84,22 @@ routerDatabaseBackupTestAssert(mikhmonSaveRevenueDeposit('router-lama', array(
   'method' => 'transfer', 'reference' => 'TRX-BACKUP', 'created_by' => 'Admin',
 )) !== false, 'source partner deposit is created');
 
+$legacySessionDatabase = mikhmonReadDatabase();
+foreach ($legacySessionDatabase['users'] as $index => $user) {
+  if ((string) ($user['id'] ?? '') === (string) $mitraId) $legacySessionDatabase['users'][$index]['session'] = 'Router-Lama';
+}
+foreach ($legacySessionDatabase['partners'] as $index => $partner) {
+  if ((string) ($partner['user_id'] ?? '') === (string) $mitraId) $legacySessionDatabase['partners'][$index]['session'] = 'Router-Lama';
+}
+routerDatabaseBackupTestAssert(mikhmonWriteDatabase($legacySessionDatabase), 'legacy session capitalization is prepared');
+
 $api = new RouterDatabaseBackupFakeApi();
 $stored = mikhmonStoreRouterDatabaseBackup($api, 'router-lama', 'password-pemulihan');
 routerDatabaseBackupTestAssert(!empty($stored['status']), 'encrypted database is stored in RouterOS scripts');
 routerDatabaseBackupTestAssert($stored['chunks'] > 1, 'large backups are split into multiple chunks');
 routerDatabaseBackupTestAssert(mikhmonRouterDatabaseManifest($api)['session'] === 'router-lama', 'manifest identifies the source session');
+$storedPayload = mikhmonReadRouterDatabaseBackup($api, 'password-pemulihan');
+routerDatabaseBackupTestAssert(count($storedPayload['payload']['users'] ?? array()) === 1 && count($storedPayload['payload']['partners'] ?? array()) === 1, 'backup includes related partner data when session capitalization changed');
 $firstGeneration = mikhmonRouterDatabaseManifest($api)['generation'];
 foreach ($api->scripts as $script) {
   routerDatabaseBackupTestAssert(strpos((string) ($script['source'] ?? ''), '081234567890') === false, 'customer phone is not stored as plaintext');

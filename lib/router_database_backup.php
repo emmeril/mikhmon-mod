@@ -47,24 +47,38 @@ function mikhmonConfigureRouterDatabaseBackup($session, $password, $enabled = tr
 
 function mikhmonRouterDatabaseBackupPayload($session) {
   $database = mikhmonReadDatabase();
+  $customers = array_values((array) ($database['customers'][$session] ?? array()));
+  $partners = array_values(array_filter((array) ($database['partners'] ?? array()), function ($partner) use ($session) {
+    return is_array($partner) && strcasecmp((string) ($partner['session'] ?? ''), (string) $session) === 0;
+  }));
+  $referencedUserIds = array();
+  foreach ($customers as $customer) {
+    $userId = trim((string) ($customer['mitra_id'] ?? ''));
+    if ($userId !== '') $referencedUserIds[$userId] = true;
+  }
+  foreach ($partners as $partner) {
+    $userId = trim((string) ($partner['user_id'] ?? ''));
+    if ($userId !== '') $referencedUserIds[$userId] = true;
+  }
   $users = array();
   foreach ((array) ($database['users'] ?? array()) as $user) {
     if (!is_array($user)) continue;
-    if (($user['role'] ?? '') === 'admin' || (string) ($user['session'] ?? '') === (string) $session) $users[] = $user;
+    $userId = (string) ($user['id'] ?? '');
+    if (($user['role'] ?? '') === 'admin'
+      || strcasecmp((string) ($user['session'] ?? ''), (string) $session) === 0
+      || ($userId !== '' && isset($referencedUserIds[$userId]))) $users[] = $user;
   }
   return array(
     'format' => 'mikhmon-router-database',
     'version' => 1,
     'session' => (string) $session,
     'created_at' => time(),
-    'customers' => array_values((array) ($database['customers'][$session] ?? array())),
+    'customers' => $customers,
     'invoices' => array_values((array) ($database['invoices'][$session] ?? array())),
     'report_records' => array_values((array) ($database['report_records'][$session] ?? array())),
     'revenue_deposits' => array_values((array) ($database['revenue_deposits'][$session] ?? array())),
     'users' => array_values($users),
-    'partners' => array_values(array_filter((array) ($database['partners'] ?? array()), function ($partner) use ($session) {
-      return is_array($partner) && (string) ($partner['session'] ?? '') === (string) $session;
-    })),
+    'partners' => $partners,
   );
 }
 
@@ -292,6 +306,7 @@ function mikhmonRestoreRouterDatabaseBackup($API, $targetSession, $password) {
     }
     if ($matchIndex !== null) {
       $userIdMap[$oldId] = (string) ($database['users'][$matchIndex]['id'] ?? $oldId);
+      if (($backupUser['role'] ?? '') !== 'admin') $database['users'][$matchIndex]['session'] = (string) $targetSession;
       continue;
     }
     if (($backupUser['role'] ?? '') !== 'admin') $backupUser['session'] = (string) $targetSession;
