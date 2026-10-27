@@ -1290,6 +1290,17 @@ function mikhmonDeleteCustomer($session, $id) {
   return mikhmonWriteDatabase($database);
 }
 
+function mikhmonReplaceDatabaseFile($temporary, $path) {
+  clearstatcache(true, $path);
+  $ownershipPath = is_file($path) ? $path : dirname($path);
+  $owner = @fileowner($ownershipPath);
+  $group = @filegroup($ownershipPath);
+  if (!@rename($temporary, $path)) return false;
+  if ($owner !== false) @chown($path, $owner);
+  if ($group !== false) @chgrp($path, $group);
+  return true;
+}
+
 function mikhmonWriteDatabase($data) {
   $path = mikhmonBackupPath();
   $tmp = $path . '.tmp.' . getmypid();
@@ -1299,7 +1310,7 @@ function mikhmonWriteDatabase($data) {
     return false;
   }
   @chmod($tmp, 0600);
-  $written = @rename($tmp, $path);
+  $written = mikhmonReplaceDatabaseFile($tmp, $path);
   if ($written) {
     $GLOBALS['_mikhmon_database_cache'] = $data;
     $GLOBALS['_mikhmon_database_cache_path'] = $path;
@@ -1315,7 +1326,7 @@ function mikhmonWriteRouterDatabase($data) {
   $json = json_encode($data, JSON_UNESCAPED_SLASHES);
   if ($json === false || @file_put_contents($tmp, $json, LOCK_EX) === false) return false;
   @chmod($tmp, 0600);
-  $written = @rename($tmp, $path);
+  $written = mikhmonReplaceDatabaseFile($tmp, $path);
   if ($written) {
     $GLOBALS['_mikhmon_router_database_cache'] = $data;
     $GLOBALS['_mikhmon_router_database_cache_path'] = $path;
@@ -1338,7 +1349,7 @@ function mikhmonWriteRouterIndex($data) {
   $indexJson = json_encode($index, JSON_UNESCAPED_SLASHES);
   if ($indexJson === false || @file_put_contents($indexTmp, $indexJson, LOCK_EX) === false) return false;
   @chmod($indexTmp, 0600);
-  return @rename($indexTmp, $indexPath);
+  return mikhmonReplaceDatabaseFile($indexTmp, $indexPath);
 }
 
 function mikhmonWriteLegacyDatabase($data) {
@@ -1347,7 +1358,7 @@ function mikhmonWriteLegacyDatabase($data) {
   $json = json_encode($data, JSON_UNESCAPED_SLASHES);
   if ($json === false || @file_put_contents($tmp, $json, LOCK_EX) === false) return false;
   @chmod($tmp, 0600);
-  return @rename($tmp, $path);
+  return mikhmonReplaceDatabaseFile($tmp, $path);
 }
 
 function mikhmonRouterSyncDue($session, $force = false) {
