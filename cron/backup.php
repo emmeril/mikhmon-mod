@@ -5,6 +5,7 @@ if (PHP_SAPI !== 'cli') {
   exit;
 }
 
+define('MIKHMON_ALLOW_PRODUCTION_CLI_WRITE', true);
 $_SERVER['REQUEST_URI'] = '/cron/backup.php';
 error_reporting(E_ALL);
 require_once dirname(__DIR__) . '/include/config.php';

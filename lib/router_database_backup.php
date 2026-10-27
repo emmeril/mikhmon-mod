@@ -19,12 +19,15 @@ function mikhmonReadRouterDatabaseBackupSettings() {
 }
 
 function mikhmonWriteRouterDatabaseBackupSettings($settings) {
+  if (function_exists('mikhmonDatabaseWriteAllowed') && !mikhmonDatabaseWriteAllowed()) return false;
   $path = mikhmonRouterDatabaseBackupSettingsPath();
   $tmp = $path . '.tmp.' . getmypid();
   $json = json_encode($settings, JSON_UNESCAPED_SLASHES);
   if ($json === false || @file_put_contents($tmp, $json, LOCK_EX) === false) return false;
   @chmod($tmp, 0600);
-  return @rename($tmp, $path);
+  return function_exists('mikhmonReplaceDatabaseFile')
+    ? mikhmonReplaceDatabaseFile($tmp, $path)
+    : @rename($tmp, $path);
 }
 
 function mikhmonConfigureRouterDatabaseBackup($session, $password, $enabled = true, $payloadHash = '') {

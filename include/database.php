@@ -3,6 +3,17 @@
 require_once __DIR__ . '/crypto.php';
 require_once dirname(__DIR__) . '/lib/router_database_backup.php';
 
+function mikhmonDatabaseWriteAllowed() {
+  if (PHP_SAPI !== 'cli') return true;
+  if (defined('MIKHMON_ALLOW_PRODUCTION_CLI_WRITE') && MIKHMON_ALLOW_PRODUCTION_CLI_WRITE === true) return true;
+  $override = getenv('MIKHMON_DATABASE_PATH');
+  if ($override === false || trim((string) $override) === '') return false;
+  $override = trim((string) $override);
+  $overrideDirectory = realpath(dirname($override));
+  if ($overrideDirectory !== false) $override = $overrideDirectory . DIRECTORY_SEPARATOR . basename($override);
+  return $override !== dirname(__DIR__) . '/data/mikhmon-backup.json';
+}
+
 function mikhmonBackupPath() {
   $override = getenv('MIKHMON_DATABASE_PATH');
   if ($override !== false && trim($override) !== '') {
@@ -49,6 +60,7 @@ function mikhmonRouterMaintenancePath() {
 }
 
 function mikhmonClaimRouterMaintenanceWindow($session, $force = false, $interval = 60) {
+  if (!mikhmonDatabaseWriteAllowed()) return false;
   if ($force) return true;
   $path = mikhmonRouterMaintenancePath();
   $directory = dirname($path);
@@ -1302,6 +1314,7 @@ function mikhmonReplaceDatabaseFile($temporary, $path) {
 }
 
 function mikhmonWriteDatabase($data) {
+  if (!mikhmonDatabaseWriteAllowed()) return false;
   $path = mikhmonBackupPath();
   $tmp = $path . '.tmp.' . getmypid();
   $data['version'] = 8;
@@ -1319,6 +1332,7 @@ function mikhmonWriteDatabase($data) {
 }
 
 function mikhmonWriteRouterDatabase($data) {
+  if (!mikhmonDatabaseWriteAllowed()) return false;
   $data = mikhmonPruneExpiredRouterBackups($data);
   $path = mikhmonRouterBackupPath();
   $tmp = $path . '.tmp.' . getmypid();
@@ -1336,6 +1350,7 @@ function mikhmonWriteRouterDatabase($data) {
 }
 
 function mikhmonWriteRouterIndex($data) {
+  if (!mikhmonDatabaseWriteAllowed()) return false;
   $index = array('version' => 1, 'routers' => array());
   foreach ((array) ($data['routers'] ?? array()) as $session => $record) {
     $normalized = mikhmonNormalizeRouterRecord($record, $session);
@@ -1353,6 +1368,7 @@ function mikhmonWriteRouterIndex($data) {
 }
 
 function mikhmonWriteLegacyDatabase($data) {
+  if (!mikhmonDatabaseWriteAllowed()) return false;
   $path = mikhmonLegacyDatabasePath();
   $tmp = $path . '.tmp.' . getmypid();
   $json = json_encode($data, JSON_UNESCAPED_SLASHES);

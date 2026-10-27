@@ -5,6 +5,7 @@ if (PHP_SAPI !== 'cli') {
   exit;
 }
 
+define('MIKHMON_ALLOW_PRODUCTION_CLI_WRITE', true);
 $_SERVER['REQUEST_URI'] = '/cron/billing.php';
 error_reporting(E_ALL);
 date_default_timezone_set(getenv('MIKHMON_TIMEZONE') ?: 'Asia/Jakarta');
